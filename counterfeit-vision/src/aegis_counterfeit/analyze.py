@@ -59,7 +59,8 @@ def analyze_image(
         CAPTURES_DIR.mkdir(parents=True, exist_ok=True)
         capture_path = CAPTURES_DIR / f"{event_id}.jpg"
         img.convert("RGB").save(capture_path, quality=88)
-        image_ref = str(capture_path.relative_to(CAPTURES_DIR.parents[1]))
+        # POSIX separators: this path lands in a web dashboard, not a shell.
+        image_ref = capture_path.relative_to(CAPTURES_DIR.parents[1]).as_posix()
 
     return {
         "schema_version": SCHEMA_VERSION,

@@ -153,6 +153,24 @@ and note access in [`docs/`](docs/).
 
 > Append newest entries at the top. Format: `### YYYY-MM-DD — <who> — <what>`
 
+### 2026-07-07 — Sudarsan (covering Adharshan) — Counterfeit Vision v1 working end-to-end
+- **Dataset decision locked Day 1** (per plan: "decide, don't wait"): no Kaggle credentials on
+  the build machine → v1 trains on a **synthetic ₹500/₹2000 note renderer** with controllable
+  security features, giving per-feature ground truth no public dataset has. `data.py` keeps the
+  Kaggle download + real-dataset prep hook ready — retrain is one CLI flag when creds land.
+- Built in `counterfeit-vision/` (work now committed directly on `main`):
+  - **Feature-level checks (OpenCV):** security-thread darkness contrast, watermark brightness
+    lift, microprint Laplacian sharpness — validated 40/40 genuine clean, 40/40 fakes caught
+    with the correct feature named. Denomination inferred from hue.
+  - **CNN:** EfficientNet-B0 transfer learning (head-only). Val: ROC-AUC 0.980, fake-verdict
+    precision 1.0 @ recall 0.70, uncertain rate 22%.
+  - **Verdict fusion:** ≥2 failed features (or 1 + elevated CNN score) ⇒ fake; a note is never
+    certified genuine while any security check fails; mid-band ⇒ `uncertain` (manual check).
+  - **Contract emitter** — validated by `shared/validate_contract.py counterfeit` ✔.
+  - **CLI** (`generate`/`train`/`analyze`/`demo`), **FastAPI** on port **8002** (`/analyze`
+    multipart, `/analyze_b64` for webcam, `/health`), **camera demo UI** at `/`, **11 tests**.
+- **Next:** command-centre wiring (endpoint ready); Kaggle real-data retrain when creds available.
+
 ### 2026-07-07 (later) — Prayag — Fusion layer + command-centre backend + geospatial DONE
 - **Gen AI fusion layer** (`command-centre/fusion/`): deterministic correlation engine
   (shared district / ≤30km geo / ≤96h temporal evidence) + Claude narrator
