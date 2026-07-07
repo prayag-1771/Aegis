@@ -42,8 +42,9 @@ dist/
 */models/*
 !*/models/.gitkeep
 
-# --- Personal learning notes (local only, never commit) ---
+# --- Personal learning notes & work log (local only, never commit) ---
 learning.md
+WORKLOG.md
 
 # --- OS / editor ---
 .DS_Store
