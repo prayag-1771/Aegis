@@ -9,6 +9,7 @@ dependencies = [
     "uvicorn>=0.32",
     "httpx>=0.27",
     "pydantic>=2.9",
+    "jsonschema>=4.23",
     "aegis-fusion",
     "aegis-geospatial",
 ]

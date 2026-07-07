@@ -4,6 +4,8 @@ Endpoints:
     GET  /health                    liveness + which detection modules are up
     POST /ingest/scam               Fraud Shield pushes a detection (contract JSON)
     POST /ingest/counterfeit        Counterfeit Vision pushes a scan (contract JSON)
+    POST /analyze/scam              proxy: text -> Fraud Shield -> auto-ingest
+    POST /analyze/counterfeit       proxy: base64 image -> Counterfeit Vision -> auto-ingest
     POST /refresh/fraud-graph       pull latest rings from the fraud-graph service
     GET  /events                    everything the dashboard renders (cards + map)
     POST /fuse                      run the Gen AI fusion over current signals
@@ -13,8 +15,11 @@ Endpoints:
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
+import jsonschema
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -27,18 +32,42 @@ MODULES = {
     "fraud-graph": "http://127.0.0.1:8003",
 }
 
-app = FastAPI(title="Aegis Command Centre", version=__version__)
+CONTRACTS = Path(__file__).resolve().parents[3].parent / "contracts"
+_SCHEMAS: dict[str, dict] = {}
+
+
+def _schema(kind: str) -> dict:
+    """Contract schema, cached. kind: scam_detection | counterfeit."""
+    if kind not in _SCHEMAS:
+        _SCHEMAS[kind] = json.loads((CONTRACTS / f"{kind}.schema.json").read_text(encoding="utf-8"))
+    return _SCHEMAS[kind]
+
+
+def _validated(kind: str, event: dict) -> dict:
+    """Reject contract-breaking payloads at the door — junk that gets past
+    ingest reaches the fusion LLM and the dashboard unchecked."""
+    try:
+        jsonschema.validate(instance=event, schema=_schema(kind))
+    except jsonschema.ValidationError as exc:
+        raise HTTPException(422, f"payload violates the {kind} contract: {exc.message}") from exc
+    return event
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    store.seed_demo_data()
+    yield
+
+
+app = FastAPI(title="Aegis Command Centre", version=__version__, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # hackathon setting
+    # Local-origin browsers only (the dashboard). Real security would need
+    # auth — CORS just stops random LAN pages from calling us.
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-def seed() -> None:
-    store.seed_demo_data()
 
 
 @app.get("/health")
@@ -57,17 +86,13 @@ async def health() -> dict:
 
 @app.post("/ingest/scam")
 def ingest_scam(event: dict) -> dict:
-    if "event_id" not in event or "verdict" not in event:
-        raise HTTPException(422, "not a valid scam_detection payload (see contracts/)")
-    store.add_scam(event)
+    store.add_scam(_validated("scam_detection", event))
     return {"accepted": event["event_id"]}
 
 
 @app.post("/ingest/counterfeit")
 def ingest_counterfeit(event: dict) -> dict:
-    if "event_id" not in event or "verdict" not in event:
-        raise HTTPException(422, "not a valid counterfeit payload (see contracts/)")
-    store.add_counterfeit(event)
+    store.add_counterfeit(_validated("counterfeit", event))
     return {"accepted": event["event_id"]}
 
 
@@ -86,6 +111,23 @@ async def analyze_scam(body: dict) -> dict:
         raise HTTPException(502, f"fraud-shield service unreachable: {exc}") from exc
     event = r.json()
     store.add_scam(event)
+    return event
+
+
+@app.post("/analyze/counterfeit")
+async def analyze_counterfeit(body: dict) -> dict:
+    """Live-demo path for notes: forward a base64 image to Counterfeit Vision
+    (:8002/analyze_b64), auto-ingest the contract JSON it returns."""
+    if not body.get("image_b64"):
+        raise HTTPException(422, "body must contain 'image_b64'")
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.post(f"{MODULES['counterfeit-vision']}/analyze_b64", json=body)
+            r.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"counterfeit-vision service unreachable: {exc}") from exc
+    event = r.json()
+    store.add_counterfeit(event)
     return event
 
 
