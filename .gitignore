@@ -46,6 +46,7 @@ dist/
 
 # --- Personal learning notes (local only, never commit) ---
 learning.md
+BUG_REPORT.md
 
 # --- OS / editor ---
 .DS_Store
