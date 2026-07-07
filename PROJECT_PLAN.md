@@ -153,6 +153,25 @@ and note access in [`docs/`](docs/).
 
 > Append newest entries at the top. Format: `### YYYY-MM-DD — <who> — <what>`
 
+### 2026-07-07 (evening) — Pushkar — Dashboard + gateway + 3-website architecture
+- **Team decision:** all future work in **Next.js + Express (latest)**. Architecture is a
+  **3-website setup**: citizen currency-check site (Adharshan), citizen scam-alert site
+  (Sudarsan), and the command-centre dashboard (Pushkar). **Fraud Graph needs no separate
+  website** — it stays an internal service feeding the dashboard. See
+  [`docs/architecture.md`](docs/architecture.md) (new, with mermaid diagram + port table).
+- **Express 5 gateway** (`command-centre/gateway/`, :4000): the single public entry point.
+  Citizen sites POST `scam_detection` / `counterfeit` JSON to `/api/alert/scam` and
+  `/api/report/counterfeit`; dashboard reads `/api/events`, `/api/hotspots`, `POST /api/fuse`.
+  Forwards to the FastAPI backend (:8000) — the Python fusion/geospatial layers are unchanged.
+- **Dashboard** (`command-centre/frontend/`, :3000): Next.js 15 + React 19 + Tailwind 4 + TS.
+  Full-bleed MapLibre crime map (keyless CARTO dark + Esri satellite — no token to die on),
+  glass-panel UI: module health, signal-confidence sparkline, scam/note cards, ring risk bars,
+  warning feed with click-to-fly alerts, **Run Fusion** typewriter reveal with audit hash,
+  live signal-volume bars. Pulsing markers per domain + red **COORDINATED HUB** rings.
+- **Map provider research** for the team: [`docs/map-providers.md`](docs/map-providers.md) —
+  chosen stack costs ₹0 with no API key; MapTiler (~$25/mo) is the scale-up path.
+- **Remaining:** wire real citizen sites when A/B deliver, demo video, deck.
+
 ### 2026-07-07 (later) — Prayag — Fusion layer + command-centre backend + geospatial DONE
 - **Gen AI fusion layer** (`command-centre/fusion/`): deterministic correlation engine
   (shared district / ≤30km geo / ≤96h temporal evidence) + Claude narrator
