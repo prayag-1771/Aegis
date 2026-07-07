@@ -44,16 +44,23 @@ def load_synthetic(cfg: SynthConfig | None = None, cache: bool = True) -> Datase
     return Dataset(accounts=result.accounts, transactions=result.transactions, name="synthetic")
 
 
-def load_elliptic(root: Path | None = None) -> Dataset:
-    """Load the Elliptic / Elliptic++ dataset if present under data/elliptic/.
+def load_elliptic(
+    root: Path | None = None,
+    max_licit: int = 50_000,
+    seed: int = 42,
+) -> Dataset:
+    """Load the Elliptic++ *actors* dataset (Bitcoin wallets) from data/elliptic/.
 
-    Expected files (from the Elliptic++ release):
-      - txs_features.csv / txs_classes.csv  (transactions-as-nodes variant), or
-      - AddrAddr_edgelist.csv + wallets features (actor variant).
+    Full graph is 823k wallets / 2.9M edges — too large for NetworkX feature
+    extraction in RAM. We validate on a stratified subsample: **every illicit
+    wallet (14,266)** plus `max_licit` randomly sampled licit wallets, with the
+    induced edge set. Honest caveat for the deck: real-data metrics are on this
+    labeled subsample, not the full graph (standard practice at hackathon scale;
+    the pipeline itself is unchanged).
 
-    We map the *actor/wallet* variant onto our account model when available;
-    otherwise raise with instructions. Download requires Google Drive / Kaggle
-    access — see PROJECT_PLAN.md postponed items.
+    Files (github.com/git-disl/EllipticPlusPlus, Google Drive release):
+      AddrAddr_edgelist.csv  (input_address,output_address)
+      wallets_classes.csv    (address,class)  1=illicit 2=licit 3=unknown
     """
     root = root or (DATA_DIR / "elliptic")
     edge_file = root / "AddrAddr_edgelist.csv"
@@ -64,26 +71,34 @@ def load_elliptic(root: Path | None = None) -> Dataset:
             "Download AddrAddr_edgelist.csv and wallets_classes.csv from the "
             "Elliptic++ release (github.com/git-disl/EllipticPlusPlus) into that folder."
         )
-    edges = pd.read_csv(edge_file)
-    edges = edges.rename(columns={"input_address": "source", "output_address": "target"})
-    edges["tx_id"] = [f"tx_{i:07d}" for i in range(len(edges))]
-    # Elliptic++ edge list has no amounts/timestamps at the address level; fill neutrals.
-    if "amount" not in edges:
-        edges["amount"] = 1.0
-    if "timestamp" not in edges:
-        edges["timestamp"] = pd.NaT
 
     classes = pd.read_csv(cls_file).rename(columns={"address": "account_id", "class": "cls"})
-    # Elliptic labels: 1 = illicit, 2 = licit, 3/unknown = unlabeled.
-    classes["is_illicit"] = classes["cls"].map({1: True, 2: False}).astype("boolean")
-    accounts = classes[["account_id", "is_illicit"]].copy()
+    illicit = classes[classes["cls"] == 1]
+    licit = classes[classes["cls"] == 2]
+    if len(licit) > max_licit:
+        licit = licit.sample(n=max_licit, random_state=seed)
+    selected = pd.concat([illicit, licit])
+    selected["is_illicit"] = selected["cls"] == 1
+    keep = set(selected["account_id"])
+
+    edges = pd.read_csv(edge_file).rename(
+        columns={"input_address": "source", "output_address": "target"}
+    )
+    edges = edges[edges["source"].isin(keep) & edges["target"].isin(keep)].reset_index(drop=True)
+    edges["tx_id"] = [f"tx_{i:07d}" for i in range(len(edges))]
+    # Address-level edge list has no amounts/timestamps; neutral fills mean the
+    # tempo/amount features go flat and the model relies on pure structure.
+    edges["amount"] = 1.0
+    edges["timestamp"] = pd.NaT
+
+    accounts = selected[["account_id", "is_illicit"]].copy()
     accounts["district"] = None
     accounts["ring_id"] = None
 
     return Dataset(
-        accounts=accounts,
+        accounts=accounts.reset_index(drop=True),
         transactions=edges[["tx_id", "source", "target", "amount", "timestamp"]],
-        name="elliptic++",
+        name=f"elliptic++(all-illicit+{len(licit)}-licit)",
     )
 
 

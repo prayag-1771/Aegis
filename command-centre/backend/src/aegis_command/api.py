@@ -71,6 +71,24 @@ def ingest_counterfeit(event: dict) -> dict:
     return {"accepted": event["event_id"]}
 
 
+@app.post("/analyze/scam")
+async def analyze_scam(body: dict) -> dict:
+    """Live-demo path: forward text to Fraud Shield (:8001/analyze), auto-ingest
+    the contract JSON it returns, so the detection is instantly visible on the
+    dashboard and available to the next fusion run."""
+    if not body.get("text"):
+        raise HTTPException(422, "body must contain 'text'")
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post(f"{MODULES['fraud-shield']}/analyze", json=body)
+            r.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"fraud-shield service unreachable: {exc}") from exc
+    event = r.json()
+    store.add_scam(event)
+    return event
+
+
 @app.post("/refresh/fraud-graph")
 async def refresh_fraud_graph() -> dict:
     """Pull the latest ring detection from the fraud-graph service."""
