@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aegis Fraud Shield — live scam check</title>
+<style>
+  :root {
+    --bg: #0b1020; --panel: #131a2e; --panel-2: #1a2340; --text: #e8ecf6;
+    --muted: #93a0bd; --line: #26304f;
+    --scam: #ff5964; --suspicious: #ffb020; --legit: #2fbf71; --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header .logo { font-size: 22px; }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 12.5px; }
+  #status {
+    margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--line);
+  }
+  #status.ok { color: var(--legit); border-color: var(--legit); }
+  #log { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { max-width: 720px; padding: 12px 16px; border-radius: 14px; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .verdict { display: inline-block; font-weight: 700; font-size: 13px; letter-spacing: .06em;
+             text-transform: uppercase; padding: 3px 10px; border-radius: 6px; margin-bottom: 8px; }
+  .verdict.scam { background: rgba(255,89,100,.15); color: var(--scam); border: 1px solid var(--scam); }
+  .verdict.suspicious { background: rgba(255,176,32,.12); color: var(--suspicious); border: 1px solid var(--suspicious); }
+  .verdict.legit { background: rgba(47,191,113,.12); color: var(--legit); border: 1px solid var(--legit); }
+  .riskbar { height: 6px; border-radius: 3px; background: var(--panel-2); margin: 8px 0; overflow: hidden; }
+  .riskbar > div { height: 100%; border-radius: 3px; transition: width .6s ease; }
+  .meta { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { font-size: 11.5px; padding: 2px 9px; border-radius: 999px;
+          background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
+  .explain { margin-top: 8px; font-size: 13.5px; }
+  footer { padding: 14px 20px 18px; background: var(--panel); border-top: 1px solid var(--line); }
+  .samples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .samples button {
+    font-size: 12px; padding: 5px 11px; border-radius: 999px; cursor: pointer;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--line);
+  }
+  .samples button:hover { color: var(--text); border-color: var(--accent); }
+  .inputrow { display: flex; gap: 10px; }
+  select, textarea, .send {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; font: inherit;
+  }
+  select { padding: 0 10px; }
+  textarea { flex: 1; padding: 10px 14px; resize: none; height: 66px; }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  .send { padding: 0 22px; cursor: pointer; background: var(--accent); color: #fff; border: none; font-weight: 600; }
+  .send:disabled { opacity: .5; cursor: wait; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🛡️</span>
+  <div>
+    <h1>Aegis Fraud Shield</h1>
+    <div class="sub">Paste or read out any message / call script — watch it get checked live</div>
+  </div>
+  <span id="status">connecting…</span>
+</header>
+
+<div id="log"></div>
+
+<footer>
+  <div class="samples" id="samples"></div>
+  <div class="inputrow">
+    <select id="source">
+      <option value="manual_demo">demo</option>
+      <option value="sms">sms</option>
+      <option value="call_transcript">call</option>
+      <option value="whatsapp">whatsapp</option>
+      <option value="email">email</option>
+    </select>
+    <textarea id="text" placeholder="Type or paste the message here… (Enter to send, Shift+Enter for newline)"></textarea>
+    <button class="send" id="send">Check</button>
+  </div>
+</footer>
+
+<script>
+const SAMPLES = [
+  ["🚨 Digital-arrest call", "call_transcript", "This is Inspector Sharma from CBI. An FIR has been registered against your Aadhaar for money laundering. Stay on this video call and do not disconnect. Transfer the verification amount in USDT immediately or a warrant will be issued."],
+  ["📱 KYC scam SMS", "sms", "Dear customer your SBI account KYC has expired. Account will be blocked within 24 hours. Update immediately at bit.ly/kyc-upd8 to avoid suspension."],
+  ["🎰 Lottery bait", "whatsapp", "Congratulations! Your mobile number has won Rs 25,00,000 in the KBC Lucky Draw. To claim your prize deposit the processing fee of Rs 12,500 and share your bank details."],
+  ["✅ Genuine OTP", "sms", "482913 is your OTP for HDFC net banking login. Valid for 10 minutes. Do not share this OTP with anyone."],
+  ["💬 Normal chat", "whatsapp", "Hey, are we still meeting for lunch tomorrow at 1pm? Let me know if you want to move it."],
+];
+
+const log = document.getElementById("log");
+const input = document.getElementById("text");
+const sendBtn = document.getElementById("send");
+const sourceSel = document.getElementById("source");
+const statusEl = document.getElementById("status");
+
+const VERDICT_COLOR = { scam: "var(--scam)", suspicious: "var(--suspicious)", legit: "var(--legit)" };
+
+fetch("/health").then(r => r.json()).then(h => {
+  statusEl.textContent = h.model_trained ? "model ready" : "model NOT trained";
+  if (h.model_trained) statusEl.classList.add("ok");
+}).catch(() => { statusEl.textContent = "api offline"; });
+
+for (const [label, source, text] of SAMPLES) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.onclick = () => { input.value = text; sourceSel.value = source; input.focus(); };
+  document.getElementById("samples").appendChild(b);
+}
+
+function bubble(cls, html) {
+  const div = document.createElement("div");
+  div.className = "msg " + cls;
+  div.innerHTML = html;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return div;
+}
+
+const esc = s => s.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+async function send() {
+  const text = input.value.trim();
+  if (!text) return;
+  bubble("user", esc(text));
+  input.value = "";
+  sendBtn.disabled = true;
+  const thinking = bubble("bot", "Analysing…");
+  try {
+    const resp = await fetch("/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, source: sourceSel.value }),
+    });
+    if (!resp.ok) throw new Error((await resp.json()).detail || resp.statusText);
+    const r = await resp.json();
+    const pct = Math.round(r.risk_score * 100);
+    const color = VERDICT_COLOR[r.verdict];
+    thinking.innerHTML = `
+      <span class="verdict ${r.verdict}">${r.verdict}</span>
+      <div class="riskbar"><div style="width:${pct}%;background:${color}"></div></div>
+      <div class="meta">risk ${pct}% · type: ${esc(r.scam_type)} · ${esc(r.event_id)}</div>
+      ${r.markers.length ? `<div class="chips">${r.markers.map(m => `<span class="chip">${esc(m)}</span>`).join("")}</div>` : ""}
+      <div class="explain">${esc(r.explanation)}</div>`;
+  } catch (e) {
+    thinking.innerHTML = `<span style="color:var(--scam)">Error:</span> ${esc(String(e.message || e))}`;
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+sendBtn.onclick = send;
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+});
+</script>
+</body>
+</html>
