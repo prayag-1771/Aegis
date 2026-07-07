@@ -41,6 +41,8 @@ dist/
 *.onnx
 */models/*
 !*/models/.gitkeep
+# Runtime note captures from the counterfeit demo UI (per-scan artifacts).
+*/output/captures/
 
 # --- Personal learning notes (local only, never commit) ---
 learning.md
