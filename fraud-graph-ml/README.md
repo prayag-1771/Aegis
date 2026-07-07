@@ -57,10 +57,17 @@ output/      # fraud_graph.json (gitignored)
 tests/       # incl. end-to-end contract-compliance test
 ```
 
-## Current results (synthetic, seed 42)
+## Current results
+**Synthetic (seed 42):**
 - AUC **0.998**, avg precision **0.958**, precision **0.94** @ recall 0.76 (threshold 0.92)
-- Ring recovery: **12/12 rings**, 78/83 illicit accounts (94%)
+- Ring recovery: **12/12 rings (100% detection rate)**, precision 1.0, account recall 0.94
 - Topology labels: layering chain / mule collection hub / round-tripping cycle
+
+**Real data — Elliptic++ actors (Bitcoin wallets, all 14,266 illicit + 50k licit sample):**
+- ROC-AUC **0.945**, avg precision 0.762, precision **0.91** @ recall 0.17 (precision-first threshold)
+- Structure-only features (address-level data has no amounts/timestamps) — model correctly
+  leans on `out_degree`, `core_number`, `pagerank`
+- Same pipeline, zero code changes: `fraud-graph demo --source elliptic`
 
 ## Tech
 NetworkX / PyTorch Geometric (stretch) · XGBoost · pandas · scikit-learn

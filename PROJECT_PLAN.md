@@ -153,6 +153,15 @@ and note access in [`docs/`](docs/).
 
 > Append newest entries at the top. Format: `### YYYY-MM-DD — <who> — <what>`
 
+### 2026-07-07 (evening) — Prayag — REAL-DATA VALIDATION + frontend + fraud-shield integration
+- **Elliptic++ real-data validation (Person C COMPLETE):** ROC-AUC **0.945** on real Bitcoin
+  fraud (all 14,266 illicit wallets + 50k licit sample, structure-only features).
+  Same pipeline, no code changes: `fraud-graph demo --source elliptic`.
+- **Dashboard frontend** (Next.js 16 + React 19 + Tailwind + Leaflet, no map token needed):
+  three signal cards, health pills, crime map with pulsing cross-domain hubs, RUN FUSION panel.
+- Merged **Sudarsan's fraud-shield v1** from upstream (zero conflicts — contract-first works);
+  added `POST /analyze/scam` proxy so live scam analysis auto-ingests into the dashboard + fusion.
+
 ### 2026-07-07 (later) — Prayag — Fusion layer + command-centre backend + geospatial DONE
 - **Gen AI fusion layer** (`command-centre/fusion/`): deterministic correlation engine
   (shared district / ≤30km geo / ≤96h temporal evidence) + Claude narrator
