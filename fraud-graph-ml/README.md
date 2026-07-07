@@ -53,7 +53,8 @@ src/aegis_fraud_graph/
   cli.py       # typer CLI (train/detect/demo/serve)
   api.py       # FastAPI service for the command centre
 models/      # saved XGBoost model + train_report.json (gitignored)
-output/      # fraud_graph.json (gitignored)
+output/      # fraud_graph.json (committed on purpose — integration artifact
+             # the command centre seeds from; see backend store.seed_demo_data)
 tests/       # incl. end-to-end contract-compliance test
 ```
 

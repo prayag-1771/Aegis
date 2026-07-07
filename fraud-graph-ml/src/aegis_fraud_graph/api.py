@@ -10,6 +10,7 @@ Endpoints:
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,21 +19,34 @@ from . import __version__
 from .config import OUTPUT_DIR
 from .pipeline import run_detection
 
+_OUTPUT_FILE = OUTPUT_DIR / "fraud_graph.json"
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Warm at startup: a cold first GET /fraud-graph used to run the whole
+    # train+detect pipeline inside the request and blow the command centre's
+    # 30 s timeout on stage.
+    if not _OUTPUT_FILE.exists():
+        run_detection()
+    yield
+
+
 app = FastAPI(
     title="Aegis Fraud Graph",
     description="Fraud-ring detection over transaction networks (graph features + XGBoost).",
     version=__version__,
+    lifespan=lifespan,
 )
 
 # The dashboard runs on another port during development; allow it.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # hackathon setting; lock down for production
+    # Local-origin browsers only (command centre + demo UIs).
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-_OUTPUT_FILE = OUTPUT_DIR / "fraud_graph.json"
 
 
 @app.get("/health")
