@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Aegis Command Centre — Dashboard (Next.js)
 
-## Getting Started
+The single screen a police officer watches: three signal cards (scam / counterfeit /
+fraud rings), module health pills, the cross-domain crime map (Leaflet, no token needed),
+and the **RUN FUSION** panel that reveals the Gen AI intelligence summary.
 
-First, run the development server:
+## Run it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The dashboard talks **only** to the command-centre backend (default
+`http://127.0.0.1:8000`; override with `NEXT_PUBLIC_COMMAND_API`). Start the backend
+first — and any detection services you want live:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Service | Port | Start |
+|---|---|---|
+| backend (required) | 8000 | `uvicorn aegis_command.api:app --app-dir src --port 8000` (from `../backend`) |
+| fraud-shield | 8001 | see `fraud-shield-nlp/README.md` |
+| counterfeit-vision | 8002 | see `counterfeit-vision/README.md` |
+| fraud-graph | 8003 | see `fraud-graph-ml/README.md` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Without the detection services the dashboard still renders from the backend's seeded
+contract samples — it is never blocked on other modules.
 
-## Learn More
+## Structure
+- `app/page.tsx` — the dashboard (cards, health, fusion panel); polls `/events` + `/hotspots` every 5 s
+- `app/components/CrimeMap.tsx` — Leaflet map; pulsing markers for cross-domain hubs
+- `lib/api.ts` — typed backend client (`api.events()`, `api.fuse()`, `api.analyzeScam()`, …)
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Stack
+Next.js 16 · React 19 · Tailwind 4 · Leaflet (OpenStreetMap tiles — no API key)

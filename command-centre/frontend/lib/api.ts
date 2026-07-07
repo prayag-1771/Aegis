@@ -98,13 +98,26 @@ async function get<T>(path: string): Promise<T> {
   return res.json();
 }
 
+async function post<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(`${path} -> ${res.status}`);
+  return res.json();
+}
+
 export const api = {
   health: () => get<HealthPayload>("/health"),
   events: () => get<EventsPayload>("/events"),
   hotspots: () => get<HotspotsPayload>("/hotspots"),
-  fuse: async (): Promise<FusionOutput> => {
-    const res = await fetch(`${BASE}/fuse`, { method: "POST" });
-    if (!res.ok) throw new Error(`/fuse -> ${res.status}`);
-    return res.json();
-  },
+  fuse: () => post<FusionOutput>("/fuse"),
+  /** Live wow moment #1: analyse text via Fraud Shield and auto-ingest. */
+  analyzeScam: (text: string, source = "manual_demo", location_hint?: MapPoint | null) =>
+    post<ScamEvent>("/analyze/scam", { text, source, location_hint }),
+  /** Live wow moment #2: analyse a note photo (data URL) and auto-ingest. */
+  analyzeCounterfeit: (image_b64: string, location_hint?: MapPoint | null) =>
+    post<CounterfeitEvent>("/analyze/counterfeit", { image_b64, location_hint }),
+  refreshFraudGraph: () => post<{ refreshed: boolean; rings: number }>("/refresh/fraud-graph"),
 };
