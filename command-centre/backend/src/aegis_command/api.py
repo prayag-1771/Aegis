@@ -114,3 +114,20 @@ def fusion_latest() -> dict:
     if store.last_fusion is None:
         raise HTTPException(404, "no fusion has been run yet — POST /fuse first")
     return store.last_fusion
+
+
+@app.get("/hotspots")
+def hotspots() -> dict:
+    """Cross-domain crime map: DBSCAN hubs over all located signals.
+    A cross_domain=true hub is the coordinated-crime-hub signal (innovation #3)."""
+    from aegis_fusion.correlator import correlate
+    from aegis_geospatial import cluster_hotspots
+
+    scams, counterfeits, fraud_graph = store.snapshot()
+    correlation = correlate(scams, counterfeits, fraud_graph)
+    hubs = cluster_hotspots(correlation.map_hotspots)
+    return {
+        "hubs": [h.to_dict() for h in hubs],
+        "n_cross_domain": sum(1 for h in hubs if h.cross_domain),
+        "points": correlation.map_hotspots,
+    }
