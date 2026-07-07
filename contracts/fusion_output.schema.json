@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aegis/fusion_output.schema.json",
+  "title": "Fusion Intelligence Summary (Command Centre Gen AI layer)",
+  "description": "Output of the Gen AI fusion layer. Takes scam + counterfeit + fraud-graph results and produces one correlated, human-readable intelligence package. This is the 'wow moment' payload rendered on the command centre.",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "summary", "threat_level", "linked_signals"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "summary": {
+      "type": "string",
+      "description": "Plain-English intelligence summary, e.g. 'This scam call is linked to a fraud ring active in Jamtara, where a counterfeit note was also seized.'"
+    },
+    "threat_level": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low"],
+      "description": "Overall correlated threat level."
+    },
+    "linked_signals": {
+      "type": "array",
+      "description": "Which source signals were correlated into this package.",
+      "items": {
+        "type": "object",
+        "required": ["type", "ref_event_id"],
+        "properties": {
+          "type": { "type": "string", "enum": ["scam", "counterfeit", "fraud_ring"] },
+          "ref_event_id": { "type": "string", "description": "event_id / ring_id from the source result." },
+          "reason": { "type": "string", "description": "Why this signal was linked (shared district, phone->account, timing)." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "correlation_basis": {
+      "type": "array",
+      "description": "Signals that drove the correlation, for auditability.",
+      "items": { "type": "string", "enum": ["shared_district", "shared_phone", "shared_account", "temporal_proximity", "geospatial_overlap"] }
+    },
+    "recommended_actions": {
+      "type": "array",
+      "description": "Autonomous / suggested next steps (agentic layer).",
+      "items": { "type": "string" }
+    },
+    "map_hotspots": {
+      "type": "array",
+      "description": "Points for the cross-domain crime map. Overlapping clusters = coordinated hub.",
+      "items": {
+        "type": "object",
+        "required": ["type", "lat", "lon"],
+        "properties": {
+          "type": { "type": "string", "enum": ["scam", "counterfeit", "fraud_ring"] },
+          "district": { "type": "string" },
+          "lat": { "type": "number" },
+          "lon": { "type": "number" },
+          "weight": { "type": "number", "description": "Cluster intensity for heatmap." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "audit_trail": {
+      "type": ["object", "null"],
+      "description": "For legal admissibility — traceable inputs and model metadata.",
+      "properties": {
+        "model": { "type": "string" },
+        "inputs_hash": { "type": "string" },
+        "prompt_version": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

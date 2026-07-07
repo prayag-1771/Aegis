@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aegis/fraud_graph.schema.json",
+  "title": "Fraud Graph Result (Fraud Graph -> Command Centre)",
+  "description": "Output emitted by the Fraud Graph ML pipeline (Prayag). Describes detected fraud rings (clusters of colluding accounts) plus per-account risk. The command centre consumes this to render the fraud-ring graph card and feed the fusion LLM.",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "rings", "accounts"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "model": {
+      "type": "string",
+      "description": "Which model produced this, e.g. 'graph_features+xgboost' or 'graphsage'."
+    },
+    "rings": {
+      "type": "array",
+      "description": "Detected fraud rings (clusters of connected illicit accounts).",
+      "items": {
+        "type": "object",
+        "required": ["ring_id", "account_ids", "risk_score"],
+        "properties": {
+          "ring_id": { "type": "string" },
+          "account_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Member account ids in this ring."
+          },
+          "risk_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Aggregate ring illicit-likelihood."
+          },
+          "size": { "type": "integer", "description": "Number of accounts in the ring." },
+          "total_amount": { "type": ["number", "null"], "description": "Total value flowing through the ring (currency units)." },
+          "label": { "type": ["string", "null"], "description": "Optional human tag e.g. 'mule network', 'layering ring'." },
+          "district": { "type": ["string", "null"], "description": "Optional dominant district for the crime map." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "accounts": {
+      "type": "array",
+      "description": "Per-account risk scores (nodes). Used for node coloring in the graph view.",
+      "items": {
+        "type": "object",
+        "required": ["account_id", "illicit_probability"],
+        "properties": {
+          "account_id": { "type": "string" },
+          "illicit_probability": { "type": "number", "minimum": 0, "maximum": 1 },
+          "ring_id": { "type": ["string", "null"], "description": "Ring this account belongs to, if any." },
+          "features": {
+            "type": ["object", "null"],
+            "description": "Optional graph features surfaced for explainability.",
+            "properties": {
+              "degree_centrality": { "type": "number" },
+              "clustering_coefficient": { "type": "number" },
+              "in_degree": { "type": "integer" },
+              "out_degree": { "type": "integer" }
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "type": "array",
+      "description": "Optional transaction edges for rendering the graph. Keep small (top-N) for demo performance.",
+      "items": {
+        "type": "object",
+        "required": ["source", "target"],
+        "properties": {
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "amount": { "type": ["number", "null"] },
+          "timestamp": { "type": ["string", "null"], "format": "date-time" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

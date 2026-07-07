@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "event_id": "scam_0001",
+  "source": "call_transcript",
+  "timestamp": "2026-07-07T10:15:00Z",
+  "raw_text": "This is Inspector Sharma from CBI. An FIR has been registered against your Aadhaar for money laundering. Stay on this video call and do not disconnect. Transfer the verification amount in USDT immediately or a warrant will be issued.",
+  "verdict": "scam",
+  "risk_score": 0.97,
+  "scam_type": "digital_arrest",
+  "markers": [
+    "authority_impersonation",
+    "fake_fir_or_case",
+    "urgency_pressure",
+    "crypto_or_giftcard_demand",
+    "video_call_isolation"
+  ],
+  "explanation": "Caller impersonates CBI, claims a fake FIR, isolates the victim on a video call, and demands crypto payment under threat of arrest — a textbook digital-arrest script.",
+  "phone_number": "+91-9900112233",
+  "location_hint": { "district": "Jamtara", "lat": 23.795, "lon": 86.803 }
+}

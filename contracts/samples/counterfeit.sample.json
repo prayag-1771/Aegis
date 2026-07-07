@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "event_id": "note_0001",
+  "timestamp": "2026-07-07T10:16:30Z",
+  "denomination": "500",
+  "verdict": "fake",
+  "confidence": 0.91,
+  "missing_features": ["security_thread", "microprint"],
+  "image_ref": "captures/note_0001.jpg",
+  "location_hint": { "district": "Jamtara", "lat": 23.79, "lon": 86.81 }
+}

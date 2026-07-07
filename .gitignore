@@ -1,0 +1,53 @@
+# ===== Aegis root .gitignore =====
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# --- Node / frontend (command centre) ---
+node_modules/
+.next/
+out/
+build/
+dist/
+.vercel/
+
+# --- Env & secrets (NEVER commit API keys) ---
+.env
+.env.*
+!.env.example
+*.pem
+
+# --- Large data & model artifacts ---
+# Keep the repo light — don't commit datasets or big weights.
+# Commit small sample/mock files instead (see contracts/samples & shared/mock_data).
+*/data/*
+!*/data/.gitkeep
+!*/data/README.md
+*.csv
+*.parquet
+*.tif
+*.zip
+*.pt
+*.pth
+*.h5
+*.pkl
+*.joblib
+*.onnx
+*/models/*
+!*/models/.gitkeep
+
+# --- Personal learning notes (local only, never commit) ---
+learning.md
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

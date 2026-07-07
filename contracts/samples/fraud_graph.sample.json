@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-07-07T10:17:00Z",
+  "model": "graph_features+xgboost",
+  "rings": [
+    {
+      "ring_id": "ring_01",
+      "account_ids": ["acc_1001", "acc_1002", "acc_1003", "acc_1004"],
+      "risk_score": 0.88,
+      "size": 4,
+      "total_amount": 2450000,
+      "label": "mule network",
+      "district": "Jamtara"
+    }
+  ],
+  "accounts": [
+    {
+      "account_id": "acc_1001",
+      "illicit_probability": 0.93,
+      "ring_id": "ring_01",
+      "features": { "degree_centrality": 0.42, "clustering_coefficient": 0.71, "in_degree": 12, "out_degree": 3 }
+    },
+    {
+      "account_id": "acc_1002",
+      "illicit_probability": 0.81,
+      "ring_id": "ring_01",
+      "features": { "degree_centrality": 0.30, "clustering_coefficient": 0.65, "in_degree": 8, "out_degree": 5 }
+    },
+    {
+      "account_id": "acc_2001",
+      "illicit_probability": 0.04,
+      "ring_id": null,
+      "features": { "degree_centrality": 0.05, "clustering_coefficient": 0.10, "in_degree": 2, "out_degree": 2 }
+    }
+  ],
+  "edges": [
+    { "source": "acc_1001", "target": "acc_1002", "amount": 500000, "timestamp": "2026-07-05T09:00:00Z" },
+    { "source": "acc_1002", "target": "acc_1003", "amount": 480000, "timestamp": "2026-07-05T09:05:00Z" },
+    { "source": "acc_1003", "target": "acc_1004", "amount": 470000, "timestamp": "2026-07-05T09:10:00Z" }
+  ]
+}

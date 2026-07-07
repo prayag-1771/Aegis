@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aegis/counterfeit.schema.json",
+  "title": "Counterfeit Detection Result (Counterfeit Vision -> Command Centre)",
+  "description": "Output emitted by the Counterfeit Vision CV model (Adharshan) for a single note image. The command centre consumes this to render the note-scan card and feed the fusion LLM.",
+  "type": "object",
+  "required": ["schema_version", "event_id", "timestamp", "verdict", "confidence", "denomination"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "event_id": { "type": "string", "description": "Unique id for this scanned note." },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "denomination": {
+      "type": "string",
+      "enum": ["100", "200", "500", "2000", "unknown"],
+      "description": "Detected note denomination."
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["fake", "genuine", "uncertain"],
+      "description": "Top-level classification."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Model confidence in the verdict."
+    },
+    "missing_features": {
+      "type": "array",
+      "description": "Security features found absent/failed (feature-level detection). Powers the 'why fake' explanation.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "security_thread",
+          "microprint",
+          "watermark",
+          "latent_image",
+          "see_through_register",
+          "intaglio_print",
+          "color_shifting_ink",
+          "serial_number_font"
+        ]
+      }
+    },
+    "image_ref": { "type": ["string", "null"], "description": "Path/URL to the captured note image for the UI." },
+    "location_hint": {
+      "type": ["object", "null"],
+      "description": "Optional seizure location for the crime map (cross-domain overlap).",
+      "properties": {
+        "district": { "type": "string" },
+        "lat": { "type": "number" },
+        "lon": { "type": "number" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

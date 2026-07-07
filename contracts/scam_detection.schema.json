@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aegis/scam_detection.schema.json",
+  "title": "Scam Detection Result (Fraud Shield -> Command Centre)",
+  "description": "Output emitted by the Fraud Shield NLP classifier (Sudarsan) for a single call/message analysed. The command centre consumes this to render the scam alert card and feed the fusion LLM.",
+  "type": "object",
+  "required": ["schema_version", "event_id", "source", "timestamp", "verdict", "risk_score"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "event_id": { "type": "string", "description": "Unique id for this analysed message/call." },
+    "source": {
+      "type": "string",
+      "enum": ["sms", "call_transcript", "whatsapp", "email", "manual_demo"],
+      "description": "Channel the text came from."
+    },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "raw_text": { "type": "string", "description": "The message/transcript that was analysed." },
+    "verdict": {
+      "type": "string",
+      "enum": ["scam", "suspicious", "legit"],
+      "description": "Top-level classification."
+    },
+    "risk_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Probability that this is a scam. 0 = safe, 1 = certain scam."
+    },
+    "scam_type": {
+      "type": "string",
+      "enum": ["digital_arrest", "phishing", "lottery", "loan", "kyc", "other", "none"],
+      "description": "Fine-grained scam category when verdict != legit."
+    },
+    "markers": {
+      "type": "array",
+      "description": "Digital-arrest / scam markers detected. Powers the 'why flagged' explanation.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "authority_impersonation",
+          "fake_fir_or_case",
+          "urgency_pressure",
+          "crypto_or_giftcard_demand",
+          "video_call_isolation",
+          "personal_data_request",
+          "suspicious_link",
+          "spoofed_number"
+        ]
+      }
+    },
+    "explanation": {
+      "type": "string",
+      "description": "Optional plain-language reason (stretch: LLM-generated) shown in the UI."
+    },
+    "phone_number": { "type": ["string", "null"], "description": "Originating number if available (for graph/geo correlation)." },
+    "location_hint": {
+      "type": ["object", "null"],
+      "description": "Optional origin location for the crime map.",
+      "properties": {
+        "district": { "type": "string" },
+        "lat": { "type": "number" },
+        "lon": { "type": "number" }
+      }
+    }
+  },
+  "additionalProperties": false
+}
