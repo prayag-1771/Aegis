@@ -47,8 +47,8 @@ class TrainConfig(BaseModel):
     backbone: str = "efficientnet_b0"  # or "mobilenet_v3_small" / "tiny" (fast unit tests)
     img_size: int = 224
     batch_size: int = 32
-    epochs: int = 4
-    lr: float = 1e-3
+    epochs: int = 8
+    lr: float = 3e-3
     val_fraction: float = 0.2
     seed: int = 42
     # Verdict bands: fake if p_fake >= fake_threshold, genuine if

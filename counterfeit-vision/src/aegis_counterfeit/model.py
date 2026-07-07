@@ -139,12 +139,9 @@ class CounterfeitModel:
             return "fake"
         if p_fake <= self.genuine_threshold and n_failed_features == 0:
             return "genuine"
-        if p_fake <= self.genuine_threshold and n_failed_features >= 2:
-            # CNN says clean but multiple security features failed — never
-            # certify that note; send it to manual inspection.
-            return "uncertain"
-        if p_fake <= self.genuine_threshold:
-            return "genuine"
+        # Everything else — mid-band CNN score, or ANY failed security
+        # feature — goes to manual inspection. A note is never certified
+        # genuine while a security check is failing.
         return "uncertain"
 
     def save(self) -> Path:
@@ -214,7 +211,7 @@ def train(data_dir: Path, cfg: TrainConfig | None = None) -> tuple[CounterfeitMo
             loss = loss_fn(net(x), y)
             loss.backward()
             opt.step()
-            total += float(loss) * len(y)
+            total += float(loss.detach()) * len(y)
         print(f"epoch {epoch + 1}/{cfg.epochs}  train loss {total / n_train:.4f}")
 
     net.eval()
