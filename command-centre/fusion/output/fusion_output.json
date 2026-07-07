@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-07-07T13:21:56.354377+00:00",
+  "summary": "Threat level CRITICAL: an active scam call is linked to a fraud ring operating in Jamtara and a counterfeit note was seized in the same area. Overlapping signals across independent detection systems indicate a coordinated operation.",
+  "threat_level": "critical",
+  "linked_signals": [
+    {
+      "type": "scam",
+      "ref_event_id": "scam_0001",
+      "reason": "scam call originates in Jamtara, where ring_09 (round-tripping cycle) is active"
+    },
+    {
+      "type": "fraud_ring",
+      "ref_event_id": "ring_09",
+      "reason": "ring active in Jamtara, matching scam call origin"
+    },
+    {
+      "type": "scam",
+      "ref_event_id": "scam_0001",
+      "reason": "scam call originates in Jamtara, where ring_11 (layering chain) is active"
+    },
+    {
+      "type": "fraud_ring",
+      "ref_event_id": "ring_11",
+      "reason": "ring active in Jamtara, matching scam call origin"
+    },
+    {
+      "type": "scam",
+      "ref_event_id": "scam_0001",
+      "reason": "scam call originates in Jamtara, where ring_12 (layering chain) is active"
+    },
+    {
+      "type": "fraud_ring",
+      "ref_event_id": "ring_12",
+      "reason": "ring active in Jamtara, matching scam call origin"
+    },
+    {
+      "type": "counterfeit",
+      "ref_event_id": "note_0001",
+      "reason": "counterfeit seizure linked to scam call: both in Jamtara, 0.9 km apart, within the same time window"
+    },
+    {
+      "type": "counterfeit",
+      "ref_event_id": "note_0001",
+      "reason": "counterfeit note seized in Jamtara, where ring_09 is active"
+    },
+    {
+      "type": "counterfeit",
+      "ref_event_id": "note_0001",
+      "reason": "counterfeit note seized in Jamtara, where ring_11 is active"
+    },
+    {
+      "type": "counterfeit",
+      "ref_event_id": "note_0001",
+      "reason": "counterfeit note seized in Jamtara, where ring_12 is active"
+    }
+  ],
+  "correlation_basis": [
+    "geospatial_overlap",
+    "shared_district",
+    "temporal_proximity"
+  ],
+  "recommended_actions": [
+    "Request account freezes for 5 accounts in ring_09 (round-tripping cycle).",
+    "Notify the telecom provider to flag/block the originating number.",
+    "Alert bank branches in the affected district to re-verify deposits.",
+    "Escalate the correlated intelligence package to the district cybercrime cell."
+  ],
+  "map_hotspots": [
+    {
+      "type": "scam",
+      "district": "Jamtara",
+      "lat": 23.795,
+      "lon": 86.803,
+      "weight": 0.97
+    },
+    {
+      "type": "counterfeit",
+      "district": "Jamtara",
+      "lat": 23.79,
+      "lon": 86.81,
+      "weight": 0.91
+    }
+  ],
+  "audit_trail": {
+    "model": "template-fallback",
+    "inputs_hash": "c771971ed82fe00d",
+    "prompt_version": "1.0"
+  }
+}

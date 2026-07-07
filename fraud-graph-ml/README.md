@@ -23,25 +23,56 @@ Study [`../contracts/samples/fraud_graph.sample.json`](../contracts/samples/frau
 4. **GNN is CUT for the 15-day plan** — graph-features + XGBoost only. (GraphSAGE/GCN only if
    the 20-day timeline is restored *and* the simple version is solid by ~day 10.)
 
+## Quickstart
+```bash
+cd fraud-graph-ml
+uv venv && uv pip install -e ".[dev]"      # one-time setup
+.venv/Scripts/fraud-graph demo             # train + detect + contract-validate
+.venv/Scripts/fraud-graph serve            # API on :8003 for the command centre
+.venv/Scripts/python -m pytest             # test suite
+```
+
+API endpoints (port 8003 — convention: NLP=8001, CV=8002, graph=8003):
+- `GET /health` — liveness
+- `GET /fraud-graph` — latest contract JSON (runs pipeline on first call)
+- `POST /detect` — force fresh detection
+
 ## Folder layout (self-contained)
 ```
-data/        # Elliptic++ / Kaggle datasets (gitignored if large)
-notebooks/   # graph EDA, feature engineering, model training
-src/         # graph builder (NetworkX), feature extraction, XGBoost model, ring clustering,
-             # exporter that writes fraud_graph JSON
-models/      # saved XGBoost model
-tests/       # unit tests + contract validation
+data/        # generated synthetic data / Elliptic++ drop-in (gitignored)
+notebooks/   # graph EDA (optional)
+src/aegis_fraud_graph/
+  synth.py     # synthetic world: mule chains, smurfing fan-in, cycles + legit
+               # merchants/payroll/B2B so amounts alone can't separate fraud
+  data.py      # swappable loaders (synthetic | elliptic)
+  graph.py     # 18 behavioural features per account (NetworkX + pandas)
+  model.py     # XGBoost + precision-first threshold from PR curve
+  rings.py     # Louvain communities on high-risk subgraph + topology labels
+  export.py    # pydantic models mirroring the contract -> fraud_graph.json
+  pipeline.py  # orchestration; validate_against_contract()
+  cli.py       # typer CLI (train/detect/demo/serve)
+  api.py       # FastAPI service for the command centre
+models/      # saved XGBoost model + train_report.json (gitignored)
+output/      # fraud_graph.json (gitignored)
+tests/       # incl. end-to-end contract-compliance test
 ```
+
+## Current results (synthetic, seed 42)
+- AUC **0.998**, avg precision **0.958**, precision **0.94** @ recall 0.76 (threshold 0.92)
+- Ring recovery: **12/12 rings**, 78/83 illicit accounts (94%)
+- Topology labels: layering chain / mule collection hub / round-tripping cycle
 
 ## Tech
 NetworkX / PyTorch Geometric (stretch) · XGBoost · pandas · scikit-learn
 
 ## Definition of done
-- [ ] Dataset loads and a transaction graph is built
-- [ ] Graph features + XGBoost flag illicit accounts with decent precision
-- [ ] Accounts clustered into rings with `risk_score`
-- [ ] Emits valid `fraud_graph` JSON (accounts + rings + top-N edges)
-- [ ] Handed off to the command centre early (Phase 3)
+- [x] Dataset loads and a transaction graph is built
+- [x] Graph features + XGBoost flag illicit accounts with decent precision
+- [x] Accounts clustered into rings with `risk_score`
+- [x] Emits valid `fraud_graph` JSON (accounts + rings + top-N edges)
+- [x] FastAPI endpoint ready for the command centre (`fraud-graph serve`)
+- [ ] Handed off to the command centre (Phase 3) — endpoint ready, integration pending
+- [ ] (Optional) Re-validated on real Elliptic++ data once dataset access is sorted
 
 ## ⚠️ Note: Prayag also co-owns the command-centre Gen AI fusion layer
 See [`../command-centre/README.md`](../command-centre/README.md). Hand this module's output off

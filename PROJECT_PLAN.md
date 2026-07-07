@@ -153,6 +153,38 @@ and note access in [`docs/`](docs/).
 
 > Append newest entries at the top. Format: `### YYYY-MM-DD — <who> — <what>`
 
+### 2026-07-07 (later) — Prayag — Fusion layer + command-centre backend + geospatial DONE
+- **Gen AI fusion layer** (`command-centre/fusion/`): deterministic correlation engine
+  (shared district / ≤30km geo / ≤96h temporal evidence) + Claude narrator
+  (`claude-opus-4-8`, structured output) with template fallback — demo never dies without
+  an API key. Reproducible `inputs_hash` audit trail. 6 tests, contract-valid.
+- **Command-centre backend** (`command-centre/backend/`, :8000): single API for the
+  dashboard — ingest endpoints, module health probes, `POST /fuse`, `GET /hotspots`.
+- **Geospatial layer** (`command-centre/geospatial/`): DBSCAN hotspot clustering;
+  `cross_domain=true` hubs = coordinated crime hubs (innovation #3). 4 tests.
+- **Ring-recovery evaluation** added to fraud-graph: **12/12 rings (100%), precision 1.0,
+  recall 0.94** — deck numbers.
+- Elliptic++ public Drive download in progress (AddrAddr edgelist done; wallets_classes
+  pending) → real-data validation next.
+- **Needs Prayag:** ANTHROPIC_API_KEY in `command-centre/fusion/.env` (console.anthropic.com,
+  ~$5 credit is plenty) to light up the live Gen AI narrator.
+- **Remaining for the demo:** dashboard frontend (cards + fusion reveal + crime map),
+  wiring A/B modules when Sudarsan/Adharshan deliver, architecture diagram, demo video.
+
+### 2026-07-07 — Prayag — Fraud Graph module v1 COMPLETE (Phase 2 goal hit on Day 1)
+- Full pipeline working end-to-end: synthetic data → 18 graph features → XGBoost →
+  Louvain ring clustering → contract-validated `fraud_graph.json` → FastAPI on :8003.
+- Synthetic world generator with 3 real laundering topologies (mule chains, smurfing
+  fan-in, round-tripping cycles) **plus legit heavy actors** (merchants, payroll, B2B)
+  so the model must learn behaviour, not "big amount = fraud".
+- Results: AUC 0.998, AP 0.958, precision 0.94 @ recall 0.76 (precision-first threshold);
+  ring recovery 12/12, 94% of illicit accounts.
+- 4 pytest tests incl. end-to-end contract compliance — all green.
+- Pushed to fork + upstream (sudarsan2507-hue/Aegis). **Command centre can integrate
+  against `GET :8003/fraud-graph` or `output/fraud_graph.json` today.**
+- **Postponed for Prayag's return:** Kaggle/Drive access for real Elliptic++ validation
+  (pipeline has an `elliptic` loader ready; drop files in `data/elliptic/`).
+
 ### 2026-07-07 — Sudarsan — Fraud Shield v1 working end-to-end
 - Confirmed dataset access (Phase 1 ✔): UCI SMS Spam Collection downloads via `data.py`.
 - Built the module on branch `feat/fraud-shield`, all inside `fraud-shield-nlp/`:
