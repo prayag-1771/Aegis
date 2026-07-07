@@ -94,6 +94,9 @@ def compute_features(ds: Dataset, g: nx.MultiDiGraph | None = None) -> pd.DataFr
     # ---- pure graph-structure features ----
     simple = nx.DiGraph(g)  # collapse parallel edges for structure metrics
     und = simple.to_undirected()
+    # Self-payments exist in real data but break k-core/clustering; drop them
+    # from the *structure* view only (flow aggregates above still count them).
+    und.remove_edges_from(nx.selfloop_edges(und))
     degree_centrality = nx.degree_centrality(simple)
     pagerank = nx.pagerank(simple, alpha=0.85)
     clustering = nx.clustering(und)

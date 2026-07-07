@@ -94,6 +94,40 @@ def generate(cfg: SynthConfig | None = None) -> SynthResult:
         ts = EPOCH + timedelta(minutes=rng.uniform(0, 30 * 24 * 60))
         add_tx(legit_ids[u], legit_ids[v], amount, ts)
 
+    # ------------------------------------------------- legit high-value actors
+    # Without these, "big amount == fraud" would be trivially learnable and the
+    # model would never need graph features. Real payment networks have heavy
+    # legitimate flows: merchants (fan-in!), payroll (fan-out!), B2B transfers
+    # in the same lakh-range as laundering. The classifier must separate fraud
+    # by *behaviour* (speed, throughput, round amounts), not by amount.
+    n_merchants = max(10, cfg.n_legit_accounts // 100)
+    merchants = rng.sample(legit_ids, n_merchants * 3)
+    for m in merchants[:n_merchants]:
+        # Merchant fan-in: many customers, organic timing, non-round amounts.
+        for _ in range(rng.randint(40, 120)):
+            c = rng.choice(legit_ids)
+            ts = EPOCH + timedelta(minutes=rng.uniform(0, 30 * 24 * 60))
+            add_tx(c, m, rng.lognormvariate(8.0, 1.0), ts)
+        # Merchant settles out to suppliers in large sums.
+        for _ in range(rng.randint(4, 10)):
+            s = rng.choice(legit_ids)
+            ts = EPOCH + timedelta(days=rng.uniform(1, 29))
+            add_tx(m, s, rng.uniform(200_000, 1_200_000), ts)
+    for p in merchants[n_merchants : n_merchants * 2]:
+        # Payroll fan-out: monthly bursts of similar salaries (legit "burst"!).
+        employees = rng.sample(legit_ids, rng.randint(15, 40))
+        for month_day in (1, 30):
+            base = EPOCH + timedelta(days=month_day - 1)
+            for e in employees:
+                ts = base + timedelta(hours=rng.uniform(0, 8))
+                add_tx(p, e, rng.uniform(25_000, 90_000), ts)
+    for b in merchants[n_merchants * 2 :]:
+        # B2B: few counterparties, large invoices, slow cadence.
+        partners = rng.sample(legit_ids, rng.randint(2, 5))
+        for _ in range(rng.randint(3, 8)):
+            ts = EPOCH + timedelta(days=rng.uniform(0, 28))
+            add_tx(b, rng.choice(partners), rng.uniform(150_000, 900_000), ts)
+
     # ---------------------------------------------------------------- fraud rings
     topologies = ["chain", "fan_in", "cycle"]
     for r in range(cfg.n_rings):
