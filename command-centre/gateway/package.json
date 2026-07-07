@@ -1,0 +1,16 @@
+{
+  "name": "aegis-gateway",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Express 5 API gateway — public front door for the citizen websites, proxy for the dashboard",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  }
+}
