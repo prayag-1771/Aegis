@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aegis Counterfeit Vision — live note scan</title>
+<style>
+  :root {
+    --bg: #0b1020; --panel: #131a2e; --panel-2: #1a2340; --text: #e8ecf6;
+    --muted: #93a0bd; --line: #26304f;
+    --fake: #ff5964; --uncertain: #ffb020; --genuine: #2fbf71; --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header .logo { font-size: 22px; }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 12.5px; }
+  #status {
+    margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--line);
+  }
+  #status.ok { color: var(--genuine); border-color: var(--genuine); }
+  main {
+    flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    padding: 18px 20px; max-width: 1100px; width: 100%; margin: 0 auto;
+  }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .card h2 { font-size: 14px; color: var(--muted); text-transform: uppercase;
+             letter-spacing: .08em; margin-bottom: 12px; }
+  video, #preview {
+    width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 10px; object-fit: contain;
+  }
+  .controls { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  button, label.filebtn {
+    font: inherit; font-weight: 600; padding: 9px 18px; border-radius: 10px; cursor: pointer;
+    background: var(--accent); color: #fff; border: none;
+  }
+  .ghost { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: wait; }
+  input[type=file] { display: none; }
+  .verdict { display: inline-block; font-weight: 700; font-size: 15px; letter-spacing: .06em;
+             text-transform: uppercase; padding: 5px 14px; border-radius: 8px; margin-bottom: 10px; }
+  .verdict.fake { background: rgba(255,89,100,.15); color: var(--fake); border: 1px solid var(--fake); }
+  .verdict.uncertain { background: rgba(255,176,32,.12); color: var(--uncertain); border: 1px solid var(--uncertain); }
+  .verdict.genuine { background: rgba(47,191,113,.12); color: var(--genuine); border: 1px solid var(--genuine); }
+  .confbar { height: 8px; border-radius: 4px; background: var(--panel-2); margin: 10px 0; overflow: hidden; }
+  .confbar > div { height: 100%; border-radius: 4px; transition: width .6s ease; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { font-size: 12px; padding: 3px 10px; border-radius: 999px;
+          background: rgba(255,89,100,.12); border: 1px solid var(--fake); color: var(--fake); }
+  #result .placeholder { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🛡️</span>
+  <div>
+    <h1>Aegis Counterfeit Vision</h1>
+    <div class="sub">Hold a note to the camera or upload a photo — feature-level fake detection</div>
+  </div>
+  <span id="status">connecting…</span>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Note capture</h2>
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas" hidden></canvas>
+    <div class="controls">
+      <button id="startCam" class="ghost">Enable camera</button>
+      <button id="scan" disabled>📷 Scan note</button>
+      <label class="filebtn ghost">Upload image<input type="file" id="file" accept="image/*"></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Scan result</h2>
+    <img id="preview" alt="" hidden>
+    <div id="result"><p class="placeholder">No scan yet. Enable the camera and hold a ₹500/₹2000
+      note flat in frame, or upload a photo.</p></div>
+  </div>
+</main>
+
+<script>
+const statusEl = document.getElementById("status");
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const scanBtn = document.getElementById("scan");
+const startBtn = document.getElementById("startCam");
+const fileInput = document.getElementById("file");
+const result = document.getElementById("result");
+const preview = document.getElementById("preview");
+
+const VERDICT_COLOR = { fake: "var(--fake)", uncertain: "var(--uncertain)", genuine: "var(--genuine)" };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+fetch("/health").then(r => r.json()).then(h => {
+  statusEl.textContent = h.model_trained ? `model ready (${h.backbone})` : "model NOT trained";
+  if (h.model_trained) statusEl.classList.add("ok");
+}).catch(() => { statusEl.textContent = "api offline"; });
+
+startBtn.onclick = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    video.srcObject = stream;
+    scanBtn.disabled = false;
+    startBtn.textContent = "Camera on";
+    startBtn.disabled = true;
+  } catch (e) {
+    statusEl.textContent = "camera blocked — use upload";
+  }
+};
+
+function render(r) {
+  const pct = Math.round(r.confidence * 100);
+  const color = VERDICT_COLOR[r.verdict];
+  result.innerHTML = `
+    <span class="verdict ${r.verdict}">${r.verdict}</span>
+    <div class="confbar"><div style="width:${pct}%;background:${color}"></div></div>
+    <div class="meta">confidence ${pct}% · denomination ₹${esc(r.denomination)} · ${esc(r.event_id)}</div>
+    ${r.missing_features.length
+      ? `<div class="meta" style="margin-top:10px">Missing security features:</div>
+         <div class="chips">${r.missing_features.map(f => `<span class="chip">${esc(f)}</span>`).join("")}</div>`
+      : (r.verdict === "genuine" ? `<div class="meta" style="margin-top:10px">All security features present.</div>` : "")}`;
+}
+
+async function analyzeDataUrl(dataUrl) {
+  preview.src = dataUrl;
+  preview.hidden = false;
+  scanBtn.disabled = true;
+  result.innerHTML = `<p class="placeholder">Analysing…</p>`;
+  try {
+    const resp = await fetch("/analyze_b64", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image_b64: dataUrl }),
+    });
+    if (!resp.ok) throw new Error((await resp.json()).detail || resp.statusText);
+    render(await resp.json());
+  } catch (e) {
+    result.innerHTML = `<p class="placeholder" style="color:var(--fake)">Error: ${esc(e.message || e)}</p>`;
+  } finally {
+    scanBtn.disabled = !video.srcObject;
+  }
+}
+
+scanBtn.onclick = () => {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+  analyzeDataUrl(canvas.toDataURL("image/jpeg", 0.92));
+};
+
+fileInput.onchange = () => {
+  const f = fileInput.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => analyzeDataUrl(reader.result);
+  reader.readAsDataURL(f);
+};
+</script>
+</body>
+</html>
