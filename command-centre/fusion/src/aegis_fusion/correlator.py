@@ -24,6 +24,20 @@ from datetime import datetime
 RADIUS_KM = 30.0
 WINDOW_HOURS = 96.0
 
+# Known scam-hub districts (the demo geography every module already uses).
+# Rings carry a district but no coordinates — this lookup puts them on the
+# crime map so a hub can genuinely show all three domains converging.
+DISTRICT_COORDS: dict[str, tuple[float, float]] = {
+    "Jamtara": (23.79, 86.80),
+    "Deoghar": (24.48, 86.70),
+    "Alwar": (27.55, 76.63),
+    "Bharatpur": (27.22, 77.49),
+    "Nuh": (28.10, 77.00),
+    "Chennai Central": (13.08, 80.27),
+    "Mumbai South": (18.93, 72.83),
+    "Delhi East": (28.65, 77.30),
+}
+
 
 @dataclass
 class Link:
@@ -93,6 +107,13 @@ def correlate(
                 {"type": "counterfeit", "district": district or "unknown", "lat": lat, "lon": lon,
                  "weight": float(c.get("confidence", 0.5))}
             )
+    for r in rings:
+        coords = DISTRICT_COORDS.get(r.get("district") or "")
+        if coords:
+            hotspots.append(
+                {"type": "fraud_ring", "district": r["district"], "lat": coords[0],
+                 "lon": coords[1], "weight": float(r.get("risk_score", 0.5))}
+            )
 
     # ---- pairwise district / geo / time correlation ----
     def district_of(obj: dict) -> str | None:
@@ -119,29 +140,35 @@ def correlate(
                      "scam": s["event_id"], "ring": r["ring_id"], "ring_label": r.get("label")}
                 )
 
-        # scam <-> counterfeit: same district, geo proximity, or temporal proximity
+        # scam <-> counterfeit: requires SPATIAL evidence (same district or geo
+        # proximity). Temporal proximity only *strengthens* a spatial match —
+        # on its own it links unrelated events across the country and floods
+        # the package with false positives (the one judged failure mode).
         for c in fake_notes:
             c_district, c_lat, c_lon = _loc(c.get("location_hint"))
             c_time = _ts(c.get("timestamp"))
-            matched = []
+            spatial = []
             if s_district and c_district and s_district == c_district:
-                basis.add("shared_district")
-                matched.append(f"both in {s_district}")
+                spatial.append(f"both in {s_district}")
             if None not in (s_lat, s_lon, c_lat, c_lon):
                 km = _haversine_km(s_lat, s_lon, c_lat, c_lon)
                 if km <= RADIUS_KM:
-                    basis.add("geospatial_overlap")
-                    matched.append(f"{km:.1f} km apart")
+                    spatial.append(f"{km:.1f} km apart")
+            if not spatial:
+                continue
+            matched = list(spatial)
+            basis.add("shared_district" if "both in" in spatial[0] else "geospatial_overlap")
+            if len(spatial) == 2:
+                basis.update(("shared_district", "geospatial_overlap"))
             if s_time and c_time and abs((s_time - c_time).total_seconds()) <= WINDOW_HOURS * 3600:
                 basis.add("temporal_proximity")
                 matched.append("within the same time window")
-            if matched:
-                reason = "counterfeit seizure linked to scam call: " + ", ".join(matched)
-                links.append(Link("counterfeit", c["event_id"], reason))
-                facts["links"].append(
-                    {"kind": "scam-counterfeit", "scam": s["event_id"],
-                     "note": c["event_id"], "evidence": matched}
-                )
+            reason = "counterfeit seizure linked to scam call: " + ", ".join(matched)
+            links.append(Link("counterfeit", c["event_id"], reason))
+            facts["links"].append(
+                {"kind": "scam-counterfeit", "scam": s["event_id"],
+                 "note": c["event_id"], "evidence": matched}
+            )
 
     # counterfeit <-> ring: same district
     for c in fake_notes:
