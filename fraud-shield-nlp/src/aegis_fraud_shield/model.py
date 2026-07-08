@@ -104,12 +104,22 @@ def _pick_threshold(y_true: np.ndarray, y_prob: np.ndarray,
                     min_precision: float, fallback: float) -> float:
     """Highest-recall threshold that keeps precision >= min_precision."""
     precision, recall, thresholds = precision_recall_curve(y_true, y_prob)
-    best, best_recall = fallback, -1.0
+    best, best_recall = None, -1.0
     for i, thr in enumerate(thresholds):
         if precision[i] >= min_precision and recall[i] > best_recall:
             best_recall = recall[i]
             best = float(thr)
-    return best
+    if best is not None:
+        return best
+    # No threshold reaches min_precision — warn instead of silently returning the
+    # caller's fallback, so a precision-guarantee miss is visible.
+    import warnings
+
+    warnings.warn(
+        f"no threshold reaches precision {min_precision:.2f}; using fallback {fallback}.",
+        stacklevel=2,
+    )
+    return fallback
 
 
 @dataclass

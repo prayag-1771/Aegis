@@ -156,6 +156,10 @@ def _parse_json_narrative(text: str) -> Narrative:
         text = text.split("\n", 1)[1] if "\n" in text else text
         text = text.rsplit("```", 1)[0] if "```" in text else text
     start, end = text.find("{"), text.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        # No JSON object in the response — raise a clear error instead of slicing
+        # garbage. narrate_safe() catches this and falls through to the next provider.
+        raise ValueError(f"no JSON object in narrator response: {text[:120]!r}")
     return Narrative(**_json.loads(text[start : end + 1]))
 
 

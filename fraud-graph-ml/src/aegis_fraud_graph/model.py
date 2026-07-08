@@ -59,15 +59,30 @@ class TrainReport:
 def _pick_threshold(y_true: np.ndarray, y_prob: np.ndarray, min_precision: float = 0.90) -> float:
     """Highest-recall threshold that still keeps precision >= min_precision."""
     precision, recall, thresholds = precision_recall_curve(y_true, y_prob)
-    best = 0.5
-    best_recall = -1.0
     # sklearn: precision[i]/recall[i] correspond to predicting positive at
     # score >= thresholds[i] (the final precision=1/recall=0 pair has no threshold).
+    best = None
+    best_recall = -1.0
     for i, thr in enumerate(thresholds):
         if precision[i] >= min_precision and recall[i] > best_recall:
             best_recall = recall[i]
             best = float(thr)
-    return best
+    if best is not None:
+        return best
+    # No threshold reaches min_precision — never silently return 0.5 (which would
+    # break the precision guarantee). Fall back to the highest-precision threshold
+    # available and warn, so the miss is visible instead of hidden.
+    import warnings
+
+    if len(thresholds) == 0:
+        return 0.5
+    best_i = int(np.argmax(precision[: len(thresholds)]))
+    warnings.warn(
+        f"no threshold reaches precision {min_precision:.2f}; falling back to the "
+        f"highest-precision threshold (precision={precision[best_i]:.3f}).",
+        stacklevel=2,
+    )
+    return float(thresholds[best_i])
 
 
 def train(

@@ -109,7 +109,7 @@ async def analyze_scam(body: dict) -> dict:
             r.raise_for_status()
     except httpx.HTTPError as exc:
         raise HTTPException(502, f"fraud-shield service unreachable: {exc}") from exc
-    event = r.json()
+    event = _validated("scam_detection", r.json())
     store.add_scam(event)
     return event
 
@@ -126,7 +126,7 @@ async def analyze_counterfeit(body: dict) -> dict:
             r.raise_for_status()
     except httpx.HTTPError as exc:
         raise HTTPException(502, f"counterfeit-vision service unreachable: {exc}") from exc
-    event = r.json()
+    event = _validated("counterfeit", r.json())
     store.add_counterfeit(event)
     return event
 
