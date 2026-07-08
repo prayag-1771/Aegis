@@ -58,6 +58,14 @@ app.post("/api/report/counterfeit", (req, res) => {
   forward(res, "/ingest/counterfeit", { method: "POST", body: e });
 });
 
+// ---- live analysis (wow moments 1 & 2): backend proxies to Fraud Shield / Counterfeit Vision ----
+app.post("/api/analyze/scam", (req, res) =>
+  forward(res, "/analyze/scam", { method: "POST", body: req.body ?? {} })
+);
+app.post("/api/analyze/counterfeit", (req, res) =>
+  forward(res, "/analyze/counterfeit", { method: "POST", body: req.body ?? {} })
+);
+
 // ---- dashboard reads / actions ----
 app.get("/api/health", (_req, res) => forward(res, "/health"));
 app.get("/api/events", (_req, res) => forward(res, "/events"));
