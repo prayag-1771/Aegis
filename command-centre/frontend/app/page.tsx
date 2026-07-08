@@ -30,7 +30,7 @@ export default function Page() {
 
   const lastFusion = fusion ?? events?.last_fusion ?? null;
   const alertCount =
-    (events?.scams.filter((s) => s.verdict !== "safe").length ?? 0) +
+    (events?.scams.filter((s) => s.verdict !== "legit").length ?? 0) +
     (events?.counterfeits.filter((c) => c.verdict === "fake").length ?? 0) +
     (hotspots?.n_cross_domain ?? 0);
 

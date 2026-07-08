@@ -14,7 +14,7 @@ export interface ScamEvent {
   source: string;
   timestamp: string;
   raw_text: string;
-  verdict: "scam" | "suspicious" | "safe";
+  verdict: "scam" | "suspicious" | "legit";
   risk_score: number;
   scam_type?: string;
   markers?: string[];

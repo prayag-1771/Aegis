@@ -16,7 +16,7 @@ export default function WarningPanel({
   onLocate: (p: { lat: number; lon: number }) => void;
 }) {
   const crossHubs = (hotspots?.hubs ?? []).filter((h) => h.cross_domain);
-  const scams = (events?.scams ?? []).filter((s) => s.verdict !== "safe").slice(-3).reverse();
+  const scams = (events?.scams ?? []).filter((s) => s.verdict !== "legit").slice(-3).reverse();
   const notes = (events?.counterfeits ?? []).filter((c) => c.verdict === "fake").slice(-3).reverse();
 
   return (
