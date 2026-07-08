@@ -48,8 +48,8 @@ command-centre/fusion/output/
 
 # --- Personal learning notes & work log (local only, never commit) ---
 learning.md
-BUG_REPORT.md
 WORKLOG.md
+BUG_REPORT.md
 
 # --- OS / editor ---
 .DS_Store

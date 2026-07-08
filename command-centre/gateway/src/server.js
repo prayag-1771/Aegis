@@ -76,19 +76,14 @@ app.post("/api/report/counterfeit", (req, res) => {
   forward(res, "/ingest/counterfeit", { method: "POST", body: e });
 });
 
-// ---- live-demo analyze paths (text/image -> module -> auto-ingest) ----
-app.post("/api/analyze/scam", (req, res) => {
-  const body = req.body ?? {};
-  if (!body.text) return res.status(422).json({ error: "body must contain 'text'" });
-  forward(res, "/analyze/scam", { method: "POST", body });
-});
-
-app.post("/api/analyze/counterfeit", (req, res) => {
-  const body = req.body ?? {};
-  if (!body.image_b64)
-    return res.status(422).json({ error: "body must contain 'image_b64'" });
-  forward(res, "/analyze/counterfeit", { method: "POST", body });
-});
+// ---- live analysis (wow moments 1 & 2): backend proxies to Fraud Shield / Counterfeit Vision ----
+// (body validation happens at the backend /analyze/* handlers)
+app.post("/api/analyze/scam", (req, res) =>
+  forward(res, "/analyze/scam", { method: "POST", body: req.body ?? {} })
+);
+app.post("/api/analyze/counterfeit", (req, res) =>
+  forward(res, "/analyze/counterfeit", { method: "POST", body: req.body ?? {} })
+);
 
 // ---- dashboard reads / actions ----
 app.get("/api/health", (_req, res) => forward(res, "/health"));

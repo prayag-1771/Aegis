@@ -109,31 +109,23 @@ export async function runFusion(): Promise<FusionOutput> {
   return r.json();
 }
 
-/** Live wow moment #1: analyse a scam message/transcript; auto-ingested for the map + fusion. */
-export async function analyzeScam(
-  text: string,
-  source = "manual_demo",
-  location_hint?: LocationHint
-): Promise<ScamEvent> {
-  const r = await fetch(`${API_BASE}/api/analyze/scam`, {
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const r = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ text, source, location_hint }),
+    body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`scam analysis failed: ${r.status}`);
+  if (!r.ok) throw new Error(`${path} -> ${r.status}`);
   return r.json();
 }
 
-/** Live wow moment #2: analyse a note photo (data URL / base64); auto-ingested. */
-export async function analyzeCounterfeit(
-  image_b64: string,
-  location_hint?: LocationHint
-): Promise<CounterfeitEvent> {
-  const r = await fetch(`${API_BASE}/api/analyze/counterfeit`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ image_b64, location_hint }),
-  });
-  if (!r.ok) throw new Error(`note analysis failed: ${r.status}`);
-  return r.json();
-}
+/** Wow moment #1: analyse text via Fraud Shield and auto-ingest into the command centre. */
+export const analyzeScam = (
+  text: string,
+  source = "manual_demo",
+  location_hint?: LocationHint | null
+) => post<ScamEvent>("/api/analyze/scam", { text, source, location_hint });
+
+/** Wow moment #2: analyse a note photo (data URL) and auto-ingest. */
+export const analyzeCounterfeit = (image_b64: string, location_hint?: LocationHint | null) =>
+  post<CounterfeitEvent>("/api/analyze/counterfeit", { image_b64, location_hint });

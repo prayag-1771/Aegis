@@ -156,6 +156,23 @@ and note access in [`docs/`](docs/).
 
 > Append newest entries at the top. Format: `### YYYY-MM-DD — <who> — <what>`
 
+### 2026-07-08 — Pushkar — Upstream merge + dashboard consolidation
+- Merged `upstream/main` (Sudarsan's bug-review pass, Prayag's Elliptic++ validation +
+  frontend, Counterfeit Vision v1) into my fork's line. **Two dashboards had been built in
+  parallel** — Prayag's react-leaflet variant (while covering) and my MapLibre/Express-gateway
+  build. Consolidated on **mine** per the team stack decision (Next + Express, reference-image
+  UI); removed only the react-leaflet variant files (`app/components/CrimeMap.tsx`,
+  `next.config.ts`, react-leaflet deps). **Everything else from upstream is kept untouched**:
+  backend `/analyze/scam` + `/analyze/counterfeit` live-analysis endpoints, hardened
+  correlator (spatial-evidence requirement, rings on map), counterfeit-vision v1,
+  fraud-shield v1 + demo UIs.
+- Gateway now proxies the live-analysis endpoints (`POST /api/analyze/scam`,
+  `POST /api/analyze/counterfeit`) so the wow-moment flows work through the public entry
+  point too; dashboard API client extended to match.
+- **Second sync same day:** Prayag had independently adopted this dashboard on `main`
+  (archiving his Leaflet build at `command-centre/frontend-leaflet/`); merged his Gen AI
+  failover + self-improving-classifier work back in — histories now fully converged.
+
 ### 2026-07-08 — Prayag — Branch merge: adopted Pushkar's MapLibre dashboard + Express gateway
 - Merged `master` into `main` (Sudarsan's repo had 3 branches). `feat/fraud-shield` was already
   fully in `main` (no-op). `master` carried Pushkar's Next 15 + MapLibre dashboard, Express 5
@@ -181,6 +198,7 @@ and note access in [`docs/`](docs/).
   criteria mapping) and `docs/demo-script.md` (6-min run-of-show with fallbacks + Q&A ammo).
 - **Keys:** Groq/Gemini in gitignored `command-centre/fusion/.env`. Gemini currently 429
   (free-tier quota) but authenticates — failover handles it.
+>>>>>>> upstream/main
 
 ### 2026-07-07 (night) — Sudarsan — Full-codebase bug review + remediation pass
 - Reviewed all four modules end-to-end; fixed the demo-critical integration gaps:
