@@ -39,7 +39,7 @@ def run_detection(
 
     out_path = out_path or (OUTPUT_DIR / "fraud_graph.json")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(output.model_dump_json(indent=2))
+    out_path.write_text(output.model_dump_json(indent=2), encoding="utf-8")
     return output
 
 

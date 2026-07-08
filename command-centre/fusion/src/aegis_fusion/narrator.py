@@ -115,7 +115,7 @@ class TemplateNarrator:
 
 
 class ClaudeNarrator:
-    """The real Gen AI narrator."""
+    """Anthropic narrator — first choice when ANTHROPIC_API_KEY is set."""
 
     name = f"{MODEL}+prompt-v{PROMPT_VERSION}"
 
@@ -140,6 +140,85 @@ class ClaudeNarrator:
         return response.parsed_output
 
 
+# JSON-only instruction appended for providers without native pydantic parsing.
+_JSON_INSTRUCTION = (
+    "\n\nRespond with ONLY a JSON object, no markdown fences, matching exactly:\n"
+    '{"summary": "<2-4 sentence summary>", "recommended_actions": ["<action>", ...]}'
+)
+
+
+def _parse_json_narrative(text: str) -> Narrative:
+    import json as _json
+
+    text = text.strip()
+    if text.startswith("```"):  # tolerate fenced output anyway
+        text = text.strip("`")
+        text = text.split("\n", 1)[1] if "\n" in text else text
+        text = text.rsplit("```", 1)[0] if "```" in text else text
+    start, end = text.find("{"), text.rfind("}")
+    return Narrative(**_json.loads(text[start : end + 1]))
+
+
+class GroqNarrator:
+    """Groq-hosted open model (OpenAI-compatible API). Fast + free tier."""
+
+    GROQ_MODEL = "llama-3.3-70b-versatile"
+    name = f"groq/{GROQ_MODEL}+prompt-v{PROMPT_VERSION}"
+
+    def __init__(self) -> None:
+        self._key = os.environ["GROQ_API_KEY"]
+
+    def narrate(self, facts: dict) -> Narrative:
+        import httpx
+
+        r = httpx.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {self._key}"},
+            json={
+                "model": self.GROQ_MODEL,
+                "temperature": 0.2,
+                "max_tokens": 1024,
+                "response_format": {"type": "json_object"},
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT + _JSON_INSTRUCTION},
+                    {"role": "user", "content": "FACTS:\n" + _facts_block(facts)},
+                ],
+            },
+            timeout=30.0,
+        )
+        r.raise_for_status()
+        return _parse_json_narrative(r.json()["choices"][0]["message"]["content"])
+
+
+class GeminiNarrator:
+    """Google Gemini via the Generative Language REST API."""
+
+    GEMINI_MODEL = "gemini-2.0-flash"
+    name = f"gemini/{GEMINI_MODEL}+prompt-v{PROMPT_VERSION}"
+
+    def __init__(self) -> None:
+        self._key = os.environ["GEMINI_API_KEY"]
+
+    def narrate(self, facts: dict) -> Narrative:
+        import httpx
+
+        r = httpx.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{self.GEMINI_MODEL}:generateContent",
+            headers={"x-goog-api-key": self._key},
+            json={
+                "system_instruction": {"parts": [{"text": SYSTEM_PROMPT + _JSON_INSTRUCTION}]},
+                "contents": [{"parts": [{"text": "FACTS:\n" + _facts_block(facts)}]}],
+                "generationConfig": {
+                    "temperature": 0.2,
+                    "responseMimeType": "application/json",
+                },
+            },
+            timeout=30.0,
+        )
+        r.raise_for_status()
+        return _parse_json_narrative(r.json()["candidates"][0]["content"]["parts"][0]["text"])
+
+
 def _load_dotenv() -> None:
     """Load command-centre/fusion/.env (gitignored) if present — lets Prayag
     drop ANTHROPIC_API_KEY in a file instead of setting a system env var."""
@@ -155,12 +234,41 @@ def _load_dotenv() -> None:
             os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
-def get_narrator() -> TemplateNarrator | ClaudeNarrator:
-    """Pick the best available narrator. Never raises."""
+def get_narrator() -> TemplateNarrator | ClaudeNarrator | GroqNarrator | GeminiNarrator:
+    """Pick the best available narrator: Claude > Groq > Gemini > template.
+    Construction never raises; call-time failures are handled by narrate_safe."""
     _load_dotenv()
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        try:
-            return ClaudeNarrator()
-        except Exception:
-            pass
+    for env_key, cls in (
+        ("ANTHROPIC_API_KEY", ClaudeNarrator),
+        ("GROQ_API_KEY", GroqNarrator),
+        ("GEMINI_API_KEY", GeminiNarrator),
+    ):
+        if os.environ.get(env_key):
+            try:
+                return cls()
+            except Exception:
+                continue
     return TemplateNarrator()
+
+
+def narrate_safe(facts: dict) -> tuple[Narrative, str]:
+    """Run the best narrator; on ANY failure fall through the chain down to the
+    template. Returns (narrative, narrator_name) — the demo can never die."""
+    _load_dotenv()
+    chain: list = []
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        chain.append(ClaudeNarrator)
+    if os.environ.get("GROQ_API_KEY"):
+        chain.append(GroqNarrator)
+    if os.environ.get("GEMINI_API_KEY"):
+        chain.append(GeminiNarrator)
+    chain.append(TemplateNarrator)
+    for cls in chain:
+        try:
+            narrator = cls()
+            return narrator.narrate(facts), narrator.name
+        except Exception:
+            continue
+    # unreachable — TemplateNarrator cannot fail — but keep a hard floor anyway
+    t = TemplateNarrator()
+    return t.narrate(facts), t.name

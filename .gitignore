@@ -43,6 +43,8 @@ dist/
 !*/models/.gitkeep
 # Runtime note captures from the counterfeit demo UI (per-scan artifacts).
 */output/captures/
+# Fusion runtime artifacts (LLM-generated eval text, per-run reports) — regenerated on demand.
+command-centre/fusion/output/
 
 # --- Personal learning notes & work log (local only, never commit) ---
 learning.md

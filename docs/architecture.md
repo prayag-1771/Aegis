@@ -61,3 +61,50 @@ flowchart LR
 | Command backend (FastAPI) | 8000 |
 | Express gateway | 4000 |
 | Dashboard (Next.js) | 3000 |
+
+---
+
+## Appendix — detection & fusion internals
+
+> Deeper diagrams from the fusion/detection side (Prayag). The 3-website flow above is the
+> deployment topology; this appendix is what happens *inside* the boxes.
+
+## The fusion pipeline (innovation #1)
+
+```mermaid
+sequenceDiagram
+    participant D as Dashboard (:3000)
+    participant B as Backend (:8000)
+    participant C as Correlator (deterministic)
+    participant L as LLM narrator (Groq/Claude)
+
+    D->>B: POST /fuse
+    B->>C: scams + counterfeits + fraud_graph
+    C->>C: evidence links: shared_district / geo ≤30km / time ≤96h
+    C->>C: threat level = # distinct domains linked (3=critical)
+    C->>L: FACTS only (established links, never raw guesses)
+    L->>L: narrate + recommend actions (JSON-constrained)
+    L->>B: summary + actions
+    B->>D: fusion_output.json (contract-valid, audit hash)
+    Note over C,L: LLM cannot create links — only narrate them.<br/>audit_trail.inputs_hash makes every package reproducible.
+```
+
+## Why this architecture wins the judged criteria
+
+| Criterion | Architectural answer |
+|---|---|
+| **Innovation** | Fusion of 3 independent detectors; deterministic-evidence + LLM-narration split; cross-domain DBSCAN hubs; LLM red-team self-improvement loop |
+| **Auditability / legal admissibility** | Marker evidence spans (NLP), per-feature check scores (CV), feature importances (graph), correlation basis + reproducible `inputs_hash` (fusion) |
+| **Low false positives** | Every module thresholds precision-first from its PR curve; `legit`/`genuine` verdicts are excluded from correlation entirely |
+| **Scalability** | Modules are independent services speaking versioned JSON contracts — swap any model without touching the rest |
+| **Resilience (demo!)** | LLM failover chain ends in a deterministic template; dashboard degrades gracefully per-module |
+
+## Port map
+
+| Service | Port | Owner |
+|---|---|---|
+| Fraud Shield API + chat UI | 8001 | Sudarsan |
+| Counterfeit Vision API + camera UI | 8002 | Adharshan |
+| Fraud Graph API | 8003 | Prayag |
+| Command-centre backend | 8000 | Pushkar/Prayag |
+| Dashboard (Next.js) | 3000 | Pushkar/Prayag |

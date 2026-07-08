@@ -1,0 +1,182 @@
+[
+  {
+    "text": "This is Officer Sharma from the Cyber Cell. Your SIM card has been linked to a fraudulent transaction; we need you to verify your identity on a secure video call.",
+    "label": 1,
+    "origin": "llm_digital_arrest",
+    "group": "llm_digital_arrest_01"
+  },
+  {
+    "text": "Our team has been tracking a tax evasion case, and your name has come up in the investigation. We need to discuss this further on a video call.",
+    "label": 1,
+    "origin": "llm_digital_arrest",
+    "group": "llm_digital_arrest_03"
+  },
+  {
+    "text": "We have reason to believe your bank account has been used for money laundering. Please join a secure video call to verify your account details and avoid account freezing.",
+    "label": 1,
+    "origin": "llm_digital_arrest",
+    "group": "llm_digital_arrest_05"
+  },
+  {
+    "text": "Our department has received a report of your involvement in a cryptocurrency scam. We request your presence on a video conference to investigate this matter further.",
+    "label": 1,
+    "origin": "llm_digital_arrest",
+    "group": "llm_digital_arrest_07"
+  },
+  {
+    "text": "A case of identity theft has been registered against you at our police station. We need to verify your identity through a video call to proceed with the investigation.",
+    "label": 1,
+    "origin": "llm_digital_arrest",
+    "group": "llm_digital_arrest_09"
+  },
+  {
+    "text": "The Central Bureau of Investigation is investigating a case of online fraud, and your name has surfaced during the investigation. We need you to join a video call to provide your statement and cooperate with the investigation.",
+    "label": 1,
+    "origin": "llm_digital_arrest",
+    "group": "llm_digital_arrest_11"
+  },
+  {
+    "text": "Aapka SBI khata band ho jayega agar aap apne KYC ko jaldi update nahi karte. Link: http://sbi.xyz/1234",
+    "label": 1,
+    "origin": "llm_kyc_freeze",
+    "group": "llm_kyc_freeze_01"
+  },
+  {
+    "text": "ICICI Bank account holders: Your account will be suspended if you dont update your PAN card details within 24 hours. Click: https://icici.click/panupdate",
+    "label": 1,
+    "origin": "llm_kyc_freeze",
+    "group": "llm_kyc_freeze_03"
+  },
+  {
+    "text": "PNB account holders: Verify your Aadhaar card details to avoid account suspension. Urgent: https://pnb.in/aadhaarverify",
+    "label": 1,
+    "origin": "llm_kyc_freeze",
+    "group": "llm_kyc_freeze_05"
+  },
+  {
+    "text": "Canara Bank account holders: Re-verify your KYC details to avoid account blockage. Link: https://canara.in/kycreverify",
+    "label": 1,
+    "origin": "llm_kyc_freeze",
+    "group": "llm_kyc_freeze_07"
+  },
+  {
+    "text": "Yes Bank: Update your PAN card details immediately to avoid account suspension. Click: https://yesbank.in/panupdate123",
+    "label": 1,
+    "origin": "llm_kyc_freeze",
+    "group": "llm_kyc_freeze_09"
+  },
+  {
+    "text": "Aapke Union Bank of India account ko suspend kiya jayega agar aap apne PAN ko jaldi sahi nahi karte. Link: https://unionbank.xyz/panupdate",
+    "label": 1,
+    "origin": "llm_kyc_freeze",
+    "group": "llm_kyc_freeze_11"
+  },
+  {
+    "text": "Join our exclusive crypto group and double your Bitcoin in 24 hours!",
+    "label": 1,
+    "origin": "llm_investment",
+    "group": "llm_investment_01"
+  },
+  {
+    "text": "Invest in our revolutionary AI-powered trading platform and get 50% monthly returns!",
+    "label": 1,
+    "origin": "llm_investment",
+    "group": "llm_investment_03"
+  },
+  {
+    "text": "Double your money in 48 hours with our proven crypto trading strategy!",
+    "label": 1,
+    "origin": "llm_investment",
+    "group": "llm_investment_05"
+  },
+  {
+    "text": "Don't miss out on this opportunity to make 5x your investment in just one month!",
+    "label": 1,
+    "origin": "llm_investment",
+    "group": "llm_investment_07"
+  },
+  {
+    "text": "Join our VIP trading group and get access to exclusive stock tips and 20% daily returns!",
+    "label": 1,
+    "origin": "llm_investment",
+    "group": "llm_investment_09"
+  },
+  {
+    "text": "Make \u20b91 lakh in just one week with our guaranteed trading formula, limited spots available!",
+    "label": 1,
+    "origin": "llm_investment",
+    "group": "llm_investment_11"
+  },
+  {
+    "text": "Get paid Rs. 1000 for each YouTube video you like and share, join our Telegram group to learn more",
+    "label": 1,
+    "origin": "llm_job_offer",
+    "group": "llm_job_offer_01"
+  },
+  {
+    "text": "Become a social media influencer and earn Rs. 1 lakh monthly, join our team by paying a one-time fee of Rs. 2000",
+    "label": 1,
+    "origin": "llm_job_offer",
+    "group": "llm_job_offer_03"
+  },
+  {
+    "text": "Join our online task completion platform, earn Rs. 500 daily, and get a bonus of Rs. 5000 on completing 10 tasks",
+    "label": 1,
+    "origin": "llm_job_offer",
+    "group": "llm_job_offer_05"
+  },
+  {
+    "text": "Telegram online job, earn Rs. 30,000 monthly, pay Rs. 500 as registration fee and get started",
+    "label": 1,
+    "origin": "llm_job_offer",
+    "group": "llm_job_offer_07"
+  },
+  {
+    "text": "Like and earn, get paid Rs. 500 for every 100 likes on our YouTube video, join our Telegram group to learn more",
+    "label": 1,
+    "origin": "llm_job_offer",
+    "group": "llm_job_offer_09"
+  },
+  {
+    "text": "Make money online by completing tasks, earn Rs. 1000 daily, and get a bonus of Rs. 2000 on completing 5 tasks",
+    "label": 1,
+    "origin": "llm_job_offer",
+    "group": "llm_job_offer_11"
+  },
+  {
+    "text": "Report to PS Sector 19 for passport verification on 25th at 10 AM.",
+    "label": 0,
+    "origin": "llm_legit",
+    "group": "llm_legit_01"
+  },
+  {
+    "text": "Your Amazon order has been shipped via Delhivery. Tracking ID: DLH123456",
+    "label": 0,
+    "origin": "llm_legit",
+    "group": "llm_legit_03"
+  },
+  {
+    "text": "PNB bank: Your account is debited with Rs 1000. Ref no: PNB123456",
+    "label": 0,
+    "origin": "llm_legit",
+    "group": "llm_legit_05"
+  },
+  {
+    "text": "LPG cylinder delivery scheduled for today between 10 AM and 1 PM.",
+    "label": 0,
+    "origin": "llm_legit",
+    "group": "llm_legit_07"
+  },
+  {
+    "text": "Please collect your driving license from RTO office, Sector 12, Chandigarh.",
+    "label": 0,
+    "origin": "llm_legit",
+    "group": "llm_legit_09"
+  },
+  {
+    "text": "Your railway ticket PNR No. 1234567890 has been confirmed for travel on 1st Aug.",
+    "label": 0,
+    "origin": "llm_legit",
+    "group": "llm_legit_11"
+  }
+]

@@ -70,11 +70,35 @@ def load_sms_spam() -> pd.DataFrame:
     return df[["text", "label", "origin", "group"]]
 
 
+def load_extra_corpus() -> pd.DataFrame | None:
+    """Opt-in augmentation hook (self-improving classifier, innovation #2).
+
+    Any CSV dropped into data/extra_corpus/ with columns text,label,origin,group
+    is merged into training — e.g. LLM-generated scam variants written by the
+    command-centre fusion layer (aegis_fusion.self_improve). Absent dir = no-op.
+    """
+    extra_dir = DATA_DIR / "extra_corpus"
+    if not extra_dir.is_dir():
+        return None
+    frames = []
+    for csv in sorted(extra_dir.glob("*.csv")):
+        df = pd.read_csv(csv)
+        missing = {"text", "label", "origin", "group"} - set(df.columns)
+        if missing:
+            raise ValueError(f"{csv} missing columns: {missing}")
+        frames.append(df[["text", "label", "origin", "group"]])
+    return pd.concat(frames, ignore_index=True) if frames else None
+
+
 def load_training_frame(cfg: CorpusConfig | None = None) -> pd.DataFrame:
-    """UCI + synthetic corpus, shuffled deterministically."""
+    """UCI + synthetic corpus (+ optional extra_corpus), shuffled deterministically."""
     cfg = cfg or CorpusConfig()
     uci = load_sms_spam()
     synth = generate_corpus(cfg)
-    frame = pd.concat([uci, synth], ignore_index=True)
+    parts = [uci, synth]
+    extra = load_extra_corpus()
+    if extra is not None:
+        parts.append(extra)
+    frame = pd.concat(parts, ignore_index=True)
     frame = frame.drop_duplicates(subset="text").reset_index(drop=True)
     return frame.sample(frac=1.0, random_state=cfg.seed).reset_index(drop=True)

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-07-07T13:21:56.354377+00:00",
-  "summary": "Threat level CRITICAL: an active scam call is linked to a fraud ring operating in Jamtara and a counterfeit note was seized in the same area. Overlapping signals across independent detection systems indicate a coordinated operation.",
+  "generated_at": "2026-07-07T18:17:49.146552+00:00",
+  "summary": "A scam call detected in Jamtara is linked to a round-tripping cycle fraud ring and two layering chain fraud rings, all active in Jamtara. A counterfeit ₹500 note was also seized in Jamtara, which is connected to the same scam call and the three fraud rings. The signals suggest a significant fraudulent activity in Jamtara.",
   "threat_level": "critical",
   "linked_signals": [
     {
@@ -61,10 +61,10 @@
     "temporal_proximity"
   ],
   "recommended_actions": [
-    "Request account freezes for 5 accounts in ring_09 (round-tripping cycle).",
-    "Notify the telecom provider to flag/block the originating number.",
-    "Alert bank branches in the affected district to re-verify deposits.",
-    "Escalate the correlated intelligence package to the district cybercrime cell."
+    "Freeze accounts linked to the scam call and fraud rings in Jamtara",
+    "Alert bank branches in Jamtara about the counterfeit ₹500 note",
+    "Notify the telecom provider about the scam call",
+    "Escalate the case to the cybercrime cell for further investigation"
   ],
   "map_hotspots": [
     {
@@ -80,10 +80,94 @@
       "lat": 23.79,
       "lon": 86.81,
       "weight": 0.91
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Bharatpur",
+      "lat": 27.22,
+      "lon": 77.49,
+      "weight": 0.9997
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Alwar",
+      "lat": 27.55,
+      "lon": 76.63,
+      "weight": 0.9995
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Alwar",
+      "lat": 27.55,
+      "lon": 76.63,
+      "weight": 0.9892
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Alwar",
+      "lat": 27.55,
+      "lon": 76.63,
+      "weight": 0.9995
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Alwar",
+      "lat": 27.55,
+      "lon": 76.63,
+      "weight": 0.9998
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Alwar",
+      "lat": 27.55,
+      "lon": 76.63,
+      "weight": 0.9991
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Bharatpur",
+      "lat": 27.22,
+      "lon": 77.49,
+      "weight": 0.9988
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Deoghar",
+      "lat": 24.48,
+      "lon": 86.7,
+      "weight": 0.9944
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Jamtara",
+      "lat": 23.79,
+      "lon": 86.8,
+      "weight": 0.9998
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Chennai Central",
+      "lat": 13.08,
+      "lon": 80.27,
+      "weight": 0.9971
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Jamtara",
+      "lat": 23.79,
+      "lon": 86.8,
+      "weight": 0.9994
+    },
+    {
+      "type": "fraud_ring",
+      "district": "Jamtara",
+      "lat": 23.79,
+      "lon": 86.8,
+      "weight": 0.9994
     }
   ],
   "audit_trail": {
-    "model": "template-fallback",
+    "model": "groq/llama-3.3-70b-versatile+prompt-v1.0",
     "inputs_hash": "c771971ed82fe00d",
     "prompt_version": "1.0"
   }

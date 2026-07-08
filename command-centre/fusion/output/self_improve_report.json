@@ -1,0 +1,28 @@
+{
+  "protocol": "eval half never trained on; two families brand-new to the model",
+  "n_eval": 30,
+  "n_augmentation_rows": 30,
+  "before": {
+    "scam_recall": 0.7917,
+    "legit_accuracy": 0.1667,
+    "by_family": {
+      "llm_digital_arrest": 1.0,
+      "llm_investment": 0.5,
+      "llm_job_offer": 0.8333,
+      "llm_kyc_freeze": 0.8333,
+      "llm_legit": 0.1667
+    }
+  },
+  "after": {
+    "scam_recall": 0.6667,
+    "legit_accuracy": 1.0,
+    "by_family": {
+      "llm_digital_arrest": 0.8333,
+      "llm_investment": 0.5,
+      "llm_job_offer": 0.6667,
+      "llm_kyc_freeze": 0.6667,
+      "llm_legit": 1.0
+    }
+  },
+  "held_out_roc_auc_after": 0.9923
+}
