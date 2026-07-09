@@ -18,6 +18,17 @@ import WarningPanel from "@/components/WarningPanel";
 
 const CrimeMap = dynamic(() => import("@/components/CrimeMap"), { ssr: false });
 
+export type RingAlert = {
+  id: string;
+  district: string;
+  label: string;
+  size: number;
+  total: number | null;
+  at: string;
+  lat?: number;
+  lon?: number;
+};
+
 const DEMO_DISTRICT_COORDS: Record<string, { lat: number; lon: number }> = {
   Jamtara: { lat: 23.795, lon: 86.803 },
   Deoghar: { lat: 24.48, lon: 86.7 },
@@ -40,12 +51,14 @@ export default function Page() {
   const [fusion, setFusion] = useState<FusionOutput | null>(null);
   const [focus, setFocus] = useState<{ lat: number; lon: number } | null>(null);
   const [injecting, setInjecting] = useState(false);
+  const [ringAlerts, setRingAlerts] = useState<RingAlert[]>([]);
 
   const lastFusion = fusion ?? events?.last_fusion ?? null;
   const alertCount =
     (events?.scams.filter((s) => s.verdict !== "legit").length ?? 0) +
     (events?.counterfeits.filter((c) => c.verdict === "fake").length ?? 0) +
-    (hotspots?.n_cross_domain ?? 0);
+    (hotspots?.n_cross_domain ?? 0) +
+    ringAlerts.length;
 
   const handleFused = useCallback(
     (f: FusionOutput) => {
@@ -61,7 +74,30 @@ export default function Page() {
     async (district: string, accounts?: string[]) => {
       setInjecting(true);
       try {
+        const before = new Set(
+          (events?.fraud_graph?.rings ?? []).map((r) => [...r.account_ids].sort().join("|"))
+        );
         const graph = await injectDemoRing(district, accounts);
+        const fresh = graph.rings.find(
+          (r) => !before.has([...r.account_ids].sort().join("|"))
+        );
+        if (fresh) {
+          const coords = DEMO_DISTRICT_COORDS[fresh.district ?? district];
+          setRingAlerts((prev) =>
+            [
+              {
+                id: `${Date.now()}`,
+                district: fresh.district ?? district,
+                label: fresh.label ?? "fraud ring",
+                size: fresh.size,
+                total: fresh.total_amount ?? null,
+                at: new Date().toISOString(),
+                ...coords,
+              },
+              ...prev,
+            ].slice(0, 3)
+          );
+        }
         const coords = DEMO_DISTRICT_COORDS[district];
         if (coords) setFocus(coords);
         await Promise.all([refreshEvents(), refreshHotspots()]);
@@ -70,7 +106,7 @@ export default function Page() {
         setInjecting(false);
       }
     },
-    [refreshEvents, refreshHotspots]
+    [events, refreshEvents, refreshHotspots]
   );
 
   return (
@@ -102,7 +138,13 @@ export default function Page() {
         onInjectRing={handleInjectRing}
         injecting={injecting}
       />
-      <WarningPanel events={events} hotspots={hotspots} fusion={lastFusion} onLocate={setFocus} />
+      <WarningPanel
+        events={events}
+        hotspots={hotspots}
+        fusion={lastFusion}
+        ringAlerts={ringAlerts}
+        onLocate={setFocus}
+      />
       <FusionPanel fusion={lastFusion} onFused={handleFused} />
       <VolumePanel events={events} />
     </main>

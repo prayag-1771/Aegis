@@ -1,18 +1,21 @@
 "use client";
 
 import type { EventsResponse, FusionOutput, HotspotsResponse } from "@/lib/api";
-import { clockTime, titleCase } from "@/lib/format";
-import { AlertTriangle, Banknote, MapPin, Phone } from "./Icons";
+import type { RingAlert } from "@/app/page";
+import { clockTime, inr, titleCase } from "@/lib/format";
+import { AlertTriangle, Banknote, MapPin, Network, Phone } from "./Icons";
 
 export default function WarningPanel({
   events,
   hotspots,
   fusion,
+  ringAlerts = [],
   onLocate,
 }: {
   events: EventsResponse | null;
   hotspots: HotspotsResponse | null;
   fusion: FusionOutput | null;
+  ringAlerts?: RingAlert[];
   onLocate: (p: { lat: number; lon: number }) => void;
 }) {
   const crossHubs = (hotspots?.hubs ?? []).filter((h) => h.cross_domain);
@@ -52,6 +55,26 @@ export default function WarningPanel({
             </div>
           </div>
         )}
+
+        {/* freshly caught rings */}
+        {ringAlerts.map((a) => (
+          <button
+            key={a.id}
+            onClick={a.lat != null ? () => onLocate({ lat: a.lat!, lon: a.lon! }) : undefined}
+            className="mt-2 w-full rounded-xl border border-violet-500/30 bg-violet-950/40 p-3 text-left transition hover:border-violet-400/60"
+          >
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-violet-300">
+                <Network className="h-3.5 w-3.5" /> new fraud ring
+              </span>
+              <span className="text-[10px] text-zinc-500">{clockTime(a.at)}</span>
+            </div>
+            <div className="mt-1 text-[11px] text-violet-100/90">
+              {a.district} — {a.label} · {a.size} accounts
+              {a.total != null ? ` · ${inr(a.total)}` : ""}
+            </div>
+          </button>
+        ))}
 
         {/* coordinated hubs */}
         {crossHubs.map((h) => (
@@ -98,7 +121,7 @@ export default function WarningPanel({
               }
             />
           ))}
-          {scams.length === 0 && notes.length === 0 && !fusion && (
+          {scams.length === 0 && notes.length === 0 && !fusion && ringAlerts.length === 0 && (
             <div className="text-[11px] text-zinc-600">no active warnings</div>
           )}
         </div>
