@@ -103,9 +103,21 @@ export interface HotspotsResponse {
   points: MapPoint[];
 }
 
+export type DemoRingResponse = FraudGraph;
+
 export async function runFusion(): Promise<FusionOutput> {
   const r = await fetch(`${API_BASE}/api/fuse`, { method: "POST" });
   if (!r.ok) throw new Error(`fusion failed: ${r.status}`);
+  return r.json();
+}
+
+export async function injectDemoRing(district: string): Promise<DemoRingResponse> {
+  const r = await fetch(`${API_BASE}/api/demo/inject-ring`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ district, topology: "cycle" }),
+  });
+  if (!r.ok) throw new Error(`demo inject failed: ${r.status}`);
   return r.json();
 }
 

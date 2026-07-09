@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { EventsResponse, HealthResponse, HotspotsResponse } from "@/lib/api";
 import { clockTime, inr, pct, titleCase } from "@/lib/format";
 import {
@@ -13,6 +14,17 @@ import {
   Phone,
 } from "./Icons";
 
+const DEMO_DISTRICTS = [
+  "Jamtara",
+  "Deoghar",
+  "Alwar",
+  "Bharatpur",
+  "Nuh",
+  "Chennai Central",
+  "Mumbai South",
+  "Delhi East",
+];
+
 /* deterministic sparkline (no hydration mismatch) */
 const SPARK = [62, 58, 66, 61, 70, 64, 72, 69, 75, 71, 78, 74, 81, 77, 84, 80, 88, 85, 91, 94];
 
@@ -20,10 +32,14 @@ export default function LeftPanel({
   events,
   health,
   hotspots,
+  onInjectRing,
+  injecting = false,
 }: {
   events: EventsResponse | null;
   health: HealthResponse | null;
   hotspots: HotspotsResponse | null;
+  onInjectRing?: (district: string) => Promise<void> | void;
+  injecting?: boolean;
 }) {
   const scam = events?.scams.at(-1) ?? null;
   const note = events?.counterfeits.at(-1) ?? null;
@@ -31,6 +47,7 @@ export default function LeftPanel({
   const modules = Object.entries(health?.modules ?? {});
   const up = modules.filter(([, s]) => s === "up").length;
   const down = modules.length - up;
+  const [district, setDistrict] = useState(DEMO_DISTRICTS[0]);
 
   const confidences = [
     ...(events?.scams.map((s) => s.risk_score) ?? []),
@@ -183,6 +200,33 @@ export default function LeftPanel({
           </div>
           <Activity className="h-3.5 w-3.5" />
         </div>
+        {onInjectRing && (
+          <div className="mt-3 rounded-2xl border border-violet-500/15 bg-violet-500/5 p-3">
+            <div className="flex items-center gap-2">
+              <select
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-zinc-950/70 px-2.5 py-2 text-[11px] text-zinc-200 outline-none transition focus:border-violet-400/60"
+              >
+                {DEMO_DISTRICTS.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => onInjectRing(district)}
+                disabled={injecting}
+                className="rounded-lg bg-violet-500 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-violet-400 disabled:cursor-wait disabled:opacity-50"
+              >
+                {injecting ? "Injecting…" : "Inject ring"}
+              </button>
+            </div>
+            <p className="mt-2 text-[10px] leading-relaxed text-zinc-500">
+              Adds 6 fresh accounts, reruns graph detection, and should light up a new purple dot.
+            </p>
+          </div>
+        )}
         <div className="mt-3 space-y-2.5">
           {rings.slice(0, 4).map((r) => (
             <div key={r.ring_id}>

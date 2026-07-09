@@ -144,6 +144,34 @@ async def refresh_fraud_graph() -> dict:
         raise HTTPException(502, f"fraud-graph service unreachable: {exc}") from exc
 
 
+@app.post("/demo/inject-ring")
+async def demo_inject_ring(body: dict | None = None) -> dict:
+    """Inject a fresh ring into the fraud graph, then refresh dashboard state."""
+    payload = body or {}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.post(f"{MODULES['fraud-graph']}/demo/inject-ring", json=payload)
+            r.raise_for_status()
+            store.set_fraud_graph(r.json())
+            return r.json()
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"fraud-graph service unreachable: {exc}") from exc
+
+
+@app.post("/demo/reset")
+async def demo_reset() -> dict:
+    """Drop injected rings (rehearsal cleanup), then refresh dashboard state."""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.post(f"{MODULES['fraud-graph']}/demo/reset")
+            r.raise_for_status()
+            graph = r.json()
+            store.set_fraud_graph(graph)
+            return {"reset": True, "rings": len(graph.get("rings", []))}
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"fraud-graph service unreachable: {exc}") from exc
+
+
 @app.get("/events")
 def events() -> dict:
     """Everything the dashboard needs to render cards, graph, and map."""

@@ -11,6 +11,7 @@ from aegis_fraud_graph.graph import FEATURE_COLUMNS, compute_features
 from aegis_fraud_graph.model import train
 from aegis_fraud_graph.rings import detect_rings
 from aegis_fraud_graph.export import build_output
+from aegis_fraud_graph.demo import inject_demo_ring
 from aegis_fraud_graph.synth import generate
 
 
@@ -70,3 +71,18 @@ def test_end_to_end_contract_compliance(features, small_world):
     ring_ids = {r["ring_id"] for r in payload["rings"]}
     for acc in payload["accounts"]:
         assert acc["ring_id"] in ring_ids
+
+
+def test_demo_ring_injection_detects_a_fresh_ring(small_world):
+    injected = inject_demo_ring(small_world, district="Alwar")
+    features = compute_features(injected)
+    labels = injected.accounts.set_index("account_id")["is_illicit"]
+    clf, _ = train(features, labels)
+
+    from aegis_fraud_graph.model import score_all
+
+    scores = score_all(clf, features)
+    rings, accounts = detect_rings(injected, scores)
+    payload = json.loads(build_output(injected, rings, accounts, features).model_dump_json())
+
+    assert any(r["district"] == "Alwar" and r["size"] == 6 for r in payload["rings"])
