@@ -15,6 +15,12 @@ const SAT_TILES = [
 
 const JAMTARA: [number, number] = [86.803, 23.795];
 
+/* Markers scale with zoom so each keeps a fixed ground footprint.
+   Mercator pixels-per-meter double per zoom level, hence 2^(zoom - ref). */
+const ZOOM_REF = 10.3; // initial zoom — markers render at their base size here (k = 1)
+const SCALE_MIN = 0.3;
+const SCALE_MAX = 4;
+
 export default function CrimeMap({
   points,
   hubs,
