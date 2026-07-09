@@ -1,182 +1,386 @@
 [
   {
-    "text": "This is Officer Sharma from the Cyber Cell. Your SIM card has been linked to a fraudulent transaction; we need you to verify your identity on a secure video call.",
+    "text": "Hello, I'm calling from the Directorate of Revenue Intelligence. A parcel with your name on it has been seized at the airport, containing undeclared goods. We need to discuss this further on a secure video call.",
     "label": 1,
     "origin": "llm_digital_arrest",
     "group": "llm_digital_arrest_01"
   },
   {
-    "text": "Our team has been tracking a tax evasion case, and your name has come up in the investigation. We need to discuss this further on a video call.",
+    "text": "We've been monitoring your online activities, and it appears your IP address was used to upload defamatory content. I'm calling from the National Cybercrime Reporting Portal. Let's discuss this on a video call.",
     "label": 1,
     "origin": "llm_digital_arrest",
     "group": "llm_digital_arrest_03"
   },
   {
-    "text": "We have reason to believe your bank account has been used for money laundering. Please join a secure video call to verify your account details and avoid account freezing.",
+    "text": "Hello, I'm calling from the Department of Telecommunications. There's been a report of SIM card misuse under your name. To avoid service disruption, please verify your identity on this video call.",
     "label": 1,
     "origin": "llm_digital_arrest",
     "group": "llm_digital_arrest_05"
   },
   {
-    "text": "Our department has received a report of your involvement in a cryptocurrency scam. We request your presence on a video conference to investigate this matter further.",
+    "text": "I'm calling from the Income Tax Department. Our records show discrepancies in your tax returns. To avoid penalties, please join a video call to clarify these discrepancies.",
     "label": 1,
     "origin": "llm_digital_arrest",
     "group": "llm_digital_arrest_07"
   },
   {
-    "text": "A case of identity theft has been registered against you at our police station. We need to verify your identity through a video call to proceed with the investigation.",
+    "text": "I'm an investigator from the Enforcement Directorate. We're looking into a money laundering case that involves your bank account. To clear your name, please cooperate with us on a video call.",
     "label": 1,
     "origin": "llm_digital_arrest",
     "group": "llm_digital_arrest_09"
   },
   {
-    "text": "The Central Bureau of Investigation is investigating a case of online fraud, and your name has surfaced during the investigation. We need you to join a video call to provide your statement and cooperate with the investigation.",
+    "text": "Hello, I'm calling from the Department of Posts. A courier package containing prohibited items was sent under your name. To avoid legal consequences, please verify the details on a video call.",
     "label": 1,
     "origin": "llm_digital_arrest",
     "group": "llm_digital_arrest_11"
   },
   {
-    "text": "Aapka SBI khata band ho jayega agar aap apne KYC ko jaldi update nahi karte. Link: http://sbi.xyz/1234",
+    "text": "This is an officer from the Narcotics Control Bureau. We've intercepted a parcel with drugs sent to your address. To avoid arrest, please cooperate with our investigation on a video call.",
+    "label": 1,
+    "origin": "llm_digital_arrest",
+    "group": "llm_digital_arrest_13"
+  },
+  {
+    "text": "Hello, this is Officer Rao from the State CID. We've found your personal details linked to a recent online scam. To protect your identity and assist our investigation, please join this video call.",
+    "label": 1,
+    "origin": "llm_digital_arrest",
+    "group": "llm_digital_arrest_15"
+  },
+  {
+    "text": "Aapka SBI khata band ho jayega agar aap apna PAN update nahi karte: http://tiny.cc/KYCUpdate",
     "label": 1,
     "origin": "llm_kyc_freeze",
     "group": "llm_kyc_freeze_01"
   },
   {
-    "text": "ICICI Bank account holders: Your account will be suspended if you dont update your PAN card details within 24 hours. Click: https://icici.click/panupdate",
+    "text": "Aadhaar link karna hai, nahi to aapka account band ho jayega: https://tinyurl.com/y4wbm5j7",
     "label": 1,
     "origin": "llm_kyc_freeze",
     "group": "llm_kyc_freeze_03"
   },
   {
-    "text": "PNB account holders: Verify your Aadhaar card details to avoid account suspension. Urgent: https://pnb.in/aadhaarverify",
+    "text": "PAN update karo, nahi to aapka PNB account band ho jayega: http://bit.do/KYC-PAN",
     "label": 1,
     "origin": "llm_kyc_freeze",
     "group": "llm_kyc_freeze_05"
   },
   {
-    "text": "Canara Bank account holders: Re-verify your KYC details to avoid account blockage. Link: https://canara.in/kycreverify",
+    "text": "Aapka account band ho jayega agar aap apna KYC update nahi karte, abhi click karo: https://tiny.cc/AccountFreeze",
     "label": 1,
     "origin": "llm_kyc_freeze",
     "group": "llm_kyc_freeze_07"
   },
   {
-    "text": "Yes Bank: Update your PAN card details immediately to avoid account suspension. Click: https://yesbank.in/panupdate123",
+    "text": "Aadhaar-PAN linking required for your Union Bank account, click here: https://tinyurl.com/y6p9l6ku",
     "label": 1,
     "origin": "llm_kyc_freeze",
     "group": "llm_kyc_freeze_09"
   },
   {
-    "text": "Aapke Union Bank of India account ko suspend kiya jayega agar aap apne PAN ko jaldi sahi nahi karte. Link: https://unionbank.xyz/panupdate",
+    "text": "Abhi update karo apna KYC, nahi to aapka UCO Bank account band ho jayega: http://bit.do/KYC-UCO",
     "label": 1,
     "origin": "llm_kyc_freeze",
     "group": "llm_kyc_freeze_11"
   },
   {
-    "text": "Join our exclusive crypto group and double your Bitcoin in 24 hours!",
+    "text": "Urgent: Your Central Bank account needs re-verification, click here: https://bit.ly/3aMQQJL",
+    "label": 1,
+    "origin": "llm_kyc_freeze",
+    "group": "llm_kyc_freeze_13"
+  },
+  {
+    "text": "Indian Overseas Bank: Update your KYC to avoid account freeze, click here: https://bit.ly/3lKQ3Sd",
+    "label": 1,
+    "origin": "llm_kyc_freeze",
+    "group": "llm_kyc_freeze_15"
+  },
+  {
+    "text": "Double your Bitcoin in 24 hours with our proven crypto trading strategy!",
     "label": 1,
     "origin": "llm_investment",
     "group": "llm_investment_01"
   },
   {
-    "text": "Invest in our revolutionary AI-powered trading platform and get 50% monthly returns!",
+    "text": "Invest in our top-performing mutual fund for assured 15% annual gains!",
     "label": 1,
     "origin": "llm_investment",
     "group": "llm_investment_03"
   },
   {
-    "text": "Double your money in 48 hours with our proven crypto trading strategy!",
+    "text": "Buy our expert-recommended stocks for a guaranteed 10x return on investment!",
     "label": 1,
     "origin": "llm_investment",
     "group": "llm_investment_05"
   },
   {
-    "text": "Don't miss out on this opportunity to make 5x your investment in just one month!",
+    "text": "Join the CryptoJackpot community for daily returns of up to 5% on your Bitcoin!",
     "label": 1,
     "origin": "llm_investment",
     "group": "llm_investment_07"
   },
   {
-    "text": "Join our VIP trading group and get access to exclusive stock tips and 20% daily returns!",
+    "text": "Invest Rs. 1000 in our stock market simulator and get Rs. 5000 in just 30 days!",
     "label": 1,
     "origin": "llm_investment",
     "group": "llm_investment_09"
   },
   {
-    "text": "Make \u20b91 lakh in just one week with our guaranteed trading formula, limited spots available!",
+    "text": "Our expert traders will manage your portfolio for guaranteed 25% monthly returns, just pay 10% fees!",
     "label": 1,
     "origin": "llm_investment",
     "group": "llm_investment_11"
   },
   {
-    "text": "Get paid Rs. 1000 for each YouTube video you like and share, join our Telegram group to learn more",
+    "text": "Our risk-free trading strategy has generated 500% returns for our clients, join now!",
+    "label": 1,
+    "origin": "llm_investment",
+    "group": "llm_investment_13"
+  },
+  {
+    "text": "Withdraw your winnings instantly with our FastCash trading app, no fees or charges!",
+    "label": 1,
+    "origin": "llm_investment",
+    "group": "llm_investment_15"
+  },
+  {
+    "text": "Get paid 1000 INR for every YouTube video you watch and like, Join our team!",
     "label": 1,
     "origin": "llm_job_offer",
     "group": "llm_job_offer_01"
   },
   {
-    "text": "Become a social media influencer and earn Rs. 1 lakh monthly, join our team by paying a one-time fee of Rs. 2000",
+    "text": "Join our Telegram group to start earning money online, Investment of 500 INR required",
     "label": 1,
     "origin": "llm_job_offer",
     "group": "llm_job_offer_03"
   },
   {
-    "text": "Join our online task completion platform, earn Rs. 500 daily, and get a bonus of Rs. 5000 on completing 10 tasks",
+    "text": "Limited spots available! Earn 30000 INR monthly by working as a part-time online tutor, Apply now!",
     "label": 1,
     "origin": "llm_job_offer",
     "group": "llm_job_offer_05"
   },
   {
-    "text": "Telegram online job, earn Rs. 30,000 monthly, pay Rs. 500 as registration fee and get started",
+    "text": "Get paid for every friend you refer to our YouTube channel, Earn up to 5000 INR weekly",
     "label": 1,
     "origin": "llm_job_offer",
     "group": "llm_job_offer_07"
   },
   {
-    "text": "Like and earn, get paid Rs. 500 for every 100 likes on our YouTube video, join our Telegram group to learn more",
+    "text": "Invest 500 INR and earn 2000 INR daily by trading online, Join our Telegram group for more info",
     "label": 1,
     "origin": "llm_job_offer",
     "group": "llm_job_offer_09"
   },
   {
-    "text": "Make money online by completing tasks, earn Rs. 1000 daily, and get a bonus of Rs. 2000 on completing 5 tasks",
+    "text": "Earn 2500 INR for every online poll you complete, Join our website and start earning today",
     "label": 1,
     "origin": "llm_job_offer",
     "group": "llm_job_offer_11"
   },
   {
-    "text": "Report to PS Sector 19 for passport verification on 25th at 10 AM.",
-    "label": 0,
-    "origin": "llm_legit",
-    "group": "llm_legit_01"
+    "text": "Join our online community and earn 6000 INR weekly by completing simple tasks, No experience needed",
+    "label": 1,
+    "origin": "llm_job_offer",
+    "group": "llm_job_offer_13"
   },
   {
-    "text": "Your Amazon order has been shipped via Delhivery. Tracking ID: DLH123456",
-    "label": 0,
-    "origin": "llm_legit",
-    "group": "llm_legit_03"
+    "text": "Earn up to 10000 INR daily by investing in our online trading platform, Initial deposit 500 INR required",
+    "label": 1,
+    "origin": "llm_job_offer",
+    "group": "llm_job_offer_15"
   },
   {
-    "text": "PNB bank: Your account is debited with Rs 1000. Ref no: PNB123456",
+    "text": "KYC completion confirmed for your Airtel account. No action required.",
     "label": 0,
-    "origin": "llm_legit",
-    "group": "llm_legit_05"
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_01"
   },
   {
-    "text": "LPG cylinder delivery scheduled for today between 10 AM and 1 PM.",
+    "text": "Your request to block your ICICI card has been processed.",
     "label": 0,
-    "origin": "llm_legit",
-    "group": "llm_legit_07"
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_03"
   },
   {
-    "text": "Please collect your driving license from RTO office, Sector 12, Chandigarh.",
+    "text": "Your Vodafone bill payment of Rs. 500 is successful.",
     "label": 0,
-    "origin": "llm_legit",
-    "group": "llm_legit_09"
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_05"
   },
   {
-    "text": "Your railway ticket PNR No. 1234567890 has been confirmed for travel on 1st Aug.",
+    "text": "Transaction alert: Rs. 2000 debited from your PNB account.",
     "label": 0,
-    "origin": "llm_legit",
-    "group": "llm_legit_11"
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_07"
+  },
+  {
+    "text": "OTP for Yes Bank transaction: 987654. Do not share.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_09"
+  },
+  {
+    "text": "Your transaction of Rs. 5000 on Paytm is successful.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_11"
+  },
+  {
+    "text": "OTP for BOI transaction: 543210. Valid for 10 minutes.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_13"
+  },
+  {
+    "text": "Your Canara Bank account has been credited with Rs. 10000.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_15"
+  },
+  {
+    "text": "Your request to unblock your SBI debit card has been processed.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_17"
+  },
+  {
+    "text": "Your Punjab National Bank account is now KYC compliant.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_19"
+  },
+  {
+    "text": "OTP for Syndicate Bank transaction: 321098. Do not share.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_21"
+  },
+  {
+    "text": "Your Central Bank of India debit card transaction is successful.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_23"
+  },
+  {
+    "text": "Your Bank of Baroda credit card transaction of Rs. 3000 is successful.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_25"
+  },
+  {
+    "text": "Your Oriental Bank of Commerce debit card is blocked for security reasons.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_27"
+  },
+  {
+    "text": "Your Corporation Bank credit card transaction is successful.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_29"
+  },
+  {
+    "text": "Your Indian Overseas Bank debit card transaction of Rs. 2000 is successful.",
+    "label": 0,
+    "origin": "llm_legit_bank",
+    "group": "llm_legit_bank_31"
+  },
+  {
+    "text": "Reminder: Income Tax Return filing deadline is 31st July, please file your returns on time to avoid penalty",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_01"
+  },
+  {
+    "text": "Your parcel ID 987654321 has been shipped via Speed Post and is expected to be delivered by 25th February",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_03"
+  },
+  {
+    "text": "Aadhaar card update: Please visit the nearest enrolment centre to update your mobile number",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_05"
+  },
+  {
+    "text": "Your LPG subsidy is credited to your bank account, please check your account statement",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_07"
+  },
+  {
+    "text": "Your voter ID application has been approved, please collect your card from the nearest electoral office",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_09"
+  },
+  {
+    "text": "Reminder: Payment of property tax is due on 31st March, please pay online or visit the nearest municipal office",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_11"
+  },
+  {
+    "text": "Your appointment with Dr. Sharma at Fortis Hospital is scheduled on 25th March at 11:00 AM",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_13"
+  },
+  {
+    "text": "Reminder: The last date for filing GST returns is 20th April, please file your returns on time",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_15"
+  },
+  {
+    "text": "Your passport application has been approved, please collect your passport from the nearest regional passport office",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_17"
+  },
+  {
+    "text": "India Railways: Your train ticket has been confirmed, PNR No. 1234567890",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_19"
+  },
+  {
+    "text": "Your gas connection has been approved, please collect your connection kit from the nearest distributor",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_21"
+  },
+  {
+    "text": "Court Notice: Case No. 2222/2022, Court No. 5, Calcutta High Court, next date of hearing is 15th June",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_23"
+  },
+  {
+    "text": "Update: Your ration card application has been approved, please collect your card from the nearest ration office",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_25"
+  },
+  {
+    "text": "Notice: The next date of hearing for Case No. 3333/2022 is 20th June, Court No. 6, Madras High Court",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_27"
+  },
+  {
+    "text": "Reminder: Renewal of health insurance policy is due on 15th July, please apply online or visit the nearest insurance office",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_29"
+  },
+  {
+    "text": "Your appointment with Dr. Jain at Max Hospital is scheduled on 15th August at 10:00 AM",
+    "label": 0,
+    "origin": "llm_legit_govt",
+    "group": "llm_legit_govt_31"
   }
 ]
