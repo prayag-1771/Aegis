@@ -56,7 +56,11 @@
               "degree_centrality": { "type": "number" },
               "clustering_coefficient": { "type": "number" },
               "in_degree": { "type": "integer" },
-              "out_degree": { "type": "integer" }
+              "out_degree": { "type": "integer" },
+              "throughput_ratio": { "type": ["number", "null"], "description": "min(in,out)/max(in,out) — ~1.0 means money exits as fast as it enters (classic mule)." },
+              "burst_ratio": { "type": ["number", "null"], "description": "Share of this account's transactions within 60min of its previous one." },
+              "round_amount_ratio": { "type": ["number", "null"], "description": "Share of transactions with suspiciously round amounts (9,999 / 50,000 style)." },
+              "tx_count": { "type": ["integer", "null"] }
             }
           }
         },

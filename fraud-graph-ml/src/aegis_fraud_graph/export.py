@@ -23,6 +23,13 @@ class AccountFeatures(BaseModel):
     clustering_coefficient: float
     in_degree: int
     out_degree: int
+    # Behavioural evidence for the dashboard's "why flagged" view. Optional in
+    # the contract (the features object allows extra keys), so older consumers
+    # are unaffected.
+    throughput_ratio: float | None = None
+    burst_ratio: float | None = None
+    round_amount_ratio: float | None = None
+    tx_count: int | None = None
 
 
 class AccountOut(BaseModel):
@@ -99,6 +106,10 @@ def build_output(
                     clustering_coefficient=round(float(f["clustering_coeff"]), 6),
                     in_degree=int(f["in_degree"]),
                     out_degree=int(f["out_degree"]),
+                    throughput_ratio=round(float(f["throughput_ratio"]), 4),
+                    burst_ratio=round(float(f["burst_ratio"]), 4),
+                    round_amount_ratio=round(float(f["round_amount_ratio"]), 4),
+                    tx_count=int(f["tx_count"]),
                 ),
             )
         )
