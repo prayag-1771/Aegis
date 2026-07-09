@@ -11,6 +11,7 @@ from aegis_fraud_graph.graph import FEATURE_COLUMNS, compute_features
 from aegis_fraud_graph.model import train
 from aegis_fraud_graph.rings import detect_rings
 from aegis_fraud_graph.export import build_output
+from aegis_fraud_graph.demo import clean_account_names, inject_demo_ring
 from aegis_fraud_graph.synth import generate
 
 
@@ -70,3 +71,49 @@ def test_end_to_end_contract_compliance(features, small_world):
     ring_ids = {r["ring_id"] for r in payload["rings"]}
     for acc in payload["accounts"]:
         assert acc["ring_id"] in ring_ids
+
+
+def test_demo_ring_injection_detects_a_fresh_ring(small_world):
+    injected = inject_demo_ring(small_world, district="Alwar")
+    features = compute_features(injected)
+    labels = injected.accounts.set_index("account_id")["is_illicit"]
+    clf, _ = train(features, labels)
+
+    from aegis_fraud_graph.model import score_all
+
+    scores = score_all(clf, features)
+    rings, accounts = detect_rings(injected, scores)
+    payload = json.loads(build_output(injected, rings, accounts, features).model_dump_json())
+
+    assert any(r["district"] == "Alwar" and r["size"] == 6 for r in payload["rings"])
+
+
+def test_demo_ring_with_custom_account_names(small_world):
+    """The name-the-criminals moment: typed names must appear in a caught ring."""
+    names = ["ravi", "pinky", "quickcash", "mule_raju"]
+    injected = inject_demo_ring(small_world, district="Jamtara", account_names=names)
+    features = compute_features(injected)
+    labels = injected.accounts.set_index("account_id")["is_illicit"]
+    clf, _ = train(features, labels)
+
+    from aegis_fraud_graph.model import score_all
+
+    scores = score_all(clf, features)
+    rings, _ = detect_rings(injected, scores)
+    named = [r for r in rings if set(names) <= set(r.account_ids)]
+    assert named, "all custom-named accounts should land in one detected ring"
+    assert named[0].district == "Jamtara"
+
+
+def test_clean_account_names_rules():
+    assert clean_account_names(None) == []
+    assert clean_account_names([]) == []
+    # trims whitespace; case-insensitive dedupe keeps first spelling, order preserved
+    assert clean_account_names(["  ravi ", "PINKY", "pinky", "", "quickcash"]) == [
+        "ravi",
+        "PINKY",
+        "quickcash",
+    ]
+    # 1-2 usable names is an error (ring needs >= 3 members to be detectable)
+    with pytest.raises(ValueError):
+        clean_account_names(["only", "two"])

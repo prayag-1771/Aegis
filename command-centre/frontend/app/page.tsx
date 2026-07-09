@@ -8,6 +8,7 @@ import type {
   HealthResponse,
   HotspotsResponse,
 } from "@/lib/api";
+import { injectDemoRing } from "@/lib/api";
 import { usePolling } from "@/lib/usePolling";
 import FusionPanel from "@/components/FusionPanel";
 import LeftPanel from "@/components/LeftPanel";
@@ -17,8 +18,19 @@ import WarningPanel from "@/components/WarningPanel";
 
 const CrimeMap = dynamic(() => import("@/components/CrimeMap"), { ssr: false });
 
+const DEMO_DISTRICT_COORDS: Record<string, { lat: number; lon: number }> = {
+  Jamtara: { lat: 23.795, lon: 86.803 },
+  Deoghar: { lat: 24.48, lon: 86.7 },
+  Alwar: { lat: 27.55, lon: 76.63 },
+  Bharatpur: { lat: 27.22, lon: 77.49 },
+  Nuh: { lat: 28.1, lon: 77.0 },
+  "Chennai Central": { lat: 13.08, lon: 80.27 },
+  "Mumbai South": { lat: 18.93, lon: 72.83 },
+  "Delhi East": { lat: 28.65, lon: 77.3 },
+};
+
 export default function Page() {
-  const { data: events } = usePolling<EventsResponse>("/api/events", 5000);
+  const { data: events, refresh: refreshEvents } = usePolling<EventsResponse>("/api/events", 5000);
   const { data: health } = usePolling<HealthResponse>("/api/health", 10000);
   const { data: hotspots, refresh: refreshHotspots } = usePolling<HotspotsResponse>(
     "/api/hotspots",
@@ -27,6 +39,7 @@ export default function Page() {
 
   const [fusion, setFusion] = useState<FusionOutput | null>(null);
   const [focus, setFocus] = useState<{ lat: number; lon: number } | null>(null);
+  const [injecting, setInjecting] = useState(false);
 
   const lastFusion = fusion ?? events?.last_fusion ?? null;
   const alertCount =
@@ -42,6 +55,22 @@ export default function Page() {
       refreshHotspots();
     },
     [refreshHotspots]
+  );
+
+  const handleInjectRing = useCallback(
+    async (district: string, accounts?: string[]) => {
+      setInjecting(true);
+      try {
+        const graph = await injectDemoRing(district, accounts);
+        const coords = DEMO_DISTRICT_COORDS[district];
+        if (coords) setFocus(coords);
+        await Promise.all([refreshEvents(), refreshHotspots()]);
+        return graph;
+      } finally {
+        setInjecting(false);
+      }
+    },
+    [refreshEvents, refreshHotspots]
   );
 
   return (
@@ -66,7 +95,13 @@ export default function Page() {
         </div>
       </div>
 
-      <LeftPanel events={events} health={health} hotspots={hotspots} />
+      <LeftPanel
+        events={events}
+        health={health}
+        hotspots={hotspots}
+        onInjectRing={handleInjectRing}
+        injecting={injecting}
+      />
       <WarningPanel events={events} hotspots={hotspots} fusion={lastFusion} onLocate={setFocus} />
       <FusionPanel fusion={lastFusion} onFused={handleFused} />
       <VolumePanel events={events} />

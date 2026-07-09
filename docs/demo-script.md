@@ -51,10 +51,33 @@ And it never certifies a note genuine while any security check fails."*
 
 **Fallback:** upload the prepared photo instead of the webcam.
 
-### Beat 4 — the fraud graph (45s)
+### Beat 4 — WOW: the fraud graph catches fraud LIVE (75s)
 Dashboard rings card: *"Meanwhile our graph engine watched the money. 12 fraud rings —
 mule chains, collection hubs, round-tripping cycles — each district-tagged. On real
 Bitcoin fraud data this scores 0.99 AUC at 90% precision."*
+
+Then the live moment — in the rings card, pick **Mumbai South** in the dropdown. For the
+interactive kill-shot, ask the judges to **name the criminals** and type 3+ names into the
+names box (e.g. `ravi, pinky, quickcash`), then press **Inject ring**:
+
+> *"Let's commit fraud right now — you name the gang. …Okay: ravi, pinky and quickcash
+> just opened accounts and started looping money around Mumbai — accounts our model has
+> never seen."*
+
+The map flies to Mumbai, a new purple dot appears, the rings count ticks 12 → 13, and a
+green **CAUGHT: ravi, pinky, quickcash** banner shows the ring type + risk.
+
+> *"Caught on the first pass, in about three seconds. That gang didn't exist ten seconds
+> ago — and nobody retrained anything. The model recognises the behaviour, not the
+> account numbers."*
+
+(Leaving the names box empty also works — it generates 6 anonymous accounts instead.)
+
+**Fallback:** if the button misbehaves, same thing from a terminal:
+`Invoke-RestMethod -Method POST http://127.0.0.1:4000/api/demo/inject-ring -ContentType application/json -Body '{"district":"Mumbai South"}'`
+
+**Rehearsal cleanup:** `POST http://127.0.0.1:4000/api/demo/reset` drops all injected
+rings (a graph-service restart does too) — always reset before going on stage.
 
 ### Beat 5 — WOW #3: THE FUSION MOMENT (90s)
 Press **▶ RUN FUSION**. Read the Gen-AI summary aloud as it appears:

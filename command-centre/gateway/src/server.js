@@ -95,6 +95,14 @@ app.post("/api/refresh/fraud-graph", (_req, res) =>
   forward(res, "/refresh/fraud-graph", { method: "POST" })
 );
 
+// ---- demo: inject a synthetic fraud ring / reset to the base dataset ----
+app.post("/api/demo/inject-ring", (req, res) =>
+  forward(res, "/demo/inject-ring", { method: "POST", body: req.body ?? {} })
+);
+app.post("/api/demo/reset", (_req, res) =>
+  forward(res, "/demo/reset", { method: "POST" })
+);
+
 app.listen(PORT, () => {
   console.log(`aegis-gateway listening on :${PORT} -> ${COMMAND_API}`);
 });
