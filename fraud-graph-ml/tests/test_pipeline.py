@@ -73,6 +73,23 @@ def test_end_to_end_contract_compliance(features, small_world):
         assert acc["ring_id"] in ring_ids
 
 
+def test_export_includes_victim_inflow_edges(features, small_world):
+    """Victim -> collector payments must reach the command centre so fusion can
+    trace a scam's reported_payment into a ring account (the money trail)."""
+    from aegis_fraud_graph.model import score_all
+
+    labels = small_world.accounts.set_index("account_id")["is_illicit"]
+    clf, _ = train(features, labels)
+    scores = score_all(clf, features)
+    rings, accounts = detect_rings(small_world, scores)
+    payload = json.loads(build_output(small_world, rings, accounts, features).model_dump_json())
+
+    ringed = {a["account_id"] for a in payload["accounts"]}
+    inflows = [e for e in payload["edges"] if e["source"] not in ringed and e["target"] in ringed]
+    assert inflows, "no victim->ring inflow edges exported"
+    assert all(e["timestamp"] for e in inflows), "inflow edges must carry timestamps"
+
+
 def test_demo_ring_injection_detects_a_fresh_ring(small_world):
     injected = inject_demo_ring(small_world, district="Alwar")
     features = compute_features(injected)

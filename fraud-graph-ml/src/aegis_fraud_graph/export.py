@@ -119,6 +119,12 @@ def build_output(
     tx = ds.transactions
     ring_tx = tx[tx["source"].isin(ringed_ids) & tx["target"].isin(ringed_ids)]
     ring_tx = ring_tx.sort_values("amount", ascending=False).head(cfg.max_export_edges)
+    # Inflows: payments from OUTSIDE the rings landing in a ring account —
+    # victim -> collector transfers. Fusion traces a scam's reported_payment
+    # against these (amount + time window + district), turning "same district"
+    # into "this exact payment landed in this exact account".
+    inflow_tx = tx[~tx["source"].isin(ringed_ids) & tx["target"].isin(ringed_ids)]
+    inflow_tx = inflow_tx.sort_values("amount", ascending=False).head(cfg.max_inflow_edges)
     edges = [
         EdgeOut(
             source=row.source,
@@ -126,7 +132,8 @@ def build_output(
             amount=round(float(row.amount), 2),
             timestamp=str(row.timestamp) if pd.notna(row.timestamp) else None,
         )
-        for row in ring_tx.itertuples(index=False)
+        for chunk in (ring_tx, inflow_tx)
+        for row in chunk.itertuples(index=False)
     ]
 
     return FraudGraphOut(

@@ -59,3 +59,7 @@ class RingConfig(BaseModel):
     min_ring_size: int = 3
     # Cap edges exported to the command centre for render performance.
     max_export_edges: int = 500
+    # Also export payments flowing INTO ring accounts from outside (victim ->
+    # collector). These are the fusion money-trail evidence; capped separately
+    # so they never crowd out the intra-ring edges.
+    max_inflow_edges: int = 200
