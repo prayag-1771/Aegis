@@ -36,6 +36,10 @@ One unified **Digital Public Safety** command centre fusing three independent AI
 3. **Fraud Graph** — Graph ML clustering accounts into fraud rings.
 4. **Command Centre** — dashboard + crime map + Gen AI fusion tying all three together.
 
+### 2026-07-10 — Adharshan — Connected Counterfeit Vision to real Kaggle dataset
+- **Resolved data block**: Replaced API-dependent Kaggle download with kagglehub. Successfully downloaded actual fake-currency-detection-dataset and linked genuine and ake inputs into the CNN training pipeline.
+- **Retrained**: EfficientNet-B0 retrained successfully on the real dataset with 1.0 val accuracy. Fully swapped out synthetic data.
+
 ### The three wow moments (all live-demoable)
 1. Scam call read out → flagged instantly.
 2. Note held to camera → missing security feature flagged live.
