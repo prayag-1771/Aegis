@@ -70,6 +70,14 @@ export interface FraudGraph {
   edges?: { source: string; target: string; amount: number; timestamp?: string }[];
 }
 
+export interface MoneyTrail {
+  scam_event_id: string;
+  ring_id: string;
+  account_id: string;
+  amount: number;
+  district?: string | null;
+}
+
 export interface FusionOutput {
   generated_at?: string;
   summary: string;
@@ -78,6 +86,7 @@ export interface FusionOutput {
   correlation_basis: string[];
   recommended_actions: string[];
   map_hotspots: MapPoint[];
+  money_trails?: MoneyTrail[];
   audit_trail?: { model: string; inputs_hash: string; prompt_version: string };
 }
 
