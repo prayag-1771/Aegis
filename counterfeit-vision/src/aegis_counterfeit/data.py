@@ -25,16 +25,21 @@ def kaggle_available() -> bool:
 
 def download_kaggle(dataset: str = KAGGLE_DATASET, out_dir: Path = KAGGLE_DIR) -> Path:
     """Download + unzip a Kaggle dataset (requires kaggle API credentials)."""
-    if not kaggle_available():
-        raise RuntimeError(
-            "No Kaggle credentials. Put your API token at ~/.kaggle/kaggle.json "
-            "(kaggle.com -> Account -> Create New Token), then retry."
-        )
-    # Imported lazily: the kaggle package errors at import time without creds.
-    import kaggle
-
+    import kagglehub
+    import shutil
+    
     out_dir.mkdir(parents=True, exist_ok=True)
-    kaggle.api.dataset_download_files(dataset, path=str(out_dir), unzip=True)
+    # Download dataset using kagglehub
+    path = kagglehub.dataset_download(dataset)
+    
+    # Move files from cache path to out_dir
+    for item in Path(path).iterdir():
+        dest = out_dir / item.name
+        if item.is_dir():
+            shutil.copytree(item, dest, dirs_exist_ok=True)
+        else:
+            shutil.copy2(item, dest)
+            
     return out_dir
 
 
