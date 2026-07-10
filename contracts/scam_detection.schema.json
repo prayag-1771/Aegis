@@ -53,6 +53,20 @@
       "description": "Optional plain-language reason (stretch: LLM-generated) shown in the UI."
     },
     "phone_number": { "type": ["string", "null"], "description": "Originating number if available (for graph/geo correlation)." },
+    "reported_payment": {
+      "type": ["object", "null"],
+      "description": "Optional: what the victim reports having paid. Lets fusion trace the payment into fraud-graph collector accounts (the scam -> mule-ring money trail).",
+      "required": ["amount"],
+      "properties": {
+        "amount": { "type": "number", "exclusiveMinimum": 0, "description": "Amount paid, in INR." },
+        "method": {
+          "type": "string",
+          "enum": ["upi", "bank_transfer", "cash", "giftcard", "crypto", "other"],
+          "description": "How the victim paid, if known."
+        }
+      },
+      "additionalProperties": false
+    },
     "location_hint": {
       "type": ["object", "null"],
       "description": "Optional origin location for the crime map.",

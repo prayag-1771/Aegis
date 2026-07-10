@@ -57,6 +57,22 @@
         "additionalProperties": false
       }
     },
+    "money_trails": {
+      "type": "array",
+      "description": "Hard cross-domain evidence: a scam victim's reported payment traced to a transaction landing in a fraud-ring collector account (amount + time-window + district match).",
+      "items": {
+        "type": "object",
+        "required": ["scam_event_id", "ring_id", "account_id", "amount"],
+        "properties": {
+          "scam_event_id": { "type": "string" },
+          "ring_id": { "type": "string" },
+          "account_id": { "type": "string", "description": "The ring member account the payment landed in." },
+          "amount": { "type": "number" },
+          "district": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
     "audit_trail": {
       "type": ["object", "null"],
       "description": "For legal admissibility — traceable inputs and model metadata.",
