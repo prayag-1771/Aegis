@@ -42,12 +42,16 @@ def analyze_image(
     save_capture: bool = False,
 ) -> dict:
     """Analyse one note photo; returns a contract-valid payload dict."""
-    # Localise once: checks AND the CNN both see the perspective-corrected
-    # note, so a camera frame with desk background behaves like a tight crop.
-    bgr = locate_note(_to_bgr(img))
-    checks = run_all_checks(bgr)
+    # The CNN (trained on real photos with varied framing/background) scores the
+    # ORIGINAL image — it is robust to framing and, critically, the perspective
+    # warp mis-fires on out-of-distribution inputs (e.g. novelty/joke notes),
+    # distorting them into looking genuine. The warped, perspective-corrected
+    # note is used ONLY for the OpenCV feature-checks, which need canonical
+    # geometry but are advisory (they never flip the CNN verdict).
+    warped = locate_note(_to_bgr(img))
+    checks = run_all_checks(warped)
     failed = [c.feature for c in checks if not c.passed]
-    p_fake = model.p_fake(Image.fromarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)))
+    p_fake = model.p_fake(img.convert("RGB"))
     verdict = model.decide_verdict(p_fake, len(failed))
 
     if verdict == "fake":
@@ -75,7 +79,7 @@ def analyze_image(
         "schema_version": SCHEMA_VERSION,
         "event_id": event_id,
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-        "denomination": infer_denomination(bgr),
+        "denomination": infer_denomination(warped),
         "verdict": verdict,
         "confidence": round(confidence, 4),
         # Only report failed features when the note isn't being certified
