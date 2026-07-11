@@ -33,6 +33,14 @@ FEATURE_COLUMNS = [
     "pagerank",
     "clustering_coeff",
     "core_number",
+    # Fan-in/out shape as a MODEL feature, not just a post-hoc ring label.
+    # A collector mule has many senders, one/few receivers -> fan_in_ratio -> 1.
+    # A distributor has one/few senders, many receivers -> fan_out_ratio -> 1.
+    # Previously this shape was only detected afterward in rings.py for labels;
+    # now it feeds training so the classifier can learn the collector signature.
+    "fan_in_ratio",
+    "fan_out_ratio",
+    "mule_score",
 ]
 
 
@@ -115,18 +123,34 @@ def compute_features(ds: Dataset, g: nx.MultiDiGraph | None = None) -> pd.DataFr
         n_tx = ind + outd
         r_in = round_in.get(aid, 0.0)
         r_out = round_out.get(aid, 0.0)
+        us = int(in_agg["unique_senders"].get(aid, 0))
+        ur = int(out_agg["unique_receivers"].get(aid, 0))
+        throughput = min(ti, to) / max(ti, to, 1e-9)
+        # Fan shape from distinct counterparties: a collector pulls from many
+        # senders and pushes to few (fan_in -> 1); a distributor is the mirror.
+        fan_in_ratio = us / max(us + ur, 1)
+        fan_out_ratio = ur / max(us + ur, 1)
+        # Mule-likeness: a standalone 0-1 score (independent of ring membership)
+        # combining the three textbook mule signatures — money passes straight
+        # through (throughput~1), it arrives in a burst, and it's collected from
+        # many senders. Cheap, explainable, and an extra signal for the model.
+        mule_score = float(
+            0.5 * throughput
+            + 0.3 * float(burst.get(aid, 0.0))
+            + 0.2 * fan_in_ratio
+        )
         rows.append(
             {
                 "account_id": aid,
                 "in_degree": ind,
                 "out_degree": outd,
-                "unique_senders": int(in_agg["unique_senders"].get(aid, 0)),
-                "unique_receivers": int(out_agg["unique_receivers"].get(aid, 0)),
+                "unique_senders": us,
+                "unique_receivers": ur,
                 "total_in": ti,
                 "total_out": to,
                 "net_flow": ti - to,
                 # Throughput ~1.0 == "money in ≈ money out" == classic mule.
-                "throughput_ratio": min(ti, to) / max(ti, to, 1e-9),
+                "throughput_ratio": throughput,
                 "avg_amount": (ti + to) / max(n_tx, 1),
                 "max_amount": max(max_in.get(aid, 0.0), max_out.get(aid, 0.0)),
                 "round_amount_ratio": float(np.nanmean([r_in, r_out])) if n_tx else 0.0,
@@ -137,6 +161,9 @@ def compute_features(ds: Dataset, g: nx.MultiDiGraph | None = None) -> pd.DataFr
                 "pagerank": pagerank.get(aid, 0.0),
                 "clustering_coeff": clustering.get(aid, 0.0),
                 "core_number": core.get(aid, 0),
+                "fan_in_ratio": fan_in_ratio,
+                "fan_out_ratio": fan_out_ratio,
+                "mule_score": mule_score,
             }
         )
 
