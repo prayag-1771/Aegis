@@ -11,14 +11,18 @@ import type {
 } from "@/lib/api";
 import { injectDemoRing } from "@/lib/api";
 import { usePolling } from "@/lib/usePolling";
+import AlertChips from "@/components/AlertChips";
+import AlertsDrawer from "@/components/AlertsDrawer";
+import AnalyticsDrawer from "@/components/AnalyticsDrawer";
+import BottomDock from "@/components/BottomDock";
+import Drawer from "@/components/Drawer";
 import FraudConsole from "@/components/FraudConsole";
-import FusionPanel from "@/components/FusionPanel";
-import LeftPanel from "@/components/LeftPanel";
-import PipelineStrip from "@/components/PipelineStrip";
+import FraudRingsDrawer from "@/components/FraudRingsDrawer";
+import IconRail, { type TabKey } from "@/components/IconRail";
+import ModulesDrawer from "@/components/ModulesDrawer";
 import RingViewer from "@/components/RingViewer";
+import ToastContainer, { type Toast } from "@/components/ToastContainer";
 import TopNav from "@/components/TopNav";
-import VolumePanel from "@/components/VolumePanel";
-import WarningPanel from "@/components/WarningPanel";
 
 const CrimeMap = dynamic(() => import("@/components/CrimeMap"), { ssr: false });
 
@@ -52,27 +56,30 @@ export default function Page() {
     8000
   );
 
+  const [activeTab, setActiveTab] = useState<TabKey>("map");
   const [fusion, setFusion] = useState<FusionOutput | null>(null);
   const [focus, setFocus] = useState<{ lat: number; lon: number } | null>(null);
   const [injecting, setInjecting] = useState(false);
   const [ringAlerts, setRingAlerts] = useState<RingAlert[]>([]);
   const [viewRing, setViewRing] = useState<Ring | null>(null);
   const [consoleOpen, setConsoleOpen] = useState(false);
-  const [realRing, setRealRing] = useState<{
-    source: string;
-    label: string;
-    size: number;
-    nodes: { id: string }[];
-    edges: { source: string; target: string }[];
-  } | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const openRealRing = useCallback(async () => {
-    try {
-      const r = await fetch("/real_ring.json");
-      if (r.ok) setRealRing(await r.json());
-    } catch {
-      /* asset missing — button is best-effort */
-    }
+  const pushToast = useCallback((msg: string, type: Toast["type"] = "error") => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setToasts((prev) => [...prev, { id, msg, type }]);
+    // auto-dismiss after a few seconds; still manually dismissable
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 6000);
+  }, []);
+  const dismissToast = useCallback(
+    (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id)),
+    []
+  );
+
+  // clicking a marker / alert flies the map there and returns to the map view
+  const locate = useCallback((p: { lat: number; lon: number }) => {
+    setFocus(p);
+    setActiveTab("map");
   }, []);
 
   const handleConsoleCommitted = useCallback(
@@ -114,6 +121,7 @@ export default function Page() {
     }));
     return { nodes: [...nodes, ...satellites], edges: [...intra, ...inflow], trail };
   }, [viewRing, events, lastFusion]);
+
   const alertCount =
     (events?.scams.filter((s) => s.verdict !== "legit").length ?? 0) +
     (events?.counterfeits.filter((c) => c.verdict === "fake").length ?? 0) +
@@ -169,50 +177,89 @@ export default function Page() {
     [events, refreshEvents, refreshHotspots]
   );
 
+  const drawerOpen = activeTab !== "map";
+
   return (
     <main className="relative h-dvh w-screen select-none overflow-hidden bg-zinc-950">
       <CrimeMap points={hotspots?.points ?? []} hubs={hotspots?.hubs ?? []} focus={focus} />
 
-      {/* readability gradients over the map */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-[40rem] bg-gradient-to-r from-zinc-950/85 via-zinc-950/35 to-transparent" />
+      {/* readability gradient over the top of the map */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-zinc-950/80 to-transparent" />
 
-      <TopNav health={health} alertCount={alertCount} />
-      <PipelineStrip events={events} fusion={lastFusion} />
-
-      {/* hero title, like the reference */}
-      <div className="pointer-events-none absolute left-[23rem] top-16 z-10 hidden lg:block">
-        <h1 className="text-4xl font-extralight tracking-wide text-zinc-100 drop-shadow">
-          Public Safety Intelligence
-        </h1>
-        <div className="mt-2 flex gap-2 text-[10px] uppercase tracking-widest text-zinc-500">
-          <span className="glass pointer-events-auto px-2.5 py-1">Scam · Fraud Shield</span>
-          <span className="glass pointer-events-auto px-2.5 py-1">Counterfeit · Vision</span>
-          <span className="glass pointer-events-auto px-2.5 py-1">Rings · Graph ML</span>
-        </div>
-      </div>
-
-      <LeftPanel
-        events={events}
+      <TopNav
         health={health}
-        hotspots={hotspots}
-        onInjectRing={handleInjectRing}
-        onViewRing={setViewRing}
-        onOpenConsole={() => setConsoleOpen(true)}
-        onShowRealRing={openRealRing}
-        injecting={injecting}
+        alertCount={alertCount}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onBell={() => setActiveTab("alerts")}
       />
-      {realRing && (
-        <RingViewer
-          title={`real illicit cluster · ${realRing.label}`}
-          subtitle={`${realRing.size} confirmed-illicit wallets · caught by the same engine (AUC 0.9945)`}
-          badge="REAL — BITCOIN BLOCKCHAIN"
-          label={realRing.label}
-          nodes={realRing.nodes}
-          edges={realRing.edges}
-          onClose={() => setRealRing(null)}
+
+      <IconRail
+        activeTab={activeTab}
+        onTabChange={(t) => setActiveTab((cur) => (cur === t && t !== "map" ? "map" : t))}
+        drawerOpen={drawerOpen}
+        onSettings={() => pushToast("Settings — coming soon", "success")}
+      />
+
+      {/* hero title + module pills — only on the map view, clear of the rail */}
+      {activeTab === "map" && (
+        <div className="pointer-events-none absolute left-20 top-20 z-10 hidden lg:block">
+          <h1 className="text-4xl font-extralight tracking-wide text-zinc-100 drop-shadow">
+            Public Safety Intelligence
+          </h1>
+          <div className="mt-2 flex gap-2 text-[10px] uppercase tracking-widest text-zinc-500">
+            <span className="glass pointer-events-auto px-2.5 py-1">Scam · Fraud Shield</span>
+            <span className="glass pointer-events-auto px-2.5 py-1">Counterfeit · Vision</span>
+            <span className="glass pointer-events-auto px-2.5 py-1">Rings · Graph ML</span>
+          </div>
+        </div>
+      )}
+
+      {/* top-priority live alert chips (map view only) */}
+      {activeTab === "map" && (
+        <AlertChips
+          events={events}
+          hotspots={hotspots}
+          onLocate={locate}
+          onOpenAll={() => setActiveTab("alerts")}
         />
       )}
+
+      {/* slide-out drawers, one per tab */}
+      {drawerOpen && (
+        <Drawer onClose={() => setActiveTab("map")}>
+          {activeTab === "modules" && <ModulesDrawer events={events} health={health} />}
+          {activeTab === "fraud-rings" && (
+            <FraudRingsDrawer
+              events={events}
+              onInjectRing={handleInjectRing}
+              onViewRing={setViewRing}
+              onOpenConsole={() => setConsoleOpen(true)}
+              onError={(msg) => pushToast(msg, "error")}
+              injecting={injecting}
+            />
+          )}
+          {activeTab === "alerts" && (
+            <AlertsDrawer
+              events={events}
+              hotspots={hotspots}
+              fusion={lastFusion}
+              ringAlerts={ringAlerts}
+              onLocate={locate}
+            />
+          )}
+          {activeTab === "analytics" && <AnalyticsDrawer events={events} fusion={lastFusion} />}
+        </Drawer>
+      )}
+
+      {/* merged bottom dock — signal counts + intelligence fusion */}
+      <BottomDock
+        fusion={lastFusion}
+        events={events}
+        onFused={handleFused}
+        onError={(msg) => pushToast(msg, "error")}
+      />
+
       {consoleOpen && (
         <FraudConsole onClose={() => setConsoleOpen(false)} onCommitted={handleConsoleCommitted} />
       )}
@@ -228,15 +275,8 @@ export default function Page() {
           onClose={() => setViewRing(null)}
         />
       )}
-      <WarningPanel
-        events={events}
-        hotspots={hotspots}
-        fusion={lastFusion}
-        ringAlerts={ringAlerts}
-        onLocate={setFocus}
-      />
-      <FusionPanel fusion={lastFusion} onFused={handleFused} />
-      <VolumePanel events={events} />
+
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
 }

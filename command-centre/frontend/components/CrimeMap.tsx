@@ -60,7 +60,7 @@ export default function CrimeMap({
         zoom: 10.3,
         attributionControl: false,
       });
-      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-left");
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
       map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
       libRef.current = maplibregl;
       mapRef.current = map;
@@ -106,8 +106,29 @@ export default function CrimeMap({
       }
       wrap.appendChild(inner);
       scalablesRef.current.push(inner);
+
+      // click-through popover: this hub's coordinated signals
+      const signalRows = (h.points ?? [])
+        .slice(0, 6)
+        .map(
+          (p) =>
+            `<div style="display:flex;justify-content:space-between;gap:10px;margin-top:3px">` +
+            `<span>${titleCase(p.type)}${p.district ? ` · ${p.district}` : ""}</span>` +
+            (p.weight != null
+              ? `<span style="color:#a1a1aa">${(p.weight * 100).toFixed(0)}%</span>`
+              : "") +
+            `</div>`
+        )
+        .join("");
+      const hubPopup = new lib.Popup({ offset: 18, closeButton: true, maxWidth: "260px" }).setHTML(
+        `<strong>Coordinated hub${h.district ? ` — ${h.district}` : ""}</strong>` +
+          `<div style="margin-top:2px;color:#a1a1aa">${h.n_points} signals · ${h.domains
+            .map(titleCase)
+            .join(" + ")}</div>` +
+          signalRows
+      );
       markersRef.current.push(
-        new lib.Marker({ element: wrap }).setLngLat([h.lon, h.lat]).addTo(map)
+        new lib.Marker({ element: wrap }).setLngLat([h.lon, h.lat]).setPopup(hubPopup).addTo(map)
       );
     }
 
@@ -149,7 +170,7 @@ export default function CrimeMap({
       <div ref={container} className="h-full w-full" />
       <button
         onClick={() => setSatellite((s) => !s)}
-        className="glass pointer-events-auto absolute bottom-28 left-4 z-20 flex items-center gap-1.5 px-3 py-2 text-[11px] text-zinc-300 transition hover:text-white"
+        className="glass pointer-events-auto absolute bottom-32 left-[60px] z-20 flex items-center gap-1.5 px-3 py-2 text-[11px] text-zinc-300 transition hover:text-white"
         title="toggle basemap"
       >
         <Layers className="h-3.5 w-3.5" />
