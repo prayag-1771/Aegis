@@ -30,6 +30,7 @@ from .markers import (
     infer_scam_type,
 )
 from .model import ScamClassifier
+from .playbooks import PlaybookMatch, match_playbook
 
 # One human sentence-fragment per marker; {evidence} is the first matched span.
 # Straight quotes on purpose — Windows consoles mangle curly quotes in demos.
@@ -51,12 +52,32 @@ _VERDICT_LEAD = {
 }
 
 
-def build_explanation(verdict: str, risk: float, hits: list[MarkerHit]) -> str:
+def build_explanation(verdict: str, risk: float, hits: list[MarkerHit],
+                      playbook: PlaybookMatch | None = None) -> str:
     lead = _VERDICT_LEAD[verdict]
     # A clean verdict must read clean — don't enumerate stray pattern matches
     # the classifier already judged harmless.
     if not hits or verdict == "legit":
         return f"{lead} Classifier risk score {risk:.2f}."
+
+    # Reasoning chain: when the message follows a known scam script, walk it
+    # stage by stage — each step cites the exact span that satisfied it.
+    if playbook is not None:
+        pb = playbook.playbook
+        order = "in script order" if playbook.in_canonical_order else "out of script order"
+        chain = " -> ".join(playbook.chain())
+        extras = [
+            _MARKER_FRAGMENTS[h.marker].format(evidence=h.evidence[0])
+            for h in hits
+            if not any(h.marker in st.stage.markers for st in playbook.stages if st.satisfied)
+        ]
+        extra_txt = (" It also " + ", and ".join(extras) + ".") if extras else ""
+        return (
+            f"{lead} Follows the {pb.name.replace('_', '-')} playbook "
+            f"({playbook.n_satisfied}/{len(playbook.stages)} stages, {order}): "
+            f"{chain}.{extra_txt} Classifier risk score {risk:.2f}."
+        )
+
     fragments = [
         _MARKER_FRAGMENTS[h.marker].format(evidence=h.evidence[0]) for h in hits
     ]
@@ -79,7 +100,14 @@ def analyze(
     markers = [h.marker for h in hits]
     risk = model.risk_score(text)
     verdict = model.decide_verdict(risk, len(markers))
-    scam_type = "none" if verdict == "legit" else infer_scam_type(text, markers)
+    playbook = match_playbook(text, hits) if verdict != "legit" else None
+    # A matched playbook is the strongest type signal we have.
+    if verdict == "legit":
+        scam_type = "none"
+    elif playbook is not None:
+        scam_type = playbook.playbook.scam_type
+    else:
+        scam_type = infer_scam_type(text, markers)
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -91,7 +119,7 @@ def analyze(
         "risk_score": round(risk, 4),
         "scam_type": scam_type,
         "markers": markers,
-        "explanation": build_explanation(verdict, risk, hits),
+        "explanation": build_explanation(verdict, risk, hits, playbook),
         "phone_number": phone_number,
         "location_hint": location_hint,
     }

@@ -40,14 +40,17 @@ from sklearn.model_selection import GroupShuffleSplit
 from sklearn.pipeline import FeatureUnion, Pipeline
 
 from .config import MODELS_DIR, ModelConfig
-from .markers import ALL_MARKERS, marker_names
+from .markers import ALL_MARKERS, detect_markers
+from .playbooks import match_playbook
 
 MODEL_FILE = MODELS_DIR / "scam_classifier.joblib"
 REPORT_FILE = MODELS_DIR / "train_report.json"
 
 
 class MarkerFeatures(BaseEstimator, TransformerMixin):
-    """8 binary contract-marker indicators + a scaled marker count."""
+    """8 binary contract-marker indicators + scaled marker count + playbook
+    structure (completeness, canonical order) — so N markers forming a
+    coherent scam script score differently from N unrelated markers."""
 
     def fit(self, X, y=None):  # noqa: N803 (sklearn API)
         return self
@@ -55,9 +58,13 @@ class MarkerFeatures(BaseEstimator, TransformerMixin):
     def transform(self, X) -> np.ndarray:  # noqa: N803
         rows = []
         for text in X:
-            names = set(marker_names(text))
+            hits = detect_markers(text)
+            names = {h.marker for h in hits}
             vec = [1.0 if m in names else 0.0 for m in ALL_MARKERS]
             vec.append(min(len(names), 5) / 5.0)
+            pb = match_playbook(text, hits)
+            vec.append(pb.completeness if pb else 0.0)
+            vec.append(1.0 if pb and pb.in_canonical_order else 0.0)
             rows.append(vec)
         return np.asarray(rows)
 

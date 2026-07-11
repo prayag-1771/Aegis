@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Aegis Counterfeit Vision — fake-currency detection (CNN transfer learning + OpenCV security-feature checks)"
 authors = [{ name = "Adharshan" }]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "torch>=2.4",
     "torchvision>=0.19",
@@ -34,7 +34,7 @@ packages = ["src/aegis_counterfeit"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py310"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

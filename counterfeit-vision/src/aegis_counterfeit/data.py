@@ -115,7 +115,10 @@ def prepare_real_dataset(
     out_dir = out_dir or (DATA_DIR / "real")
     rng = random.Random(seed)
 
-    # collect every real note photo (skip Background / non-note folders)
+    # collect every real note photo (skip Background / non-note folders). Every
+    # photo in this dataset is a REAL note — we do NOT bucket by path keywords;
+    # the fake class is generated from these via _degrade_to_fake (no public
+    # dataset of photographed counterfeit notes exists).
     photos: list[Path] = []
     for ext in ("*.png", "*.jpg", "*.jpeg", "*.JPG", "*.jpeg"):
         for p in src_dir.rglob(ext):

@@ -10,14 +10,68 @@ body {
   background: #09090b;
 }
 
-/* ---------- floating glass panels (the reference-image look) ---------- */
+/* ---------- floating glass panels (redesigned glassmorphism) ---------- */
 .glass {
-  background: rgb(24 24 27 / 0.62);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgb(255 255 255 / 0.07);
-  border-radius: 1.1rem;
+  background: rgba(14, 14, 20, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.38);
+}
+
+/* icon rail — left dock */
+.glass-rail {
+  background: rgba(14, 14, 20, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+
+/* slide-out drawer */
+.glass-drawer {
+  background: rgba(14, 14, 20, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ---------- animations ---------- */
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.animate-slide-in {
+  animation: slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(1rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* ---------- graceful degradation for backdrop-filter ---------- */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass,
+  .glass-rail,
+  .glass-drawer {
+    background: rgba(14, 14, 20, 0.88);
+  }
 }
 
 /* thin dark scrollbars */
@@ -78,7 +132,8 @@ body {
   border-radius: 9999px;
   border: 1px solid rgb(255 255 255 / 0.25);
   background: radial-gradient(circle, rgb(244 244 245 / 0.14) 0%, rgb(244 244 245 / 0.03) 70%);
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
 }
 .hub-cross {
   border-color: rgb(248 113 113 / 0.7);
