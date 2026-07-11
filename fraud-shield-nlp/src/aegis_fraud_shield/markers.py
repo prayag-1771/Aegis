@@ -100,7 +100,8 @@ _MARKER_PATTERNS: dict[str, list[str]] = {
         r"\bKYC\b.{0,40}\b(?:update|verify|expire|complete|pending)\b",
     ],
     SUSPICIOUS_LINK: [
-        r"\bhttps?://(?:bit\.ly|tinyurl\.com|t\.co|goo\.gl|cutt\.ly|rb\.gy|is\.gd|shorturl\.at)/\S+",
+        # scheme optional: real scam SMS send bare "bit.ly/xyz" links
+        r"\b(?:https?://)?(?:bit\.ly|tinyurl\.com|t\.co|goo\.gl|cutt\.ly|rb\.gy|is\.gd|shorturl\.at)/\S+",
         r"\bhttps?://\d{1,3}(?:\.\d{1,3}){3}\b",  # raw-IP URL
         r"\b(?:click|tap|open|visit)\b.{0,30}\bhttps?://\S+",
         r"\bhttps?://[^\s/]*(?:-|\.)(?:kyc|verify|update|reward|refund|claim|prize|lucky)[^\s]*",
@@ -127,6 +128,7 @@ class MarkerHit:
 
     marker: str
     evidence: list[str]  # matched text spans, deduplicated, in document order
+    first_pos: int = 0  # char offset of the earliest span (playbook order checks)
 
 
 def detect_markers(text: str) -> list[MarkerHit]:
@@ -145,7 +147,8 @@ def detect_markers(text: str) -> list[MarkerHit]:
                 if key not in seen:
                     seen.add(key)
                     evidence.append(s)
-            hits.append(MarkerHit(marker=marker, evidence=evidence))
+            hits.append(MarkerHit(marker=marker, evidence=evidence,
+                                  first_pos=min(p for p, _ in spans)))
     return hits
 
 
