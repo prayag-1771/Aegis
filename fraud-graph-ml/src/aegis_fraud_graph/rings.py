@@ -46,6 +46,17 @@ def _topology_label(sub: nx.DiGraph) -> str:
         has_cycle = False
     if has_cycle:
         return "round-tripping cycle"
+
+    # A "hub" is a node collecting from (or fanning to) an outsized share of the
+    # ring. Count ALL hubs, not just the biggest — real rings run multiple
+    # collection points that cross-feed each other, which the single-hub check
+    # below used to bucket into the vague "mixed laundering network" catch-all.
+    hub_cut = max(3, n // 3)
+    collectors = [node for node, d in sub.in_degree() if d >= hub_cut]
+    distributors = [node for node, d in sub.out_degree() if d >= hub_cut]
+    n_hubs = len(set(collectors) | set(distributors))
+    if n_hubs >= 2:
+        return "multi-hub laundering network"
     if max_in >= max(3, n - 2) or max(out_degs) >= max(3, n - 2):
         return "mule collection hub"
     # Mostly linear flow: many degree<=2 nodes in a path-like arrangement.
