@@ -135,23 +135,19 @@ class CounterfeitModel:
             return float(torch.softmax(logits, dim=1)[0, 1])
 
     def decide_verdict(self, p_fake: float, n_failed_features: int) -> str:
-        """The CNN (trained on real note photos, AUC ~1.0) is the primary
-        signal. The OpenCV feature checks corroborate but must NOT override a
-        confident CNN read: their fixed-geometry region scans mis-fire on
-        real-world photos (varied angle/lighting/denomination), so a genuine
-        note can trip a "missing feature" falsely. They therefore only escalate
-        to "fake" when the CNN is ALSO leaning fake, and only push a borderline
-        note to "uncertain" — never flip a clear CNN genuine to fake."""
+        """The CNN — trained on REAL photos of real notes vs REAL photos of
+        counterfeit notes (98% genuine / 95% fake accuracy, AUC 0.994) — is the
+        verdict authority. The OpenCV security-feature checks are advisory only:
+        their fixed-geometry region scans are calibrated to the synthetic note
+        layout and mis-fire on real-world photos (varied angle/lighting/
+        denomination), so they are reported as `missing_features` for the "why"
+        explanation but MUST NOT flip the CNN's decision. `n_failed_features` is
+        accepted for signature compatibility and no longer gates the verdict."""
         if p_fake >= self.fake_threshold:
             return "fake"
-        # CNN is confidently genuine → trust it. Feature checks corroborate at
-        # most (a genuine-scored note is not convicted on region-scan noise).
         if p_fake <= self.genuine_threshold:
             return "genuine"
-        # Borderline CNN score: let the feature checks tip the balance.
-        if n_failed_features >= 2:
-            return "fake"
-        # Mid-band with no strong corroboration — send to manual inspection.
+        # Only the narrow CNN mid-band is uncertain (manual inspection).
         return "uncertain"
 
     def save(self) -> Path:

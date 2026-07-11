@@ -14,13 +14,12 @@ CONTRACT_SCHEMA = REPO_ROOT / "contracts" / "counterfeit.schema.json"
 
 SCHEMA_VERSION = "1.0"
 
-# Real Indian note photos — the genuine class (4,002 real ₹10–₹2000 photos,
-# mobile-camera, varied backgrounds/lighting). Public, downloads anonymously
-# via kagglehub. No public dataset of photographed *counterfeit* notes exists
-# (govt policy — see data.py), so fakes are built by degrading these real
-# photos' security features. This is the standard approach in the counterfeit-
-# detection literature when no seized-fake data is available.
-REAL_DATASET = "vishalmane109/indian-currency-note-images-dataset-2020"
+# Real Indian note dataset with BOTH real and fake photographed notes, split
+# real/ and fake/ by denomination (₹10–₹2000). ~4,900 real + ~2,500 real
+# counterfeit photos (mobile-camera, varied backgrounds/lighting). Public,
+# downloads anonymously via kagglehub. This is genuine photographed-counterfeit
+# data — the fake class is real fakes, not synthetic degradations.
+REAL_DATASET = "preetrank/indian-currency-real-vs-fake-notes-dataset"
 
 # Canonical working size for feature checks (w, h) — real ₹500 note is
 # 150x66 mm, aspect ratio ~2.27.
