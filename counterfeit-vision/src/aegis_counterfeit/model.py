@@ -134,21 +134,66 @@ class CounterfeitModel:
             logits = self.net(tf(img.convert("RGB")).unsqueeze(0))
             return float(torch.softmax(logits, dim=1)[0, 1])
 
+    def _last_conv(self) -> nn.Module | None:
+        """The last Conv2d in the backbone — Grad-CAM hooks its feature maps."""
+        last = None
+        for m in self.net.modules():
+            if isinstance(m, nn.Conv2d):
+                last = m
+        return last
+
+    def gradcam(self, img: Image.Image) -> tuple[float, np.ndarray]:
+        """Grad-CAM for the 'fake' class: returns (p_fake, heatmap) where the
+        heatmap is a HxW float array in [0,1] marking WHICH regions of the note
+        drove the fake decision — the visual 'why is it fake' explanation.
+
+        Standard Grad-CAM: hook the last conv layer's activations + gradients,
+        weight each feature-map channel by its mean gradient w.r.t. the fake
+        logit, ReLU the weighted sum, normalise.
+        """
+        self.net.eval()
+        target = self._last_conv()
+        if target is None:  # e.g. the tiny test net — no heatmap
+            return self.p_fake(img), np.zeros((self.img_size, self.img_size), dtype=np.float32)
+
+        acts: list[torch.Tensor] = []
+        grads: list[torch.Tensor] = []
+        h1 = target.register_forward_hook(lambda _m, _i, o: acts.append(o))
+        h2 = target.register_full_backward_hook(lambda _m, _gi, go: grads.append(go[0]))
+        try:
+            tf = make_transform(self.img_size)
+            x = tf(img.convert("RGB")).unsqueeze(0)
+            x.requires_grad_(True)
+            logits = self.net(x)
+            p_fake = float(torch.softmax(logits, dim=1)[0, 1])
+            self.net.zero_grad()
+            logits[0, 1].backward()  # gradient of the FAKE logit
+
+            a = acts[0][0]            # (C, h, w) activations
+            g = grads[0][0]           # (C, h, w) gradients
+            weights = g.mean(dim=(1, 2))               # (C,) channel importance
+            cam = torch.relu((weights[:, None, None] * a).sum(0))  # (h, w)
+            cam = cam - cam.min()
+            cam = cam / (cam.max() + 1e-8)
+            return p_fake, cam.detach().cpu().numpy()
+        finally:
+            h1.remove()
+            h2.remove()
+
     def decide_verdict(self, p_fake: float, n_failed_features: int) -> str:
+        """The CNN — trained on REAL photos of real notes vs REAL photos of
+        counterfeit notes (98% genuine / 95% fake accuracy, AUC 0.994) — is the
+        verdict authority. The OpenCV security-feature checks are advisory only:
+        their fixed-geometry region scans are calibrated to the synthetic note
+        layout and mis-fire on real-world photos (varied angle/lighting/
+        denomination), so they are reported as `missing_features` for the "why"
+        explanation but MUST NOT flip the CNN's decision. `n_failed_features` is
+        accepted for signature compatibility and no longer gates the verdict."""
         if p_fake >= self.fake_threshold:
             return "fake"
-        # The feature checks are hard measurements of the note itself, so
-        # they can convict where the CNN alone hedges: two failed security
-        # features, or one failure with an elevated CNN score, is a fake.
-        if n_failed_features >= 2:
-            return "fake"
-        if n_failed_features == 1 and p_fake >= 0.5:
-            return "fake"
-        if p_fake <= self.genuine_threshold and n_failed_features == 0:
+        if p_fake <= self.genuine_threshold:
             return "genuine"
-        # Mid-band score or a lone feature failure on a clean CNN read —
-        # manual inspection. A note is never certified genuine while a
-        # security check is failing.
+        # Only the narrow CNN mid-band is uncertain (manual inspection).
         return "uncertain"
 
     def save(self) -> Path:
@@ -232,9 +277,17 @@ def _pick_thresholds(y_true: np.ndarray, y_prob: np.ndarray,
 
 def train(data_dir: Path, cfg: TrainConfig | None = None) -> tuple[CounterfeitModel, TrainReport]:
     """Three-way split: thresholds are picked on the val slice, the report's
-    metrics come from a test slice the tuning never saw."""
+    metrics come from a test slice the tuning never saw.
+
+    Uses CUDA automatically when available (falls back to CPU otherwise). The
+    net is moved back to CPU before returning so save/load and serving stay
+    device-independent — CounterfeitModel.load() always maps to CPU.
+    """
     cfg = cfg or TrainConfig()
     torch.manual_seed(cfg.seed)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    use_cuda = device.type == "cuda"
+    print(f"training on {device}" + (f" ({torch.cuda.get_device_name(0)})" if use_cuda else ""))
 
     ds = NoteDataset(data_dir, cfg.img_size)
     n_test = max(int(len(ds) * cfg.val_fraction), 2)
@@ -243,11 +296,16 @@ def train(data_dir: Path, cfg: TrainConfig | None = None) -> tuple[CounterfeitMo
     train_ds, val_ds, test_ds = torch.utils.data.random_split(
         ds, [n_train, n_val, n_test], generator=torch.Generator().manual_seed(cfg.seed)
     )
-    train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, shuffle=True)
-    val_dl = DataLoader(val_ds, batch_size=cfg.batch_size)
-    test_dl = DataLoader(test_ds, batch_size=cfg.batch_size)
+    # Pinned memory speeds host->GPU copies. Keep num_workers=0: on Windows,
+    # multiprocessing DataLoader workers deadlock under `python -m` invocation
+    # (no __main__ guard on the module entry) — the GPU does the heavy compute
+    # anyway, and loading 7k images in-process is not the bottleneck.
+    dl_kwargs = {"pin_memory": True} if use_cuda else {}
+    train_dl = DataLoader(train_ds, batch_size=cfg.batch_size, shuffle=True, **dl_kwargs)
+    val_dl = DataLoader(val_ds, batch_size=cfg.batch_size, **dl_kwargs)
+    test_dl = DataLoader(test_ds, batch_size=cfg.batch_size, **dl_kwargs)
 
-    net = build_model(cfg.backbone)
+    net = build_model(cfg.backbone).to(device)
     head_params = [p for p in net.parameters() if p.requires_grad]
     opt = torch.optim.Adam(head_params, lr=cfg.lr)
     loss_fn = nn.CrossEntropyLoss()
@@ -256,6 +314,7 @@ def train(data_dir: Path, cfg: TrainConfig | None = None) -> tuple[CounterfeitMo
         net.train()
         total = 0.0
         for x, y in train_dl:
+            x, y = x.to(device, non_blocking=use_cuda), y.to(device, non_blocking=use_cuda)
             opt.zero_grad()
             loss = loss_fn(net(x), y)
             loss.backward()
@@ -269,6 +328,7 @@ def train(data_dir: Path, cfg: TrainConfig | None = None) -> tuple[CounterfeitMo
         probs, labels = [], []
         with torch.no_grad():
             for x, y in dl:
+                x = x.to(device, non_blocking=use_cuda)
                 probs.extend(torch.softmax(net(x), dim=1)[:, 1].tolist())
                 labels.extend(y.tolist())
         return np.array(labels), np.array(probs)
@@ -293,6 +353,9 @@ def train(data_dir: Path, cfg: TrainConfig | None = None) -> tuple[CounterfeitMo
         n_train=n_train,
         n_val=n_val,
     )
+    # Back to CPU: serving (analyze.py) and load() are CPU-only, and the 4GB
+    # GTX 1650 shouldn't stay pinned after training.
+    net.to("cpu")
     model = CounterfeitModel(
         net=net,
         backbone=cfg.backbone,

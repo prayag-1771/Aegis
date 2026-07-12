@@ -3,168 +3,597 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aegis Counterfeit Vision — live note scan</title>
+<title>Aegis Counterfeit Vision — Live Note Scan</title>
+<meta name="description" content="AI-powered Indian currency counterfeit detection with Grad-CAM heatmap explanations.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0b1020; --panel: #131a2e; --panel-2: #1a2340; --text: #e8ecf6;
-    --muted: #93a0bd; --line: #26304f;
-    --fake: #ff5964; --uncertain: #ffb020; --genuine: #2fbf71; --accent: #5b8cff;
-  }
-  * { box-sizing: border-box; margin: 0; }
-  body {
-    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
-    background: var(--bg); color: var(--text);
-    min-height: 100vh; display: flex; flex-direction: column;
-  }
-  header {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
-  }
-  header .logo { font-size: 22px; }
-  header h1 { font-size: 17px; font-weight: 600; }
-  header .sub { color: var(--muted); font-size: 12.5px; }
-  #status {
-    margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px;
-    background: var(--panel-2); color: var(--muted); border: 1px solid var(--line);
-  }
-  #status.ok { color: var(--genuine); border-color: var(--genuine); }
-  main {
-    flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
-    padding: 18px 20px; max-width: 1100px; width: 100%; margin: 0 auto;
-  }
-  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
-  .card h2 { font-size: 14px; color: var(--muted); text-transform: uppercase;
-             letter-spacing: .08em; margin-bottom: 12px; }
-  video, #preview {
-    width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 10px; object-fit: contain;
-  }
-  .controls { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
-  button, label.filebtn {
-    font: inherit; font-weight: 600; padding: 9px 18px; border-radius: 10px; cursor: pointer;
-    background: var(--accent); color: #fff; border: none;
-  }
-  .ghost { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
-  button:disabled { opacity: .5; cursor: wait; }
-  input[type=file] { display: none; }
-  .verdict { display: inline-block; font-weight: 700; font-size: 15px; letter-spacing: .06em;
-             text-transform: uppercase; padding: 5px 14px; border-radius: 8px; margin-bottom: 10px; }
-  .verdict.fake { background: rgba(255,89,100,.15); color: var(--fake); border: 1px solid var(--fake); }
-  .verdict.uncertain { background: rgba(255,176,32,.12); color: var(--uncertain); border: 1px solid var(--uncertain); }
-  .verdict.genuine { background: rgba(47,191,113,.12); color: var(--genuine); border: 1px solid var(--genuine); }
-  .confbar { height: 8px; border-radius: 4px; background: var(--panel-2); margin: 10px 0; overflow: hidden; }
-  .confbar > div { height: 100%; border-radius: 4px; transition: width .6s ease; }
-  .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .chip { font-size: 12px; padding: 3px 10px; border-radius: 999px;
-          background: rgba(255,89,100,.12); border: 1px solid var(--fake); color: var(--fake); }
-  #result .placeholder { color: var(--muted); font-size: 14px; }
+/* ══════════════════════════════════════════════════
+   DESIGN SYSTEM
+   ══════════════════════════════════════════════════ */
+:root {
+  --bg: #060a13;
+  --surface-1: #0d1221;
+  --surface-2: #131b2e;
+  --surface-3: #1a2440;
+  --text: #eaeff8;
+  --text-secondary: #8899b8;
+  --border: rgba(255,255,255,0.06);
+  --border-hover: rgba(255,255,255,0.12);
+
+  --red: #ff4d5e;
+  --red-bg: rgba(255,77,94,0.1);
+  --red-border: rgba(255,77,94,0.3);
+  --orange: #ffaa2e;
+  --orange-bg: rgba(255,170,46,0.1);
+  --orange-border: rgba(255,170,46,0.3);
+  --green: #34d97f;
+  --green-bg: rgba(52,217,127,0.1);
+  --green-border: rgba(52,217,127,0.3);
+  --blue: #4d8eff;
+  --blue-bg: rgba(77,142,255,0.08);
+  --blue-border: rgba(77,142,255,0.25);
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 14px; line-height: 1.5;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh;
+}
+
+/* ══════════════════════════════════════════════════
+   HEADER
+   ══════════════════════════════════════════════════ */
+.header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+}
+.header-brand {
+  display: flex; align-items: center; gap: 10px;
+}
+.header-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, #4d8eff 0%, #7c5cff 100%);
+  display: grid; place-items: center; font-size: 17px;
+  flex-shrink: 0;
+}
+.header-title { font-size: 15px; font-weight: 700; }
+.header-sub { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+.header-status {
+  margin-left: auto; font-size: 10px; font-weight: 600;
+  padding: 4px 12px; border-radius: 20px;
+  background: var(--surface-2); color: var(--text-secondary);
+  border: 1px solid var(--border);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  transition: all var(--transition);
+}
+.header-status.ok {
+  color: var(--green); border-color: var(--green-border);
+  background: var(--green-bg);
+}
+
+/* ══════════════════════════════════════════════════
+   LAYOUT — top capture, bottom results
+   ══════════════════════════════════════════════════ */
+.app {
+  max-width: 960px; margin: 0 auto;
+  padding: 16px; display: flex; flex-direction: column; gap: 16px;
+}
+.panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.panel-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.panel-body { padding: 16px; }
+
+/* ── CAPTURE PANEL ── */
+.capture-row {
+  display: flex; gap: 12px; align-items: stretch;
+}
+.capture-row video {
+  flex: 1; min-width: 0;
+  background: #000; border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  aspect-ratio: 16/9; object-fit: contain;
+}
+.capture-controls {
+  display: flex; flex-direction: column; gap: 8px;
+  min-width: 150px;
+}
+@media (max-width: 640px) {
+  .capture-row { flex-direction: column; }
+  .capture-controls { flex-direction: row; flex-wrap: wrap; min-width: auto; }
+}
+
+/* Buttons */
+.btn {
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  padding: 8px 14px; border-radius: var(--radius-xs); cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-secondary);
+  transition: all var(--transition); display: inline-flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--border-hover); color: var(--text); background: var(--surface-3); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary {
+  background: linear-gradient(135deg, #4d8eff, #6c5cff); color: #fff;
+  border: none; font-weight: 700;
+}
+.btn-primary:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
+input[type=file] { display: none; }
+select.btn {
+  -webkit-appearance: none; appearance: none;
+  padding-right: 24px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238899b8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+/* ══════════════════════════════════════════════════
+   RESULT — verdict + heatmap
+   ══════════════════════════════════════════════════ */
+#result-area { display: none; }
+#result-area.visible { display: block; }
+
+.placeholder-msg {
+  text-align: center; padding: 32px 16px;
+  color: var(--text-secondary); font-size: 13px; line-height: 1.8;
+}
+
+/* ── VERDICT STRIP ── */
+.verdict-strip {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  animation: fadeSlideIn 0.4s ease;
+}
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.verdict-tag {
+  font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 6px 16px; border-radius: var(--radius-xs);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.verdict-tag.fake { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+.verdict-tag.uncertain { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); }
+.verdict-tag.genuine { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+
+.verdict-conf {
+  display: flex; align-items: center; gap: 10px; flex: 1;
+}
+.conf-track {
+  flex: 1; height: 6px; border-radius: 3px;
+  background: var(--surface-3); overflow: hidden;
+}
+.conf-fill {
+  height: 100%; border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.conf-num { font-size: 15px; font-weight: 800; min-width: 40px; text-align: right; }
+.verdict-denom {
+  font-size: 12px; color: var(--text-secondary); font-weight: 600;
+  padding: 4px 10px; background: var(--surface-2); border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* ── DETAILS ROW ── */
+.details-row {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+.detail-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  background: var(--surface-2); color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.detail-chip.fail {
+  background: var(--red-bg); color: var(--red); border-color: var(--red-border);
+  font-weight: 600;
+}
+.detail-chip.pass-chip {
+  background: var(--green-bg); color: var(--green); border-color: var(--green-border);
+  font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════
+   GRAD-CAM — the hero: side-by-side comparison
+   ══════════════════════════════════════════════════ */
+.gradcam-section {
+  padding: 0;
+}
+.gradcam-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.gradcam-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-secondary);
+  display: flex; align-items: center; gap: 6px;
+}
+.gradcam-title .fire { font-size: 14px; }
+.view-tabs {
+  display: flex; border-radius: var(--radius-xs); overflow: hidden;
+  border: 1px solid var(--border);
+}
+.view-tab {
+  font-family: inherit; font-size: 10px; font-weight: 700;
+  padding: 4px 12px; cursor: pointer;
+  background: var(--surface-2); color: var(--text-secondary);
+  border: none; text-transform: uppercase; letter-spacing: 0.04em;
+  transition: all var(--transition);
+}
+.view-tab:not(:last-child) { border-right: 1px solid var(--border); }
+.view-tab:hover { color: var(--text); }
+.view-tab.active { background: var(--blue-bg); color: var(--blue); }
+
+/* Image comparison container */
+.img-compare {
+  position: relative; background: #000; overflow: hidden;
+  /* Aspect ratio set by JS based on loaded image */
+}
+.img-compare img {
+  width: 100%; height: 100%; display: block;
+  object-fit: contain;
+  position: absolute; top: 0; left: 0;
+}
+.img-compare .img-original { z-index: 1; }
+.img-compare .img-heatmap { z-index: 2; }
+
+/* Slider overlay for compare mode */
+.img-compare .slider-handle {
+  position: absolute; top: 0; bottom: 0; z-index: 10;
+  width: 3px; background: #fff;
+  cursor: ew-resize; left: 50%;
+  box-shadow: 0 0 8px rgba(0,0,0,0.5);
+  display: none;
+}
+.img-compare .slider-handle::after {
+  content: '⟨⟩'; position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: #fff; color: #000;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 900;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.img-compare .img-label {
+  position: absolute; top: 10px; z-index: 15;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; padding: 3px 8px; border-radius: 4px;
+  background: rgba(0,0,0,0.65); color: #fff;
+  pointer-events: none;
+}
+.img-compare .label-left { left: 10px; }
+.img-compare .label-right { right: 10px; }
+
+/* Single-view: just the image */
+.single-view .img-heatmap, .single-view .img-original { position: relative; }
+.single-view .slider-handle { display: none !important; }
+
+/* Compare view */
+.compare-view .slider-handle { display: block; }
+.compare-view .img-heatmap { clip-path: inset(0 0 0 0); }
+
+/* Loading spinner */
+.analysing-box {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 40px 16px; animation: fadeSlideIn 0.3s ease;
+}
+.spinner {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2.5px solid var(--surface-3);
+  border-top-color: var(--blue);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.analysing-text { font-size: 13px; font-weight: 600; color: var(--blue); }
+
+/* No-heatmap fallback */
+.fallback-img {
+  padding: 12px;
+}
+.fallback-img img {
+  width: 100%; border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
 </style>
 </head>
 <body>
-<header>
-  <span class="logo">🛡️</span>
-  <div>
-    <h1>Aegis Counterfeit Vision</h1>
-    <div class="sub">Hold a note to the camera or upload a photo — feature-level fake detection</div>
-  </div>
-  <span id="status">connecting…</span>
-</header>
 
-<main>
-  <div class="card">
-    <h2>Note capture</h2>
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas" hidden></canvas>
-    <div class="controls">
-      <button id="startCam" class="ghost">Enable camera</button>
-      <button id="scan" disabled>📷 Scan note</button>
-      <label class="filebtn ghost">Upload image<input type="file" id="file" accept="image/*"></label>
-      <select id="district" title="Seizure location (feeds the crime map + fusion)"
-              style="background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit">
-        <option value="Jamtara">Jamtara</option>
-        <option value="Deoghar">Deoghar</option>
-        <option value="Alwar">Alwar</option>
-        <option value="Bharatpur">Bharatpur</option>
-        <option value="Nuh">Nuh</option>
-        <option value="Chennai Central">Chennai Central</option>
-        <option value="Mumbai South">Mumbai South</option>
-        <option value="Delhi East">Delhi East</option>
-        <option value="">no location</option>
-      </select>
+<!-- ── HEADER ── -->
+<div class="header">
+  <div class="header-brand">
+    <div class="header-icon">🛡️</div>
+    <div>
+      <div class="header-title">Aegis Counterfeit Vision</div>
+      <div class="header-sub">AI counterfeit detection with Grad-CAM heatmap explanation</div>
+    </div>
+  </div>
+  <span class="header-status" id="status">connecting…</span>
+</div>
+
+<!-- ── APP ── -->
+<div class="app">
+
+  <!-- CAPTURE -->
+  <div class="panel">
+    <div class="panel-header">📷 Note Capture</div>
+    <div class="panel-body">
+      <div class="capture-row">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="capture-controls">
+          <button class="btn" id="startCam">🎥 Enable Camera</button>
+          <button class="btn btn-primary" id="scan" disabled>📷 Scan Note</button>
+          <label class="btn" style="cursor:pointer">📁 Upload Image<input type="file" id="file" accept="image/*"></label>
+          <select id="district" class="btn" title="Seizure location">
+            <option value="Jamtara">📍 Jamtara</option>
+            <option value="Deoghar">📍 Deoghar</option>
+            <option value="Alwar">📍 Alwar</option>
+            <option value="Bharatpur">📍 Bharatpur</option>
+            <option value="Nuh">📍 Nuh</option>
+            <option value="Chennai Central">📍 Chennai Central</option>
+            <option value="Mumbai South">📍 Mumbai South</option>
+            <option value="Delhi East">📍 Delhi East</option>
+            <option value="">no location</option>
+          </select>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <h2>Scan result</h2>
-    <img id="preview" alt="" hidden>
-    <div id="result"><p class="placeholder">No scan yet. Enable the camera and hold a ₹500/₹2000
-      note flat in frame, or upload a photo.</p></div>
+  <!-- EMPTY STATE -->
+  <div class="panel" id="empty-state">
+    <div class="placeholder-msg">
+      No scan yet.<br>
+      Enable the camera or upload a note image to start.<br><br>
+      The AI will classify the note and generate a <strong style="color:var(--blue)">Grad-CAM heatmap</strong><br>
+      showing exactly which regions look suspicious.
+    </div>
   </div>
-</main>
+
+  <!-- RESULT (hidden until first scan) -->
+  <div class="panel" id="result-area">
+    <!-- Verdict strip — injected by JS -->
+    <div id="verdict-strip"></div>
+    <!-- Details (features, event id) -->
+    <div id="details-row"></div>
+    <!-- Grad-CAM comparison viewer -->
+    <div id="gradcam-container"></div>
+  </div>
+
+</div>
+
+<canvas id="canvas" hidden></canvas>
 
 <script>
-const statusEl = document.getElementById("status");
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const scanBtn = document.getElementById("scan");
-const startBtn = document.getElementById("startCam");
-const fileInput = document.getElementById("file");
-const result = document.getElementById("result");
-const preview = document.getElementById("preview");
+/* ══════════════════════════════════════════════════
+   ELEMENTS
+   ══════════════════════════════════════════════════ */
+const statusEl     = document.getElementById("status");
+const video        = document.getElementById("video");
+const canvas       = document.getElementById("canvas");
+const scanBtn      = document.getElementById("scan");
+const startBtn     = document.getElementById("startCam");
+const fileInput    = document.getElementById("file");
+const emptyState   = document.getElementById("empty-state");
+const resultArea   = document.getElementById("result-area");
+const verdictStrip = document.getElementById("verdict-strip");
+const detailsRow   = document.getElementById("details-row");
+const gradcamBox   = document.getElementById("gradcam-container");
+const districtSel  = document.getElementById("district");
 
-const VERDICT_COLOR = { fake: "var(--fake)", uncertain: "var(--uncertain)", genuine: "var(--genuine)" };
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-
-// Command centre to auto-ingest scans into (dashboard + fusion).
 const COMMAND_CENTRE = "http://127.0.0.1:8000";
-// Demo geography shared with fraud-graph + fusion (see fusion/correlator.py).
 const DISTRICT_COORDS = {
-  "Jamtara": [23.79, 86.80], "Deoghar": [24.48, 86.70], "Alwar": [27.55, 76.63],
-  "Bharatpur": [27.22, 77.49], "Nuh": [28.10, 77.00], "Chennai Central": [13.08, 80.27],
-  "Mumbai South": [18.93, 72.83], "Delhi East": [28.65, 77.30],
+  "Jamtara":[23.79,86.80],"Deoghar":[24.48,86.70],"Alwar":[27.55,76.63],
+  "Bharatpur":[27.22,77.49],"Nuh":[28.10,77.00],"Chennai Central":[13.08,80.27],
+  "Mumbai South":[18.93,72.83],"Delhi East":[28.65,77.30],
 };
-const districtSel = document.getElementById("district");
+const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const VCOL = { fake:"var(--red)", uncertain:"var(--orange)", genuine:"var(--green)" };
+const VICON = { fake:"⚠️", uncertain:"❓", genuine:"✅" };
 
-fetch("/health").then(r => r.json()).then(h => {
-  statusEl.textContent = h.model_trained ? `model ready (${h.backbone})` : "model NOT trained";
-  if (h.model_trained) statusEl.classList.add("ok");
-}).catch(() => { statusEl.textContent = "api offline"; });
+/* ── Health ── */
+fetch("/health").then(r=>r.json()).then(h=>{
+  statusEl.textContent = h.model_trained ? `model ready · ${h.backbone}` : "NOT TRAINED";
+  if(h.model_trained) statusEl.classList.add("ok");
+}).catch(()=>{ statusEl.textContent = "api offline"; });
 
-startBtn.onclick = async () => {
+/* ── Camera ── */
+startBtn.onclick = async()=>{
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    video.srcObject = stream;
+    video.srcObject = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
     scanBtn.disabled = false;
-    startBtn.textContent = "Camera on";
+    startBtn.textContent = "✅ Camera On";
     startBtn.disabled = true;
-  } catch (e) {
-    statusEl.textContent = "camera blocked — use upload";
-  }
+  } catch { statusEl.textContent = "camera blocked"; }
 };
 
-function render(r, relayed) {
+/* ══════════════════════════════════════════════════
+   RENDER
+   ══════════════════════════════════════════════════ */
+function render(r, relayed, uploadDataUrl) {
+  emptyState.style.display = "none";
+  resultArea.style.display = "block";
+  resultArea.classList.add("visible");
+
   const pct = Math.round(r.confidence * 100);
-  const color = VERDICT_COLOR[r.verdict];
-  result.innerHTML = `
-    <span class="verdict ${r.verdict}">${r.verdict}</span>
-    <div class="confbar"><div style="width:${pct}%;background:${color}"></div></div>
-    <div class="meta">confidence ${pct}% · denomination ₹${esc(r.denomination)} · ${esc(r.event_id)}${relayed ? " · ⇢ command centre" : ""}</div>
-    ${r.missing_features.length
-      ? `<div class="meta" style="margin-top:10px">Missing security features:</div>
-         <div class="chips">${r.missing_features.map(f => `<span class="chip">${esc(f)}</span>`).join("")}</div>`
-      : (r.verdict === "genuine" ? `<div class="meta" style="margin-top:10px">All security features present.</div>` : "")}`;
+  const col = VCOL[r.verdict];
+
+  /* ── 1. Verdict strip ── */
+  verdictStrip.innerHTML = `
+    <div class="verdict-strip">
+      <span class="verdict-tag ${r.verdict}">${VICON[r.verdict]} ${r.verdict}</span>
+      <div class="verdict-conf">
+        <div class="conf-track"><div class="conf-fill" style="width:${pct}%;background:${col}"></div></div>
+        <span class="conf-num" style="color:${col}">${pct}%</span>
+      </div>
+      <span class="verdict-denom">₹${esc(r.denomination)}</span>
+    </div>`;
+
+  /* ── 2. Details row ── */
+  let chips = `<span class="detail-chip">${esc(r.event_id)}</span>`;
+  if (relayed) chips += `<span class="detail-chip pass-chip">⇢ command centre ✓</span>`;
+  if (r.missing_features && r.missing_features.length) {
+    r.missing_features.forEach(f => {
+      chips += `<span class="detail-chip fail">✗ ${esc(f.replace(/_/g,' '))}</span>`;
+    });
+  } else if (r.verdict === "genuine") {
+    chips += `<span class="detail-chip pass-chip">✓ all features present</span>`;
+  }
+  detailsRow.innerHTML = `<div class="details-row">${chips}</div>`;
+
+  /* ── 3. Grad-CAM viewer ── */
+  const originalUrl = r.image_ref || uploadDataUrl;
+  // Build heatmap URL: either from API response, or derive from image_ref
+  let heatmapUrl = r.heatmap_ref || null;
+  if (!heatmapUrl && r.image_ref) {
+    // Fallback: derive _cam.jpg from image_ref
+    heatmapUrl = r.image_ref.replace(/\.jpg$/i, '_cam.jpg');
+  }
+
+  if (!originalUrl) {
+    gradcamBox.innerHTML = '';
+    return;
+  }
+
+  let currentView = heatmapUrl ? 'compare' : 'original';
+
+  gradcamBox.innerHTML = `
+    <div class="gradcam-header">
+      <div class="gradcam-title"><span class="fire">🔥</span> Grad-CAM Analysis</div>
+      ${heatmapUrl ? `
+      <div class="view-tabs" id="viewTabs">
+        <button class="view-tab active" data-v="compare">Compare</button>
+        <button class="view-tab" data-v="heatmap">Heatmap Only</button>
+        <button class="view-tab" data-v="original">Original Only</button>
+      </div>` : ''}
+    </div>
+    <div class="img-compare ${heatmapUrl ? 'compare-view' : 'single-view'}" id="imgCompare" style="min-height:200px">
+      <img class="img-original" id="imgOrig" src="${esc(originalUrl)}" alt="Original note">
+      ${heatmapUrl ? `
+        <img class="img-heatmap" id="imgHeat" src="${esc(heatmapUrl)}" alt="Grad-CAM heatmap overlay" onerror="this.style.display='none'; document.querySelector('.view-tabs')?.remove();">
+        <div class="slider-handle" id="sliderHandle"></div>
+        <span class="img-label label-left">Original</span>
+        <span class="img-label label-right">🔥 Heatmap</span>
+      ` : `
+        <span class="img-label label-left">Scanned Note</span>
+      `}
+    </div>`;
+
+  const compareBox = document.getElementById("imgCompare");
+  const imgOrig = document.getElementById("imgOrig");
+  const imgHeat = document.getElementById("imgHeat");
+  const slider  = document.getElementById("sliderHandle");
+
+  // Size the container once image loads
+  imgOrig.onload = () => {
+    const ratio = imgOrig.naturalHeight / imgOrig.naturalWidth;
+    compareBox.style.aspectRatio = `${imgOrig.naturalWidth} / ${imgOrig.naturalHeight}`;
+    compareBox.style.minHeight = '';
+  };
+
+  if (!heatmapUrl || !imgHeat) return;
+
+  /* ── Slider logic (compare mode) ── */
+  let sliderPos = 0.5;
+  function setSlider(frac) {
+    sliderPos = Math.max(0.02, Math.min(0.98, frac));
+    slider.style.left = (sliderPos * 100) + '%';
+    // Original is left, Heatmap is right. Heatmap is z-index 2.
+    // Cut off the left side of the heatmap so original shows through.
+    imgHeat.style.clipPath = `inset(0 0 0 ${sliderPos * 100}%)`;
+  }
+  setSlider(0.5);
+
+  function onMove(clientX) {
+    const rect = compareBox.getBoundingClientRect();
+    setSlider((clientX - rect.left) / rect.width);
+  }
+  let dragging = false;
+  slider.addEventListener("mousedown", e => { dragging = true; e.preventDefault(); });
+  slider.addEventListener("touchstart", e => { dragging = true; }, {passive:true});
+  document.addEventListener("mousemove", e => { if(dragging) onMove(e.clientX); });
+  document.addEventListener("touchmove", e => { if(dragging) onMove(e.touches[0].clientX); }, {passive:true});
+  document.addEventListener("mouseup", () => { dragging = false; });
+  document.addEventListener("touchend", () => { dragging = false; });
+
+  /* ── View tabs ── */
+  const tabs = document.getElementById("viewTabs");
+  if (tabs) {
+    tabs.addEventListener("click", e => {
+      const btn = e.target.closest("[data-v]");
+      if (!btn) return;
+      const v = btn.dataset.v;
+      tabs.querySelectorAll(".view-tab").forEach(t => t.classList.toggle("active", t === btn));
+      compareBox.classList.remove("compare-view", "single-view");
+
+      const labels = compareBox.querySelectorAll(".img-label");
+      if (v === "compare") {
+        compareBox.classList.add("compare-view");
+        imgHeat.style.display = "block";
+        imgOrig.style.display = "block";
+        slider.style.display = "block";
+        setSlider(0.5);
+        labels.forEach(l => l.style.display = '');
+      } else if (v === "heatmap") {
+        compareBox.classList.add("single-view");
+        imgHeat.style.display = "block";
+        imgHeat.style.clipPath = "none";
+        imgOrig.style.display = "none";
+        slider.style.display = "none";
+        labels.forEach(l => l.style.display = 'none');
+      } else {
+        compareBox.classList.add("single-view");
+        imgOrig.style.display = "block";
+        imgHeat.style.display = "none";
+        slider.style.display = "none";
+        labels.forEach(l => l.style.display = 'none');
+      }
+    });
+  }
 }
 
+/* ══════════════════════════════════════════════════
+   ANALYZE
+   ══════════════════════════════════════════════════ */
 async function analyzeDataUrl(dataUrl) {
-  preview.src = dataUrl;
-  preview.hidden = false;
   scanBtn.disabled = true;
-  result.innerHTML = `<p class="placeholder">Analysing…</p>`;
+  emptyState.style.display = "none";
+  resultArea.style.display = "block";
+  verdictStrip.innerHTML = '';
+  detailsRow.innerHTML = '';
+  gradcamBox.innerHTML = `<div class="analysing-box"><div class="spinner"></div><span class="analysing-text">Analysing note…</span></div>`;
+
   try {
     const district = districtSel.value;
     const coords = DISTRICT_COORDS[district];
     const location_hint = coords ? { district, lat: coords[0], lon: coords[1] } : null;
+
     const resp = await fetch("/analyze_b64", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -172,31 +601,31 @@ async function analyzeDataUrl(dataUrl) {
     });
     if (!resp.ok) throw new Error((await resp.json()).detail || resp.statusText);
     const r = await resp.json();
-    // Fire-and-forget hand-off to the dashboard + fusion; failure is non-fatal.
+
+    // Relay to command centre (fire-and-forget)
     let relayed = false;
     try {
       const ing = await fetch(`${COMMAND_CENTRE}/ingest/counterfeit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(r),
+        method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(r),
       });
       relayed = ing.ok;
-    } catch { /* command centre offline — fine */ }
-    render(r, relayed);
-  } catch (e) {
-    result.innerHTML = `<p class="placeholder" style="color:var(--fake)">Error: ${esc(e.message || e)}</p>`;
+    } catch { /* offline — fine */ }
+
+    render(r, relayed, dataUrl);
+  } catch(e) {
+    gradcamBox.innerHTML = `<div class="analysing-box" style="color:var(--red)">⚠ Error: ${esc(e.message||e)}</div>`;
   } finally {
     scanBtn.disabled = !video.srcObject;
   }
 }
 
+/* ── Triggers ── */
 scanBtn.onclick = () => {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   canvas.getContext("2d").drawImage(video, 0, 0);
   analyzeDataUrl(canvas.toDataURL("image/jpeg", 0.92));
 };
-
 fileInput.onchange = () => {
   const f = fileInput.files[0];
   if (!f) return;

@@ -14,10 +14,12 @@ CONTRACT_SCHEMA = REPO_ROOT / "contracts" / "counterfeit.schema.json"
 
 SCHEMA_VERSION = "1.0"
 
-# Kaggle dataset to swap in when API credentials are available (see data.py).
-# Verified to exist 2026-07-07: real + fake ₹500/₹2000 notes, with separate
-# images per security feature.
-KAGGLE_DATASET = "sreeharisureshkaggle/fake-currency-detection-dataset"
+# Real Indian note dataset with BOTH real and fake photographed notes, split
+# real/ and fake/ by denomination (₹10–₹2000). ~4,900 real + ~2,500 real
+# counterfeit photos (mobile-camera, varied backgrounds/lighting). Public,
+# downloads anonymously via kagglehub. This is genuine photographed-counterfeit
+# data — the fake class is real fakes, not synthetic degradations.
+REAL_DATASET = "preetrank/indian-currency-real-vs-fake-notes-dataset"
 
 # Canonical working size for feature checks (w, h) — real ₹500 note is
 # 150x66 mm, aspect ratio ~2.27.

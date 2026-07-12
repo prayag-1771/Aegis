@@ -1,10 +1,13 @@
 """Counterfeit Vision command line.
 
-    python -m aegis_counterfeit.cli generate
-        Render the synthetic training set into data/synth/.
+    python -m aegis_counterfeit.cli prepare-real
+        Download 4,002 REAL note photos + build data/real/{genuine,fake}/.
 
-    python -m aegis_counterfeit.cli train [--data data/synth] [--backbone efficientnet_b0]
-        Train the CNN and save weights + held-out report.
+    python -m aegis_counterfeit.cli train [--data data/real] [--backbone efficientnet_b0]
+        Train the CNN on the real dataset and save weights + held-out report.
+
+    python -m aegis_counterfeit.cli generate
+        Render the synthetic training set into data/synth/ (unit tests only).
 
     python -m aegis_counterfeit.cli analyze path/to/note.jpg [--out out.json]
         Scan one note image; print contract JSON.
@@ -34,6 +37,17 @@ def cmd_generate(_: argparse.Namespace) -> int:
     prepare_synth_dataset(SynthConfig())
     n = len(list(out.rglob("*.png")))
     print(f"Done: {n} images.")
+    return 0
+
+
+def cmd_prepare_real(_: argparse.Namespace) -> int:
+    """Download real note photos and build data/real/{genuine,fake}/."""
+    from .data import prepare_real_dataset
+
+    print("Downloading real note dataset (kagglehub, ~public) and preparing ...")
+    out = prepare_real_dataset()
+    n = len(list(out.rglob("*.png")))
+    print(f"Done: {n} images in {out}.")
     return 0
 
 
@@ -90,10 +104,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="counterfeit-vision", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("generate", help="render synthetic dataset").set_defaults(fn=cmd_generate)
+    sub.add_parser("generate", help="render synthetic dataset (tests)").set_defaults(fn=cmd_generate)
+    sub.add_parser("prepare-real", help="download + build real dataset").set_defaults(
+        fn=cmd_prepare_real
+    )
 
     p_train = sub.add_parser("train", help="train the CNN")
-    p_train.add_argument("--data", default=str(DATA_DIR / "synth"))
+    p_train.add_argument("--data", default=str(DATA_DIR / "real"))
     p_train.add_argument("--backbone", default=TrainConfig().backbone,
                          choices=["efficientnet_b0", "mobilenet_v3_small", "tiny"])
     p_train.set_defaults(fn=cmd_train)

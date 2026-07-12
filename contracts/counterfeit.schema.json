@@ -43,6 +43,7 @@
       }
     },
     "image_ref": { "type": ["string", "null"], "description": "Path/URL to the captured note image for the UI." },
+    "heatmap_ref": { "type": ["string", "null"], "description": "Path/URL to the Grad-CAM heatmap overlay image — highlights which regions drove the fake/genuine decision." },
     "location_hint": {
       "type": ["object", "null"],
       "description": "Optional seizure location for the crime map (cross-domain overlap).",

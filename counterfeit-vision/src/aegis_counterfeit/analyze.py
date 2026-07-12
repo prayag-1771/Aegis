@@ -42,12 +42,18 @@ def analyze_image(
     save_capture: bool = False,
 ) -> dict:
     """Analyse one note photo; returns a contract-valid payload dict."""
-    # Localise once: checks AND the CNN both see the perspective-corrected
-    # note, so a camera frame with desk background behaves like a tight crop.
-    bgr = locate_note(_to_bgr(img))
-    checks = run_all_checks(bgr)
+    # The CNN (trained on real photos with varied framing/background) scores the
+    # ORIGINAL image — it is robust to framing and, critically, the perspective
+    # warp mis-fires on out-of-distribution inputs (e.g. novelty/joke notes),
+    # distorting them into looking genuine. The warped, perspective-corrected
+    # note is used ONLY for the OpenCV feature-checks, which need canonical
+    # geometry but are advisory (they never flip the CNN verdict).
+    warped = locate_note(_to_bgr(img))
+    checks = run_all_checks(warped)
     failed = [c.feature for c in checks if not c.passed]
-    p_fake = model.p_fake(Image.fromarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)))
+    # Grad-CAM gives us p_fake AND a heatmap of the regions that drove the
+    # decision — the visual "why is it fake" explanation over the note.
+    p_fake, heatmap = model.gradcam(img.convert("RGB"))
     verdict = model.decide_verdict(p_fake, len(failed))
 
     if verdict == "fake":
@@ -62,28 +68,50 @@ def analyze_image(
 
     event_id = f"note_{uuid.uuid4().hex[:12]}"
     image_ref: str | None = None
+    heatmap_ref: str | None = None
     if save_capture:
         CAPTURES_DIR.mkdir(parents=True, exist_ok=True)
         capture_path = CAPTURES_DIR / f"{event_id}.jpg"
         img.convert("RGB").save(capture_path, quality=88)
+        # Grad-CAM overlay: the note with a heatmap marking the suspicious
+        # regions. Most useful when fake/uncertain; still saved for genuine so
+        # the UI can always show "what the model looked at".
+        heat_path = CAPTURES_DIR / f"{event_id}_cam.jpg"
+        _save_heatmap_overlay(img.convert("RGB"), heatmap, heat_path)
         _prune_captures()
         # Absolute URL on this service (api.py mounts CAPTURES_DIR at /captures),
         # so the dashboard on a different origin can actually display the note.
         image_ref = f"{SERVICE_BASE_URL}/captures/{capture_path.name}"
+        heatmap_ref = f"{SERVICE_BASE_URL}/captures/{heat_path.name}"
 
     return {
         "schema_version": SCHEMA_VERSION,
         "event_id": event_id,
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-        "denomination": infer_denomination(bgr),
+        "denomination": infer_denomination(warped),
         "verdict": verdict,
         "confidence": round(confidence, 4),
         # Only report failed features when the note isn't being certified
         # genuine — matches the field's "why fake" purpose.
         "missing_features": failed if verdict != "genuine" else [],
         "image_ref": image_ref,
+        "heatmap_ref": heatmap_ref,
         "location_hint": location_hint,
     }
+
+
+def _save_heatmap_overlay(img: Image.Image, heatmap: np.ndarray, path: Path) -> None:
+    """Blend the Grad-CAM heatmap (red = suspicious) over the note and save it."""
+    w, h = img.size
+    if heatmap.size == 0:
+        img.save(path, quality=88)
+        return
+    cam = cv2.resize(heatmap.astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC)
+    cam = np.clip(cam, 0, 1)
+    colored = cv2.applyColorMap((cam * 255).astype(np.uint8), cv2.COLORMAP_JET)  # BGR
+    base = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
+    overlay = cv2.addWeighted(base, 0.6, colored, 0.4, 0)
+    cv2.imwrite(str(path), overlay, [cv2.IMWRITE_JPEG_QUALITY, 88])
 
 
 def _prune_captures() -> None:
