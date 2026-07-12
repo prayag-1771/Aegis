@@ -1,17 +1,44 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Hub, MapPoint } from "@/lib/api";
 import { titleCase } from "@/lib/format";
 import { Layers } from "./Icons";
 
-/* Free, keyless tiles — the demo can never die on a missing token. */
-const DARK_TILES = ["a", "b", "c"].map(
+/* Free, keyless tiles — the demo can never die on a missing token. The dark and
+   satellite tiles live on third-party CDNs that some networks / ad-blockers block,
+   so OSM is kept as a universal fallback (darkened via CSS when used). */
+const DARK_TILES = ["a", "b", "c", "d"].map(
   (s) => `https://${s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png`
 );
 const SAT_TILES = [
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
 ];
+const OSM_TILES = ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"];
+
+/* one small tile per provider, used to detect if the CDN is reachable/allowed */
+const CARTO_PROBE = "https://a.basemaps.cartocdn.com/dark_all/3/5/3@2x.png";
+const ESRI_PROBE =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/3/3/5";
+
+/** Load a single tile as an <img>; resolves false on block / error / timeout.
+ *  Ad-blockers and firewalls fail this the same way they fail the map's tiles. */
+function probeTile(url: string, timeout = 3500): Promise<boolean> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    let done = false;
+    const finish = (ok: boolean) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(ok);
+    };
+    const timer = setTimeout(() => finish(false), timeout);
+    img.onload = () => finish(true);
+    img.onerror = () => finish(false);
+    img.src = url;
+  });
+}
 
 const JAMTARA: [number, number] = [86.803, 23.795];
 
@@ -35,8 +62,28 @@ export default function CrimeMap({
   const libRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const scalablesRef = useRef<HTMLElement[]>([]);
+  const modeRef = useRef<"dark" | "sat">("dark");
+  const blockedRef = useRef({ dark: false, sat: false });
   const [ready, setReady] = useState(false);
   const [satellite, setSatellite] = useState(false);
+
+  /* Drive layer visibility + the darken filter from the current mode and which
+     CDNs are blocked. Falls back to (darkened) OSM whenever the chosen provider
+     is unreachable, so the map is always dark and never blank. */
+  const applyBasemap = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer?.("dark")) return;
+    const mode = modeRef.current;
+    const blocked = blockedRef.current;
+    const showDark = mode === "dark" && !blocked.dark;
+    const showSat = mode === "sat" && !blocked.sat;
+    const useOsm = !showDark && !showSat; // blocked provider → OSM fallback
+    map.setLayoutProperty("dark", "visibility", showDark ? "visible" : "none");
+    map.setLayoutProperty("sat", "visibility", showSat ? "visible" : "none");
+    map.setLayoutProperty("osm", "visibility", useOsm ? "visible" : "none");
+    // invert the tile canvas only when the light OSM tiles are the visible base
+    container.current?.classList.toggle("osm-dark", useOsm);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,10 +95,12 @@ export default function CrimeMap({
         style: {
           version: 8,
           sources: {
-            dark: { type: "raster", tiles: DARK_TILES, tileSize: 256, attribution: "© OpenStreetMap · © CARTO" },
+            osm: { type: "raster", tiles: OSM_TILES, tileSize: 256, attribution: "© OpenStreetMap contributors" },
             sat: { type: "raster", tiles: SAT_TILES, tileSize: 256, attribution: "Imagery © Esri" },
+            dark: { type: "raster", tiles: DARK_TILES, tileSize: 256, attribution: "© OpenStreetMap · © CARTO" },
           },
           layers: [
+            { id: "osm", type: "raster", source: "osm", layout: { visibility: "none" } },
             { id: "sat", type: "raster", source: "sat", layout: { visibility: "none" } },
             { id: "dark", type: "raster", source: "dark" },
           ],
@@ -64,22 +113,42 @@ export default function CrimeMap({
       map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
       libRef.current = maplibregl;
       mapRef.current = map;
-      map.on("load", () => !cancelled && setReady(true));
+
+      // runtime backup: if a dark/sat tile fails to load, fall back immediately
+      map.on("error", (e: any) => {
+        const sid = e?.sourceId;
+        if (sid === "dark" && !blockedRef.current.dark) {
+          blockedRef.current.dark = true;
+          applyBasemap();
+        } else if (sid === "sat" && !blockedRef.current.sat) {
+          blockedRef.current.sat = true;
+          applyBasemap();
+        }
+      });
+
+      map.on("load", () => {
+        if (cancelled) return;
+        setReady(true);
+        // proactively detect blocked CDNs so the first paint is already correct
+        Promise.all([probeTile(CARTO_PROBE), probeTile(ESRI_PROBE)]).then(([darkOk, satOk]) => {
+          if (cancelled) return;
+          blockedRef.current = { dark: !darkOk, sat: !satOk };
+          applyBasemap();
+        });
+      });
     })();
     return () => {
       cancelled = true;
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [applyBasemap]);
 
-  // basemap toggle
+  // basemap toggle → re-derive visibility through the fallback logic
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
-    map.setLayoutProperty("dark", "visibility", satellite ? "none" : "visible");
-    map.setLayoutProperty("sat", "visibility", satellite ? "visible" : "none");
-  }, [satellite, ready]);
+    modeRef.current = satellite ? "sat" : "dark";
+    if (ready) applyBasemap();
+  }, [satellite, ready, applyBasemap]);
 
   // markers: hotspot hubs underneath, signal dots on top
   useEffect(() => {

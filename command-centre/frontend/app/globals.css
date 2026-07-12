@@ -166,6 +166,14 @@ body {
   }
 }
 
+/* Darkened OSM fallback: when the dark/satellite CDNs are blocked (ad-blocker,
+   firewall, region) we fall back to OpenStreetMap and invert the tile canvas so
+   it still reads as a dark map. Only the WebGL tile canvas is filtered —
+   markers, popups and controls are separate DOM overlays, so they stay intact. */
+.osm-dark .maplibregl-canvas {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.6);
+}
+
 /* ---------- maplibre chrome, restyled dark ---------- */
 .maplibregl-ctrl-group {
   background: rgb(24 24 27 / 0.75) !important;
