@@ -49,3 +49,26 @@ class ModelConfig(BaseModel):
     # suspicious floor keeps genuine bank OTP messages out of the warning band.
     min_scam_precision: float = 0.97
     min_suspicious_precision: float = 0.90
+
+
+class VerifyConfig(BaseModel):
+    """Knobs for the agentic verification layer (additive; never overrides the
+    deterministic verdict). See verify/ — an LLM agent investigates a *flagged*
+    message with real verification tools, then narrates only tool-confirmed
+    findings. Runtime-flippable so the whole layer can be switched off without
+    a code change."""
+
+    enabled: bool = True
+    # Per-tool network timeout (seconds). Each live tool call must return or
+    # fall back to offline heuristics within this budget.
+    tool_timeout_s: float = 4.0
+    # Hard overall wall-clock budget for the whole verification pass. /analyze
+    # answers in ~100 ms today; this caps how much the (synchronous) agent can
+    # add. On expiry we return whatever findings completed.
+    total_budget_s: float = 6.0
+    # LLM used only for the final synthesis sentence (never for the verdict).
+    model: str = "claude-opus-4-8"
+    # Follow at most this many URL redirect hops (SSRF hardening).
+    max_redirects: int = 5
+    # Cap bytes read from a resolved page.
+    max_body_bytes: int = 2048
