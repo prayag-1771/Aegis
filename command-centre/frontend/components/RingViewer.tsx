@@ -234,11 +234,28 @@ export default function RingViewer({
                     x2={x2}
                     y2={y2}
                     stroke={traced ? "#f87171" : "#a78bfa"}
-                    strokeOpacity={traced ? 0.95 : 0.55}
+                    strokeOpacity={traced ? 0.95 : 0.4}
                     strokeWidth={traced ? 2.5 : wgt}
                     markerEnd={traced ? "url(#arrowRed)" : "url(#arrow)"}
-                    className={traced ? "animate-pulse" : undefined}
                   />
+                  {/* Animated flow line on top */}
+                  <line
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke={traced ? "#f87171" : "#d8b4fe"}
+                    strokeOpacity={traced ? 1 : 0.8}
+                    strokeWidth={wgt * 0.8}
+                    strokeDasharray="4 8"
+                  >
+                    <animate 
+                      attributeName="stroke-dashoffset" 
+                      values="12;0" 
+                      dur={`${2 / wgt}s`} 
+                      repeatCount="indefinite" 
+                    />
+                  </line>
                   <title>
                     {traced ? "TRACED VICTIM PAYMENT · " : ""}
                     {e.source} → {e.target}

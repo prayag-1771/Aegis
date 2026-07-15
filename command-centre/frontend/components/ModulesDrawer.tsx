@@ -9,19 +9,19 @@ import {
   CheckCircle,
   MapPin,
   Phone,
+  Zap
 } from "./Icons";
 
-/* deterministic sparkline (no hydration mismatch) */
 const SPARK = [62, 58, 66, 61, 70, 64, 72, 69, 75, 71, 78, 74, 81, 77, 84, 80, 88, 85, 91, 94];
 
-/** Detection-module detail: live health of each engine + the latest scam and
- *  counterfeit verdicts. Lifted from the old LeftPanel so all bindings survive. */
 export default function ModulesDrawer({
   events,
   health,
+  onSelectModule,
 }: {
   events: EventsResponse | null;
   health: HealthResponse | null;
+  onSelectModule?: (type: "scam" | "counterfeit") => void;
 }) {
   const scam = events?.scams.at(-1) ?? null;
   const note = events?.counterfeits.at(-1) ?? null;
@@ -74,30 +74,37 @@ export default function ModulesDrawer({
         </div>
       </div>
 
-      {/* signal confidence */}
-      <div className="glass p-4">
-        <div className="flex items-center justify-between text-xs text-zinc-400">
-          <span>Signal Confidence</span>
-          <ArrowUpRight className="h-3.5 w-3.5" />
+      {/* External Links & Features */}
+      <div className="glass p-4 space-y-3">
+        <div className="text-xs font-semibold text-zinc-300 mb-2">Connected Websites</div>
+        <div className="space-y-2">
+          <a href="#" target="_blank" className="block p-2 rounded-lg bg-white/5 hover:bg-white/10 transition border border-white/5">
+            <div className="flex items-center justify-between text-xs text-zinc-200">
+              <span className="font-medium">Citizen Portal</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+            <div className="text-[10px] text-zinc-400 mt-1">Report scams, verify notes.</div>
+          </a>
+          <a href="#" target="_blank" className="block p-2 rounded-lg bg-white/5 hover:bg-white/10 transition border border-white/5">
+            <div className="flex items-center justify-between text-xs text-zinc-200">
+              <span className="font-medium">Investigator Dashboard</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+            <div className="text-[10px] text-zinc-400 mt-1">Deep-dive graph analytics.</div>
+          </a>
         </div>
-        <div className="mt-1 flex items-end gap-2">
-          <span className="text-3xl font-light">{(avgConf * 100).toFixed(1)}</span>
-          <span className="pb-1 text-sm text-zinc-500">%</span>
-          <span className="pb-1 text-[10px] text-zinc-500">target ≥ 90</span>
-        </div>
-        <svg viewBox="0 0 200 44" className="mt-2 h-11 w-full">
-          <polyline
-            points={SPARK.map((v, i) => `${(i / (SPARK.length - 1)) * 200},${44 - (v / 100) * 40}`).join(" ")}
-            fill="none"
-            stroke="#e4e4e7"
-            strokeWidth="1.5"
-          />
-          <line x1="0" y1={44 - 0.9 * 40} x2="200" y2={44 - 0.9 * 40} stroke="#71717a" strokeWidth="0.75" strokeDasharray="3 3" />
-        </svg>
+        
+        <div className="text-xs font-semibold text-zinc-300 mt-4 mb-2">Key Features</div>
+        <ul className="text-[10px] text-zinc-400 space-y-1.5 list-disc pl-3">
+          <li>Live scam call audio analysis using Fraud Shield</li>
+          <li>Real-time currency note scanning with Counterfeit Vision</li>
+          <li>Graph ML for tracing fraud rings</li>
+          <li>Gen AI driven intelligence fusion</li>
+        </ul>
       </div>
 
-      {/* latest scam + note cards */}
-      <div className="glass p-3">
+      {/* latest scam card */}
+      <button onClick={() => onSelectModule?.("scam")} className="glass p-3 text-left transition hover:bg-white/5 relative group border hover:border-red-500/30 cursor-pointer">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-[11px] text-zinc-300">
             <Phone className="h-3.5 w-3.5 text-red-400" /> Scam Call
@@ -122,16 +129,22 @@ export default function ModulesDrawer({
                 </span>
               ))}
             </div>
-            <div className="mt-2 flex items-center gap-1 text-[10px] text-zinc-500">
-              <MapPin className="h-3 w-3" /> {scam.location_hint?.district ?? "unknown"}
+            <div className="mt-2 flex items-center justify-between">
+              <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <MapPin className="h-3 w-3" /> {scam.location_hint?.district ?? "unknown"}
+              </div>
+              <div className="flex items-center gap-1 text-[10px] text-violet-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Zap className="h-3 w-3" /> AI Summary
+              </div>
             </div>
           </>
         ) : (
           <Empty />
         )}
-      </div>
+      </button>
 
-      <div className="glass p-3">
+      {/* latest note card */}
+      <button onClick={() => onSelectModule?.("counterfeit")} className="glass p-3 text-left transition hover:bg-white/5 relative group border hover:border-amber-500/30 cursor-pointer">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-[11px] text-zinc-300">
             <Banknote className="h-3.5 w-3.5 text-amber-400" /> Note Scan
@@ -154,14 +167,19 @@ export default function ModulesDrawer({
                 </span>
               ))}
             </div>
-            <div className="mt-2 flex items-center gap-1 text-[10px] text-zinc-500">
-              <MapPin className="h-3 w-3" /> {note.location_hint?.district ?? "unknown"}
+            <div className="mt-2 flex items-center justify-between">
+              <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <MapPin className="h-3 w-3" /> {note.location_hint?.district ?? "unknown"}
+              </div>
+              <div className="flex items-center gap-1 text-[10px] text-violet-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Zap className="h-3 w-3" /> AI Summary
+              </div>
             </div>
           </>
         ) : (
           <Empty />
         )}
-      </div>
+      </button>
     </div>
   );
 }

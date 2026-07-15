@@ -14,15 +14,16 @@ import { usePolling } from "@/lib/usePolling";
 import AlertChips from "@/components/AlertChips";
 import AlertsDrawer from "@/components/AlertsDrawer";
 import AnalyticsDrawer from "@/components/AnalyticsDrawer";
-import BottomDock from "@/components/BottomDock";
+import FusionChatBot from "@/components/FusionChatBot";
 import Drawer from "@/components/Drawer";
 import FraudConsole from "@/components/FraudConsole";
 import FraudRingsDrawer from "@/components/FraudRingsDrawer";
-import IconRail, { type TabKey } from "@/components/IconRail";
+import type { TabKey } from "@/components/types";
 import ModulesDrawer from "@/components/ModulesDrawer";
 import RingViewer from "@/components/RingViewer";
 import ToastContainer, { type Toast } from "@/components/ToastContainer";
 import TopNav from "@/components/TopNav";
+import InfoPanel from "@/components/InfoPanel";
 
 const CrimeMap = dynamic(() => import("@/components/CrimeMap"), { ssr: false });
 
@@ -64,11 +65,12 @@ export default function Page() {
   const [viewRing, setViewRing] = useState<Ring | null>(null);
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [cityAlerts, setCityAlerts] = useState<{district: string; alerts: any[]} | null>(null);
+  const [selectedModule, setSelectedModule] = useState<"scam" | "counterfeit" | null>(null);
 
   const pushToast = useCallback((msg: string, type: Toast["type"] = "error") => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     setToasts((prev) => [...prev, { id, msg, type }]);
-    // auto-dismiss after a few seconds; still manually dismissable
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 6000);
   }, []);
   const dismissToast = useCallback(
@@ -76,7 +78,6 @@ export default function Page() {
     []
   );
 
-  // clicking a marker / alert flies the map there and returns to the map view
   const locate = useCallback((p: { lat: number; lon: number }) => {
     setFocus(p);
     setActiveTab("map");
@@ -105,8 +106,6 @@ export default function Page() {
     const intra = (g?.edges ?? []).filter((e) => member.has(e.source) && member.has(e.target));
     const trail =
       (lastFusion?.money_trails ?? []).find((t) => t.ring_id === viewRing.ring_id) ?? null;
-    // victim payments INTO the ring — traced edge first, then biggest, capped
-    // so the drawing stays readable
     const inflow = (g?.edges ?? [])
       .filter((e) => !member.has(e.source) && member.has(e.target))
       .sort((a, b) => {
@@ -177,33 +176,70 @@ export default function Page() {
     [events, refreshEvents, refreshHotspots]
   );
 
+  const handleSearch = (query: string) => {
+    const districtKey = Object.keys(DEMO_DISTRICT_COORDS).find(k => k.toLowerCase().includes(query.toLowerCase()));
+    if (districtKey) {
+      locate(DEMO_DISTRICT_COORDS[districtKey]);
+      
+      const relatedScams = events?.scams.filter(s => s.location.toLowerCase().includes(districtKey.toLowerCase()) || districtKey.toLowerCase().includes(s.location.toLowerCase())) || [];
+      const relatedFakes = events?.counterfeits.filter(c => c.location.toLowerCase().includes(districtKey.toLowerCase()) || districtKey.toLowerCase().includes(c.location.toLowerCase())) || [];
+      
+      setCityAlerts({
+        district: districtKey,
+        alerts: [...relatedScams, ...relatedFakes]
+      });
+      // auto-dismiss city alerts panel after 10 seconds
+      setTimeout(() => setCityAlerts(null), 10000);
+    } else {
+      pushToast(`Location not found: ${query}`, "error");
+    }
+  };
+
   const drawerOpen = activeTab !== "map";
 
   return (
     <main className="relative h-dvh w-screen select-none overflow-hidden bg-zinc-950">
       <CrimeMap points={hotspots?.points ?? []} hubs={hotspots?.hubs ?? []} focus={focus} />
 
-      {/* readability gradient over the top of the map */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-zinc-950/80 to-transparent" />
 
       <TopNav
         health={health}
         alertCount={alertCount}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onBell={() => setActiveTab("alerts")}
-      />
-
-      <IconRail
-        activeTab={activeTab}
         onTabChange={(t) => setActiveTab((cur) => (cur === t && t !== "map" ? "map" : t))}
-        drawerOpen={drawerOpen}
-        onSettings={() => pushToast("Settings — coming soon", "success")}
+        onBell={() => setActiveTab("alerts")}
+        onSearch={handleSearch}
       />
 
-      {/* hero title + module pills — only on the map view, clear of the rail */}
+      {/* Top right localized alerts panel */}
+      {cityAlerts && (
+        <div className="absolute top-16 right-5 z-40 w-80 rounded-2xl bg-zinc-900/90 backdrop-blur-md border border-zinc-800 shadow-2xl overflow-hidden pointer-events-auto">
+          <div className="bg-zinc-800/50 px-4 py-2 border-b border-zinc-800 flex justify-between items-center">
+            <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+              {cityAlerts.district} Alerts
+            </h3>
+            <button onClick={() => setCityAlerts(null)} className="text-zinc-400 hover:text-zinc-100">&times;</button>
+          </div>
+          <div className="max-h-64 overflow-y-auto p-2">
+            {cityAlerts.alerts.length === 0 ? (
+              <p className="text-xs text-zinc-500 text-center py-4">No active alerts for this region.</p>
+            ) : (
+              cityAlerts.alerts.map((a, i) => (
+                <div key={i} className="mb-2 p-2 bg-zinc-800/30 rounded-lg border border-zinc-800/50">
+                  <div className="text-xs font-medium text-zinc-200">{a.verdict ? (a.verdict === 'fake' ? 'Counterfeit Note' : 'Scam Call') : 'Alert'}</div>
+                  <div className="text-[10px] text-zinc-500 mt-1">{a.summary || "Suspicious activity detected."}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* hero title + module pills */}
       {activeTab === "map" && (
-        <div className="pointer-events-none absolute left-20 top-20 z-10 hidden lg:block">
+        <div className="pointer-events-none absolute left-5 top-20 z-10 hidden lg:block">
           <h1 className="text-4xl font-extralight tracking-wide text-zinc-100 drop-shadow">
             Public Safety Intelligence
           </h1>
@@ -215,7 +251,6 @@ export default function Page() {
         </div>
       )}
 
-      {/* top-priority live alert chips (map view only) */}
       {activeTab === "map" && (
         <AlertChips
           events={events}
@@ -226,17 +261,13 @@ export default function Page() {
       )}
 
       {/* slide-out drawers, one per tab */}
-      {drawerOpen && (
+      {drawerOpen && activeTab !== "fraud-rings" && (
         <Drawer onClose={() => setActiveTab("map")}>
-          {activeTab === "modules" && <ModulesDrawer events={events} health={health} />}
-          {activeTab === "fraud-rings" && (
-            <FraudRingsDrawer
-              events={events}
-              onInjectRing={handleInjectRing}
-              onViewRing={setViewRing}
-              onOpenConsole={() => setConsoleOpen(true)}
-              onError={(msg) => pushToast(msg, "error")}
-              injecting={injecting}
+          {activeTab === "modules" && (
+            <ModulesDrawer 
+              events={events} 
+              health={health} 
+              onSelectModule={setSelectedModule} 
             />
           )}
           {activeTab === "alerts" && (
@@ -252,8 +283,38 @@ export default function Page() {
         </Drawer>
       )}
 
-      {/* merged bottom dock — signal counts + intelligence fusion */}
-      <BottomDock
+      {/* Full screen blur overlay for Fraud Rings */}
+      {activeTab === "fraud-rings" && (
+        <div className="absolute inset-0 z-30 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-8 pointer-events-auto">
+          <div className="w-full max-w-4xl max-h-full overflow-y-auto bg-zinc-900/90 border border-white/10 rounded-2xl shadow-2xl relative">
+            <button 
+              onClick={() => setActiveTab("map")}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-100 p-2 rounded-full hover:bg-white/10 transition z-10"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <FraudRingsDrawer
+              events={events}
+              onInjectRing={handleInjectRing}
+              onViewRing={setViewRing}
+              onOpenConsole={() => setConsoleOpen(true)}
+              onError={(msg) => pushToast(msg, "error")}
+              injecting={injecting}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* InfoPanel for selected module in ModulesDrawer */}
+      {selectedModule && (
+        <InfoPanel
+          moduleType={selectedModule}
+          events={events}
+          onClose={() => setSelectedModule(null)}
+        />
+      )}
+
+      <FusionChatBot
         fusion={lastFusion}
         events={events}
         onFused={handleFused}
