@@ -68,3 +68,43 @@ def test_explanation_carries_evidence():
     text = build_explanation("scam", 0.99, hits)
     assert "impersonates an authority" in text
     assert "0.99" in text
+
+
+# --- agentic verification gating (additive block) --------------------------
+
+FLAGGED_WITH_ENTITIES = (
+    "Dear customer your SBI account KYC has expired. Update at https://bit.ly/kyc-upd8 "
+    "and confirm IFSC SBIN0001234 or your account will be blocked immediately."
+)
+
+
+@pytest.fixture(autouse=True)
+def _offline_verify(monkeypatch):
+    """Keep verification hermetic: no key (offline synthesis) and no live net."""
+    import httpx
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr("aegis_fraud_shield.verify.agent._load_dotenv", lambda: None)
+    monkeypatch.setattr(
+        httpx, "get", lambda *a, **k: (_ for _ in ()).throw(httpx.ConnectError("x")))
+
+
+def test_verification_present_for_flagged(model, schema):
+    payload = analyze(FLAGGED_WITH_ENTITIES, model, source="sms")
+    jsonschema.validate(instance=payload, schema=schema)
+    if payload["verdict"] != "legit":
+        assert "verification" in payload
+        assert payload["verification"]["engine"] == "offline-fallback"
+        # verdict/risk untouched by the verification layer
+        assert payload["verification"].get("verdict") is None
+
+
+def test_no_verification_for_legit(model, schema):
+    payload = analyze(LEGIT, model, source="whatsapp")
+    jsonschema.validate(instance=payload, schema=schema)
+    assert "verification" not in payload
+
+
+def test_verify_flag_off_skips_layer(model):
+    payload = analyze(FLAGGED_WITH_ENTITIES, model, source="sms", verify=False)
+    assert "verification" not in payload

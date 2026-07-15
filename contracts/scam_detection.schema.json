@@ -75,6 +75,30 @@
         "lat": { "type": "number" },
         "lon": { "type": "number" }
       }
+    },
+    "verification": {
+      "type": ["object", "null"],
+      "description": "Agentic verification of concrete entities in a flagged message (links resolved, IFSC/UPI/phone checked). Additive evidence — NEVER changes verdict/risk_score. Null when verdict is legit or verification is disabled.",
+      "properties": {
+        "checked": {
+          "type": "array",
+          "description": "One entry per entity a tool inspected.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entity": { "type": "string" },
+              "entity_type": { "type": "string", "enum": ["url", "ifsc", "upi", "phone"] },
+              "ok": { "type": "boolean" },
+              "source": { "type": "string", "enum": ["live", "offline"] },
+              "detail": { "type": "string" }
+            }
+          }
+        },
+        "findings": { "type": "array", "items": { "type": "string" }, "description": "Human-readable tool findings." },
+        "synthesis": { "type": "string", "description": "Short investigator-facing summary (LLM or deterministic)." },
+        "engine": { "type": "string", "enum": ["claude-agent", "offline-fallback"], "description": "Which synthesis path produced this." },
+        "any_live": { "type": "boolean", "description": "Whether any tool made a live network call (vs offline heuristics)." }
+      }
     }
   },
   "additionalProperties": false

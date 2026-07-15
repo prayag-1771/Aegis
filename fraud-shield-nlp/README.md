@@ -63,9 +63,33 @@ python -m pytest -q                        # tests (offline, no download needed)
    PR curve (scam band ≥ 0.97 precision; suspicious band ≥ 0.90).
 4. **Contract** ([analyze.py](src/aegis_fraud_shield/analyze.py)) — emits schema-valid
    `scam_detection` JSON with a deterministic evidence-based explanation.
+5. **Agentic verification** ([verify/](src/aegis_fraud_shield/verify/)) — *additive, never
+   overrides.* For a **flagged** message only, an LLM agent extracts the concrete entities a
+   scammer relies on (shortlink, IFSC, UPI, phone) and runs real verification tools, then
+   narrates only tool-confirmed evidence into a `verification` block.
 
 **Held-out metrics (seed 42):** ROC-AUC 0.984 · scam-verdict precision 0.971 / recall 0.919 ·
 100% recall on synthetic digital-arrest / KYC / lottery / loan / phishing families.
+
+## Agentic verification layer (`verify/`)
+
+The deterministic stack (markers + classifier + playbooks) decides the verdict — that verdict is
+authoritative and court-defensible, and the agent **never** writes `verdict`, `risk_score`,
+`scam_type`, or `markers`. What the agent adds is hard, external evidence a regex can't produce:
+
+| Tool | What it checks | Key? |
+|---|---|---|
+| `resolve_url` | Follows a shortlink to its real host; flags typosquats + credential-harvest pages | ❌ (public HTTP; **SSRF-hardened** — http/https only, private/loopback/metadata IPs refused on every redirect hop) |
+| `validate_ifsc` | Confirms an IFSC is a real bank + branch (Razorpay's free public API) | ❌ |
+| `validate_upi` | Validates a `name@psp` handle against known PSPs | ❌ (offline) |
+| `phone_reputation` | Flags spoofed / malformed numbers | ❌ (offline) |
+| LLM synthesis | Narrates only tool-confirmed findings + claim cross-check | ✅ `ANTHROPIC_API_KEY` |
+
+**Never dies, never hangs** (mirrors the fusion narrator's `narrate_safe`): live tools → offline
+heuristics → deterministic synthesis → `None`. Each tool has a timeout and the whole pass has a
+hard wall-clock budget (`VerifyConfig.total_budget_s`); on expiry it returns partial findings.
+With **no key** the whole layer still runs and produces findings — you just lose the LLM
+write-up. Runtime-flippable via `VerifyConfig.enabled` / the `verify=` arg to `analyze()`.
 
 ## Definition of done
 - [x] Classifies the sample scripts correctly (`cli demo` + tests)

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-07-11T22:22:09.663001+00:00",
+  "generated_at": "2026-07-12T05:21:52.561937+00:00",
   "model": "graph_features+xgboost",
   "rings": [
     {
@@ -143,7 +143,7 @@
       "size": 6,
       "total_amount": 7048091.4,
       "label": "round-tripping cycle",
-      "district": "Bharatpur"
+      "district": "Chennai Central"
     },
     {
       "ring_id": "ring_09",
@@ -1773,7 +1773,7 @@
       "source": "acc_02083",
       "target": "acc_02084",
       "amount": 420000.0,
-      "timestamp": "2026-07-11T22:22:00+00:00"
+      "timestamp": "2026-07-12T05:21:00+00:00"
     },
     {
       "source": "acc_02004",
@@ -1785,31 +1785,31 @@
       "source": "acc_02084",
       "target": "acc_02085",
       "amount": 411600.0,
-      "timestamp": "2026-07-11T22:26:00+00:00"
+      "timestamp": "2026-07-12T05:25:00+00:00"
     },
     {
       "source": "acc_02083",
       "target": "acc_02084",
       "amount": 411600.0,
-      "timestamp": "2026-07-11T22:52:00+00:00"
+      "timestamp": "2026-07-12T05:51:00+00:00"
     },
     {
       "source": "acc_02085",
       "target": "acc_02086",
       "amount": 403368.0,
-      "timestamp": "2026-07-11T22:30:00+00:00"
+      "timestamp": "2026-07-12T05:29:00+00:00"
     },
     {
       "source": "acc_02084",
       "target": "acc_02085",
       "amount": 403368.0,
-      "timestamp": "2026-07-11T22:56:00+00:00"
+      "timestamp": "2026-07-12T05:55:00+00:00"
     },
     {
       "source": "acc_02083",
       "target": "acc_02084",
       "amount": 403200.0,
-      "timestamp": "2026-07-11T23:22:00+00:00"
+      "timestamp": "2026-07-12T06:21:00+00:00"
     },
     {
       "source": "acc_02025",
@@ -1833,37 +1833,37 @@
       "source": "acc_02086",
       "target": "acc_02087",
       "amount": 395300.64,
-      "timestamp": "2026-07-11T22:34:00+00:00"
+      "timestamp": "2026-07-12T05:33:00+00:00"
     },
     {
       "source": "acc_02085",
       "target": "acc_02086",
       "amount": 395300.64,
-      "timestamp": "2026-07-11T23:00:00+00:00"
+      "timestamp": "2026-07-12T05:59:00+00:00"
     },
     {
       "source": "acc_02084",
       "target": "acc_02085",
       "amount": 395136.0,
-      "timestamp": "2026-07-11T23:26:00+00:00"
+      "timestamp": "2026-07-12T06:25:00+00:00"
     },
     {
       "source": "acc_02086",
       "target": "acc_02087",
       "amount": 387394.63,
-      "timestamp": "2026-07-11T23:04:00+00:00"
+      "timestamp": "2026-07-12T06:03:00+00:00"
     },
     {
       "source": "acc_02087",
       "target": "acc_02088",
       "amount": 387394.63,
-      "timestamp": "2026-07-11T22:38:00+00:00"
+      "timestamp": "2026-07-12T05:37:00+00:00"
     },
     {
       "source": "acc_02085",
       "target": "acc_02086",
       "amount": 387233.28,
-      "timestamp": "2026-07-11T23:30:00+00:00"
+      "timestamp": "2026-07-12T06:29:00+00:00"
     },
     {
       "source": "acc_02027",
@@ -1881,31 +1881,31 @@
       "source": "acc_02088",
       "target": "acc_02083",
       "amount": 379646.73,
-      "timestamp": "2026-07-11T22:42:00+00:00"
+      "timestamp": "2026-07-12T05:41:00+00:00"
     },
     {
       "source": "acc_02087",
       "target": "acc_02088",
       "amount": 379646.73,
-      "timestamp": "2026-07-11T23:08:00+00:00"
+      "timestamp": "2026-07-12T06:07:00+00:00"
     },
     {
       "source": "acc_02086",
       "target": "acc_02087",
       "amount": 379488.61,
-      "timestamp": "2026-07-11T23:34:00+00:00"
+      "timestamp": "2026-07-12T06:33:00+00:00"
     },
     {
       "source": "acc_02088",
       "target": "acc_02083",
       "amount": 372053.8,
-      "timestamp": "2026-07-11T23:12:00+00:00"
+      "timestamp": "2026-07-12T06:11:00+00:00"
     },
     {
       "source": "acc_02087",
       "target": "acc_02088",
       "amount": 371898.84,
-      "timestamp": "2026-07-11T23:38:00+00:00"
+      "timestamp": "2026-07-12T06:37:00+00:00"
     },
     {
       "source": "acc_02028",
@@ -1917,7 +1917,7 @@
       "source": "acc_02088",
       "target": "acc_02083",
       "amount": 364460.87,
-      "timestamp": "2026-07-11T23:42:00+00:00"
+      "timestamp": "2026-07-12T06:41:00+00:00"
     },
     {
       "source": "acc_02025",

@@ -94,6 +94,7 @@ def analyze(
     source: str = "manual_demo",
     phone_number: str | None = None,
     location_hint: dict | None = None,
+    verify: bool = True,
 ) -> dict:
     """Analyse one message/transcript; returns a contract-valid payload dict."""
     hits = detect_markers(text)
@@ -109,7 +110,7 @@ def analyze(
     else:
         scam_type = infer_scam_type(text, markers)
 
-    return {
+    result = {
         "schema_version": SCHEMA_VERSION,
         "event_id": f"scam_{uuid.uuid4().hex[:12]}",
         "source": source,
@@ -123,6 +124,20 @@ def analyze(
         "phone_number": phone_number,
         "location_hint": location_hint,
     }
+
+    # Additive agentic verification — only for flagged messages, never for the
+    # verdict itself. Wrapped so a verifier failure can never break /analyze.
+    if verify and verdict != "legit":
+        try:
+            from .verify import verify_safe
+
+            report = verify_safe(text, result)
+            if report is not None:
+                result["verification"] = report
+        except Exception:  # noqa: BLE001 — verification is best-effort, never load-bearing
+            pass
+
+    return result
 
 
 def validate_payload(payload: dict) -> None:
