@@ -181,8 +181,8 @@ export default function Page() {
     if (districtKey) {
       locate(DEMO_DISTRICT_COORDS[districtKey]);
       
-      const relatedScams = events?.scams.filter(s => s.location.toLowerCase().includes(districtKey.toLowerCase()) || districtKey.toLowerCase().includes(s.location.toLowerCase())) || [];
-      const relatedFakes = events?.counterfeits.filter(c => c.location.toLowerCase().includes(districtKey.toLowerCase()) || districtKey.toLowerCase().includes(c.location.toLowerCase())) || [];
+      const relatedScams = events?.scams.filter(s => s.location_hint?.district?.toLowerCase().includes(districtKey.toLowerCase()) || districtKey.toLowerCase().includes(s.location_hint?.district?.toLowerCase() || "")) || [];
+      const relatedFakes = events?.counterfeits.filter(c => c.location_hint?.district?.toLowerCase().includes(districtKey.toLowerCase()) || districtKey.toLowerCase().includes(c.location_hint?.district?.toLowerCase() || "")) || [];
       
       setCityAlerts({
         district: districtKey,
@@ -272,7 +272,6 @@ export default function Page() {
               onLocate={locate}
             />
           )}
-          {activeTab === "analytics" && <AnalyticsDrawer events={events} fusion={lastFusion} />}
         </Drawer>
       )}
 

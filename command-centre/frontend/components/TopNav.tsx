@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import type { HealthResponse } from "@/lib/api";
 import type { TabKey } from "./types";
 import { Bell, Search, Shield, Wifi, X } from "./Icons";
@@ -31,6 +33,25 @@ export default function TopNav({
   const backendUp = health?.status === "ok";
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const container = useRef<HTMLElement>(null);
+
+  useGSAP(() => {
+    gsap.from(container.current, {
+      y: -50,
+      opacity: 0,
+      duration: 0.8,
+      ease: "power3.out",
+    });
+    
+    gsap.from(".gsap-nav-item", {
+      y: -20,
+      opacity: 0,
+      duration: 0.5,
+      stagger: 0.05,
+      ease: "back.out(1.5)",
+      delay: 0.2
+    });
+  }, { scope: container });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +61,7 @@ export default function TopNav({
   };
 
   return (
-    <header className="pointer-events-auto absolute inset-x-0 top-0 z-40 flex items-center gap-5 px-5 py-3">
+    <header ref={container} className="pointer-events-auto absolute inset-x-0 top-0 z-40 flex items-center gap-5 px-5 py-3">
       {/* Animated Shield Logo */}
       <div className="glass flex h-10 w-10 items-center justify-center !rounded-xl transition-transform duration-500 hover:rotate-12 hover:scale-110 shadow-[0_0_15px_rgba(139,92,246,0.3)]">
         <Shield className="h-5 w-5 text-zinc-100 animate-pulse" />
@@ -51,11 +72,11 @@ export default function TopNav({
           <button
             key={key}
             onClick={() => onTabChange(key)}
-            className={
+            className={`gsap-nav-item ${
               activeTab === key
                 ? "rounded-full bg-zinc-100 px-4 py-1.5 text-sm font-medium text-zinc-900 shadow"
                 : "rounded-full px-4 py-1.5 text-sm text-zinc-400 transition hover:text-zinc-100"
-            }
+            }`}
           >
             {label}
           </button>
@@ -64,7 +85,7 @@ export default function TopNav({
 
       <div className="ml-auto flex items-center gap-4">
         {/* Search */}
-        <div className="relative flex items-center">
+        <div className="relative flex items-center gsap-nav-item">
           {searchOpen ? (
             <form onSubmit={handleSearch} className="flex items-center bg-zinc-900/80 backdrop-blur-md rounded-full border border-zinc-800 pl-3 pr-1 py-1 w-48 transition-all">
               <button type="submit" className="hover:text-zinc-300">
@@ -91,7 +112,7 @@ export default function TopNav({
         </div>
 
         {/* Backend Status */}
-        <span title={backendUp ? "backend online" : "backend unreachable"}>
+        <span className="gsap-nav-item" title={backendUp ? "backend online" : "backend unreachable"}>
           <Wifi className={`h-4 w-4 ${backendUp ? "text-emerald-400" : "text-red-400"}`} />
         </span>
 
@@ -99,7 +120,7 @@ export default function TopNav({
         <button
           onClick={onBell}
           title="View alerts"
-          className="relative transition hover:text-zinc-100"
+          className="relative transition hover:text-zinc-100 gsap-nav-item"
         >
           <Bell className="h-4 w-4 text-zinc-300" />
           {alertCount > 0 && (
@@ -110,7 +131,9 @@ export default function TopNav({
         </button>
 
         {/* Clock instead of PM icon */}
-        <Clock />
+        <div className="gsap-nav-item">
+          <Clock />
+        </div>
       </div>
     </header>
   );

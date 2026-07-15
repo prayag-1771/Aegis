@@ -1,5 +1,8 @@
 "use client";
 
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import type { EventsResponse, FusionOutput, HotspotsResponse } from "@/lib/api";
 import { clockTime, inr, titleCase } from "@/lib/format";
 import { AlertTriangle, Banknote, MapPin, Network, Phone, ArrowUpRight } from "./Icons";
@@ -39,6 +42,18 @@ export default function AlertsDrawer({
   ringAlerts?: RingAlert[];
   onLocate: (p: { lat: number; lon: number }) => void;
 }) {
+  const container = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    gsap.from(".gsap-alert-item", {
+      x: -30,
+      opacity: 0,
+      duration: 0.4,
+      stagger: 0.05,
+      ease: "power2.out",
+    });
+  }, { scope: container });
+
   const crossHubs = (hotspots?.hubs ?? []).filter((h) => h.cross_domain);
   const scams = (events?.scams ?? []).filter((s) => s.verdict !== "legit").reverse();
   const notes = (events?.counterfeits ?? []).filter((c) => c.verdict === "fake").reverse();
@@ -61,9 +76,9 @@ export default function AlertsDrawer({
   const moveCashLinked = types.has("counterfeit");
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div ref={container} className="flex flex-col gap-4 p-4">
       {/* ── Live Signal Volume ── */}
-      <section className="glass p-4 rounded-xl">
+      <section className="gsap-alert-item glass p-4 rounded-xl">
         <div className="flex items-center justify-between text-xs text-zinc-400">
           <span>Live Signal Volume</span>
           <ArrowUpRight className="h-3.5 w-3.5" />
@@ -94,7 +109,7 @@ export default function AlertsDrawer({
       </section>
 
       {/* ── Pipeline Visualization (Vertical) ── */}
-      <section className="glass p-4 rounded-xl">
+      <section className="gsap-alert-item glass p-4 rounded-xl">
         <div className="text-xs text-zinc-400">Criminal Pipeline</div>
         <div className="mt-3 flex flex-col items-center gap-1">
           <PipeStage n="1" verb="TAKE" tone="text-red-300" accent="border-red-500/30" line={`${scamCount} scam signal${scamCount === 1 ? "" : "s"}`} />
@@ -105,11 +120,11 @@ export default function AlertsDrawer({
         </div>
       </section>
 
-      <div className="border-t border-white/5 my-2"></div>
+      <div className="gsap-alert-item border-t border-white/5 my-2"></div>
 
       {/* fusion verdict */}
       {fusion && (
-        <div className="rounded-xl border border-red-500/30 bg-red-950/40 p-3">
+        <div className="gsap-alert-item rounded-xl border border-red-500/30 bg-red-950/40 p-3">
           <div className="flex items-center justify-between">
             <span
               className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
@@ -141,7 +156,7 @@ export default function AlertsDrawer({
         <button
           key={a.id}
           onClick={a.lat != null ? () => onLocate({ lat: a.lat!, lon: a.lon! }) : undefined}
-          className="w-full rounded-xl border border-violet-500/30 bg-violet-950/40 p-3 text-left transition hover:border-violet-400/60"
+          className="gsap-alert-item w-full rounded-xl border border-violet-500/30 bg-violet-950/40 p-3 text-left transition hover:border-violet-400/60"
         >
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-violet-300">
@@ -166,7 +181,7 @@ export default function AlertsDrawer({
         <button
           key={h.hub_id}
           onClick={() => onLocate({ lat: h.lat, lon: h.lon })}
-          className="w-full rounded-xl border border-amber-500/25 bg-amber-950/30 p-3 text-left transition hover:border-amber-400/50"
+          className="gsap-alert-item w-full rounded-xl border border-amber-500/25 bg-amber-950/30 p-3 text-left transition hover:border-amber-400/50"
         >
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-200">
             <MapPin className="h-3.5 w-3.5" />
@@ -181,21 +196,22 @@ export default function AlertsDrawer({
       {/* ALL scam detections */}
       {scams.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+          <div className="gsap-alert-item text-[10px] font-bold uppercase tracking-widest text-zinc-500">
             Scam detections ({scams.length})
           </div>
           {scams.map((s) => (
-            <Row
-              key={s.event_id}
-              icon={<Phone className="h-3.5 w-3.5 text-red-400" />}
-              text={`${titleCase(s.scam_type ?? "scam")} flagged — ${s.location_hint?.district ?? "?"}`}
-              time={clockTime(s.timestamp)}
-              onClick={
-                s.location_hint?.lat != null
-                  ? () => onLocate({ lat: s.location_hint!.lat!, lon: s.location_hint!.lon! })
-                  : undefined
-              }
-            />
+            <div key={s.event_id} className="gsap-alert-item">
+              <Row
+                icon={<Phone className="h-3.5 w-3.5 text-red-400" />}
+                text={`${titleCase(s.scam_type ?? "scam")} flagged — ${s.location_hint?.district ?? "?"}`}
+                time={clockTime(s.timestamp)}
+                onClick={
+                  s.location_hint?.lat != null
+                    ? () => onLocate({ lat: s.location_hint!.lat!, lon: s.location_hint!.lon! })
+                    : undefined
+                }
+              />
+            </div>
           ))}
         </div>
       )}
@@ -203,28 +219,29 @@ export default function AlertsDrawer({
       {/* ALL counterfeit detections */}
       {notes.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+          <div className="gsap-alert-item text-[10px] font-bold uppercase tracking-widest text-zinc-500">
             Counterfeit detections ({notes.length})
           </div>
           {notes.map((c) => (
-            <Row
-              key={c.event_id}
-              icon={<Banknote className="h-3.5 w-3.5 text-amber-400" />}
-              text={`Fake ₹${c.denomination} seized — ${c.location_hint?.district ?? "?"}`}
-              time={clockTime(c.timestamp)}
-              onClick={
-                c.location_hint?.lat != null
-                  ? () => onLocate({ lat: c.location_hint!.lat!, lon: c.location_hint!.lon! })
-                  : undefined
-              }
-            />
+            <div key={c.event_id} className="gsap-alert-item">
+              <Row
+                icon={<Banknote className="h-3.5 w-3.5 text-amber-400" />}
+                text={`Fake ₹${c.denomination} seized — ${c.location_hint?.district ?? "?"}`}
+                time={clockTime(c.timestamp)}
+                onClick={
+                  c.location_hint?.lat != null
+                    ? () => onLocate({ lat: c.location_hint!.lat!, lon: c.location_hint!.lon! })
+                    : undefined
+                }
+              />
+            </div>
           ))}
         </div>
       )}
 
       {/* empty state */}
       {scams.length === 0 && notes.length === 0 && !fusion && ringAlerts.length === 0 && crossHubs.length === 0 && (
-        <div className="flex items-center gap-2 text-[11px] text-zinc-600">
+        <div className="gsap-alert-item flex items-center gap-2 text-[11px] text-zinc-600">
           <AlertTriangle className="h-3.5 w-3.5" />
           no active warnings
         </div>

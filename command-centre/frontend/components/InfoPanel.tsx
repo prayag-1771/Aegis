@@ -1,5 +1,8 @@
 "use client";
 
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import { X, Shield, Phone, Banknote, MapPin, Zap } from "./Icons";
 import { titleCase, pct, clockTime } from "@/lib/format";
 import type { EventsResponse } from "@/lib/api";
@@ -15,6 +18,32 @@ export default function InfoPanel({
   onClose: () => void;
   inline?: boolean;
 }) {
+  const container = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    if (!moduleType) return;
+    
+    // Animate the main panel sliding in
+    if (!inline) {
+      gsap.from(container.current, {
+        x: 50,
+        opacity: 0,
+        duration: 0.4,
+        ease: "power2.out",
+      });
+    }
+
+    // Stagger the internal children
+    gsap.from(".gsap-panel-item", {
+      y: 20,
+      opacity: 0,
+      duration: 0.4,
+      stagger: 0.05,
+      ease: "power2.out",
+      delay: 0.1,
+    });
+  }, { scope: container, dependencies: [moduleType] });
+
   if (!moduleType) return null;
 
   const dataList = moduleType === "scam" ? events?.scams || [] : events?.counterfeits || [];
@@ -22,7 +51,7 @@ export default function InfoPanel({
 
   const renderContent = () => (
     <div className={inline ? "h-full flex flex-col" : "h-full w-full bg-zinc-950/95 backdrop-blur-2xl border-l border-white/10 shadow-[-20px_0_40px_rgba(0,0,0,0.5)] flex flex-col pointer-events-auto"}>
-      <div className="flex items-center justify-between p-5 border-b border-white/10">
+      <div className="flex items-center justify-between p-5 border-b border-white/10 gsap-panel-item">
         <div className="flex items-center gap-2">
           <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${moduleType === "scam" ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}>
             {moduleType === "scam" ? <Phone className="h-4 w-4" /> : <Banknote className="h-4 w-4" />}
@@ -42,7 +71,7 @@ export default function InfoPanel({
       <div className="flex-1 overflow-y-auto p-5 scroll-thin space-y-6">
         {dataList.length > 0 && latestData ? (
           <>
-            <div>
+            <div className="gsap-panel-item">
               <div className="flex items-center gap-2 text-xs font-medium text-zinc-300 mb-3">
                 <Zap className="h-4 w-4 text-violet-400" />
                 Consolidated AI Summary
@@ -67,9 +96,9 @@ export default function InfoPanel({
             </div>
 
             <div className="space-y-4">
-              <div className="text-xs font-medium text-zinc-300 mb-2">Recent Reports</div>
+              <div className="text-xs font-medium text-zinc-300 mb-2 gsap-panel-item">Recent Reports</div>
               {dataList.slice().reverse().map((data: any, idx: number) => (
-                <div key={idx} className="glass p-4 rounded-xl relative overflow-hidden group">
+                <div key={idx} className="gsap-panel-item glass p-4 rounded-xl relative overflow-hidden group">
                   <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${moduleType === "scam" ? "from-red-500 to-transparent" : "from-amber-500 to-transparent"}`} />
                   <div className="relative z-10 flex flex-col gap-3">
                     <div className="flex justify-between items-start">
@@ -108,7 +137,7 @@ export default function InfoPanel({
             </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center py-20">
+          <div className="flex flex-col items-center justify-center h-full text-center py-20 gsap-panel-item">
             <Shield className="h-10 w-10 text-zinc-700 mb-4" />
             <p className="text-sm text-zinc-500">No detection data available to analyze.</p>
           </div>
@@ -117,10 +146,10 @@ export default function InfoPanel({
     </div>
   );
 
-  if (inline) return renderContent();
+  if (inline) return <div ref={container} className="h-full w-full">{renderContent()}</div>;
 
   return (
-    <div className="absolute right-0 top-16 bottom-0 w-[500px] z-30 transform transition-transform duration-300">
+    <div ref={container} className="absolute right-0 top-16 bottom-0 w-[500px] z-30">
       {renderContent()}
     </div>
   );

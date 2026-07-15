@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import type { EventsResponse, FraudGraph, Ring } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { Activity, Network } from "./Icons";
@@ -42,6 +44,18 @@ export default function FraudRingsDrawer({
   );
   const [phase, setPhase] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const container = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    // Stagger in the top elements and rings
+    gsap.from(".gsap-ring-item", {
+      x: -30,
+      opacity: 0,
+      duration: 0.4,
+      stagger: 0.05,
+      ease: "power2.out",
+    });
+  }, { scope: container, dependencies: [rings.length] });
 
   const names = namesRaw.split(",").map((n) => n.trim()).filter(Boolean);
   const namesTooFew = names.length > 0 && names.length < 3;
@@ -95,16 +109,16 @@ export default function FraudRingsDrawer({
   };
 
   return (
-    <div className="flex flex-col gap-3 p-4">
+    <div ref={container} className="flex flex-col gap-3 p-4">
       <div className="glass p-4">
-        <div className="flex items-center justify-between text-xs text-zinc-400">
+        <div className="flex items-center justify-between text-xs text-zinc-400 gsap-ring-item">
           <div className="flex items-center gap-1.5">
             <Network className="h-3.5 w-3.5 text-violet-400" /> Fraud Rings
           </div>
           <Activity className="h-3.5 w-3.5" />
         </div>
         {onInjectRing && (
-          <div className="mt-3 rounded-2xl border border-violet-500/15 bg-violet-500/5 p-3">
+          <div className="mt-3 rounded-2xl border border-violet-500/15 bg-violet-500/5 p-3 gsap-ring-item">
             <div className="flex items-center gap-2">
               <select
                 value={district}
@@ -171,7 +185,7 @@ export default function FraudRingsDrawer({
             <button
               key={r.ring_id}
               onClick={() => onViewRing?.(r)}
-              className="block w-full rounded-lg px-1 py-0.5 text-left transition hover:bg-white/5"
+              className="gsap-ring-item block w-full rounded-lg px-1 py-0.5 text-left transition hover:bg-white/5"
               title="view the money flow"
             >
               <div className="flex items-center justify-between text-[11px]">
@@ -190,7 +204,7 @@ export default function FraudRingsDrawer({
               </div>
             </button>
           ))}
-          {rings.length === 0 && <div className="mt-3 text-[11px] text-zinc-600">no rings yet…</div>}
+          {rings.length === 0 && <div className="mt-3 text-[11px] text-zinc-600 gsap-ring-item">no rings yet…</div>}
         </div>
       </div>
     </div>
