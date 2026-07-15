@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import gsap from "gsap";
 import { inr } from "@/lib/format";
-import { X } from "./Icons";
+import { X, Play, Zap } from "./Icons";
 
 export type ViewNode = {
   id: string;
@@ -115,10 +116,7 @@ export default function RingViewer({
   nodes: ViewNode[];
   edges: ViewEdge[];
   /** fusion money trail for this ring — the traced victim payment to highlight */
-  trail?: { account_id: string; amount: number } | null;
-  onClose: () => void;
-}) {
-  const [picked, setPicked] = useState<ViewNode | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // merge parallel transfers between the same pair so the drawing stays clean
   const merged = useMemo(() => {
@@ -139,13 +137,53 @@ export default function RingViewer({
   const pos = useMemo(() => layout(nodes, merged, label), [nodes, merged, label]);
   const maxAmt = Math.max(...merged.map((e) => e.amount ?? 0), 1);
 
+  const startSimulation = () => {
+    setPicked(null);
+    if (!containerRef.current) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline();
+      
+      // Reset state for animation
+      gsap.set(".gsap-node", { opacity: 0, scale: 0, transformOrigin: "center" });
+      gsap.set(".gsap-edge", { opacity: 0 });
+      gsap.set(".gsap-anim-flow", { opacity: 0 }); // Hide flow animations during build
+      
+      // Animate nodes popping in
+      tl.to(".gsap-node", {
+        opacity: 1,
+        scale: 1,
+        duration: 0.4,
+        stagger: 0.1,
+        ease: "back.out(1.5)"
+      });
+      
+      // Animate edges fading in
+      tl.to(".gsap-edge", {
+        opacity: 1,
+        duration: 0.2,
+        stagger: 0.05
+      }, "-=0.2");
+
+      // Show flow animations at the end
+      tl.to(".gsap-anim-flow", {
+        opacity: 1,
+        duration: 0.5
+      });
+      
+    }, containerRef);
+    
+    // Just run once, don't return cleanup to avoid reverting when function ends
+  };
+
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="glass w-[860px] max-w-[94vw] p-5"
+        ref={containerRef}
+        className="glass w-[860px] max-w-[94vw] p-5 relative"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
@@ -172,16 +210,24 @@ export default function RingViewer({
               </p>
             )}
           </div>
-          <button onClick={onClose} className="text-zinc-500 transition hover:text-zinc-200">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={startSimulation}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 transition text-[11px] font-medium"
+            >
+              <Play className="h-3 w-3" /> Simulate
+            </button>
+            <button onClick={onClose} className="text-zinc-500 transition hover:text-zinc-200">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="mt-3 flex gap-4">
           {/* money-flow drawing */}
           <svg
             viewBox={`0 0 ${W} ${H}`}
-            className="min-w-0 flex-1 rounded-xl border border-white/5 bg-zinc-950/60"
+            className="min-w-0 flex-1 rounded-xl border border-white/5 bg-zinc-950/60 transition-all duration-500"
           >
             <defs>
               <marker
@@ -227,7 +273,7 @@ export default function RingViewer({
                 e.amount != null &&
                 Math.abs(e.amount - trail.amount) <= Math.max(0.01 * trail.amount, 1);
               return (
-                <g key={i}>
+                <g key={i} className="gsap-edge">
                   <line
                     x1={x1}
                     y1={y1}
@@ -248,6 +294,7 @@ export default function RingViewer({
                     strokeOpacity={traced ? 1 : 0.8}
                     strokeWidth={wgt * 0.8}
                     strokeDasharray="4 8"
+                    className="gsap-anim-flow"
                   >
                     <animate 
                       attributeName="stroke-dashoffset" 
@@ -270,7 +317,7 @@ export default function RingViewer({
               if (!p) return null;
               if (n.satellite) {
                 return (
-                  <g key={n.id}>
+                  <g key={n.id} className="gsap-node animate-in zoom-in duration-300" style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
                     <circle cx={p.x} cy={p.y} r={6} fill="#27272a" stroke="#52525b" strokeWidth={1} />
                     <text x={p.x} y={p.y + 16} textAnchor="middle" fontSize="7.5" fill="#71717a">
                       {short(n.id)}
@@ -284,7 +331,8 @@ export default function RingViewer({
                 <g
                   key={n.id}
                   onClick={() => setPicked(n)}
-                  className="cursor-pointer"
+                  className="cursor-pointer gsap-node animate-in zoom-in duration-300"
+                  style={{ transformOrigin: `${p.x}px ${p.y}px` }}
                 >
                   <circle
                     cx={p.x}
@@ -322,7 +370,23 @@ export default function RingViewer({
           </svg>
 
           {/* evidence panel */}
-          <div className="w-56 shrink-0 rounded-xl border border-white/5 bg-zinc-950/60 p-3">
+          <div className="w-64 shrink-0 rounded-xl border border-white/5 bg-zinc-950/60 p-3 flex flex-col h-full overflow-y-auto scroll-thin">
+            {/* Gen AI Summary */}
+            <div className="mb-4 pb-4 border-b border-white/5">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-violet-400 mb-2">
+                <Zap className="h-3.5 w-3.5" /> AI Summary
+              </div>
+              <div className="text-[11px] text-zinc-300 leading-relaxed font-light">
+                {label?.includes("hub") ? (
+                  <p>Graph ML detects a <strong>Hub-and-Spoke</strong> topology. Central account acts as a collector, aggregating funds from victims before layering via mules.</p>
+                ) : label?.includes("chain") ? (
+                  <p>Graph ML detects a <strong>Chain</strong> topology. Funds are transferred sequentially across multiple accounts to obfuscate the money trail.</p>
+                ) : (
+                  <p>Graph ML detects an <strong>Organized Ring</strong>. Multiple accounts exhibit high-velocity transfers with synchronized timing and identical amounts.</p>
+                )}
+              </div>
+            </div>
+
             {picked ? (
               <>
                 <div className="text-[11px] font-semibold text-zinc-100">{picked.id}</div>

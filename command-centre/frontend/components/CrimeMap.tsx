@@ -129,10 +129,11 @@ export default function CrimeMap({
       map.on("load", () => {
         if (cancelled) return;
         setReady(true);
-        // proactively detect blocked CDNs so the first paint is already correct
-        Promise.all([probeTile(CARTO_PROBE), probeTile(ESRI_PROBE)]).then(([darkOk, satOk]) => {
+        // proactively detect blocked CARTO CDN so the first paint is already correct.
+        // We bypass the ESRI probe as it can falsely fail via img tags.
+        probeTile(CARTO_PROBE).then((darkOk) => {
           if (cancelled) return;
-          blockedRef.current = { dark: !darkOk, sat: !satOk };
+          blockedRef.current = { dark: !darkOk, sat: false };
           applyBasemap();
         });
       });

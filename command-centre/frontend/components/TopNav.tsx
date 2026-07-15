@@ -67,7 +67,9 @@ export default function TopNav({
         <div className="relative flex items-center">
           {searchOpen ? (
             <form onSubmit={handleSearch} className="flex items-center bg-zinc-900/80 backdrop-blur-md rounded-full border border-zinc-800 pl-3 pr-1 py-1 w-48 transition-all">
-              <Search className="h-3.5 w-3.5 text-zinc-400 mr-2" />
+              <button type="submit" className="hover:text-zinc-300">
+                <Search className="h-3.5 w-3.5 text-zinc-400 mr-2" />
+              </button>
               <input
                 autoFocus
                 type="text"
