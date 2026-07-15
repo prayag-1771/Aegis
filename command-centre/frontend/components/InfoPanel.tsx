@@ -8,19 +8,20 @@ export default function InfoPanel({
   moduleType,
   events,
   onClose,
+  inline = false,
 }: {
   moduleType: "scam" | "counterfeit" | null;
   events: EventsResponse | null;
   onClose: () => void;
+  inline?: boolean;
 }) {
   if (!moduleType) return null;
 
   const dataList = moduleType === "scam" ? events?.scams || [] : events?.counterfeits || [];
   const latestData = dataList.at(-1);
 
-  return (
-    <div className="absolute right-0 top-16 bottom-0 w-[500px] z-30 transform transition-transform duration-300">
-      <div className="h-full w-full bg-zinc-950/95 backdrop-blur-2xl border-l border-white/10 shadow-[-20px_0_40px_rgba(0,0,0,0.5)] flex flex-col pointer-events-auto">
+  const content = (
+    <div className={inline ? "h-full flex flex-col" : "h-full w-full bg-zinc-950/95 backdrop-blur-2xl border-l border-white/10 shadow-[-20px_0_40px_rgba(0,0,0,0.5)] flex flex-col pointer-events-auto"}>
         <div className="flex items-center justify-between p-5 border-b border-white/10">
           <div className="flex items-center gap-2">
             <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${moduleType === 'scam' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
@@ -118,6 +119,14 @@ export default function InfoPanel({
           )}
         </div>
       </div>
+    </div>
+  );
+
+  if (inline) return content;
+
+  return (
+    <div className="absolute right-0 top-16 bottom-0 w-[500px] z-30 transform transition-transform duration-300">
+      {content}
     </div>
   );
 }

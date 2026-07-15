@@ -260,16 +260,9 @@ export default function Page() {
         />
       )}
 
-      {/* slide-out drawers, one per tab */}
-      {drawerOpen && activeTab !== "fraud-rings" && (
+      {/* slide-out drawers for alerts and analytics */}
+      {drawerOpen && activeTab !== "fraud-rings" && activeTab !== "modules" && (
         <Drawer onClose={() => setActiveTab("map")}>
-          {activeTab === "modules" && (
-            <ModulesDrawer 
-              events={events} 
-              health={health} 
-              onSelectModule={setSelectedModule} 
-            />
-          )}
           {activeTab === "alerts" && (
             <AlertsDrawer
               events={events}
@@ -281,6 +274,99 @@ export default function Page() {
           )}
           {activeTab === "analytics" && <AnalyticsDrawer events={events} fusion={lastFusion} />}
         </Drawer>
+      )}
+
+      {/* Full screen blur overlay for Modules — side-by-side layout */}
+      {activeTab === "modules" && (
+        <div className="absolute inset-0 z-50 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-6 pointer-events-auto">
+          <div className="w-full max-w-[95vw] max-h-[90vh] flex gap-4 relative">
+            {/* Close button */}
+            <button 
+              onClick={() => { setActiveTab("map"); setSelectedModule(null); }}
+              className="absolute -top-2 -right-2 text-zinc-400 hover:text-zinc-100 p-2 rounded-full hover:bg-white/10 transition z-10 bg-zinc-900/80 border border-white/10"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+
+            {/* LEFT: Modules list */}
+            <div className="w-[380px] shrink-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 rounded-2xl shadow-2xl">
+              <ModulesDrawer 
+                events={events} 
+                health={health} 
+                onSelectModule={setSelectedModule} 
+              />
+            </div>
+
+            {/* RIGHT: InfoPanel or GenAI summary */}
+            <div className="flex-1 min-w-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 rounded-2xl shadow-2xl">
+              {selectedModule ? (
+                <InfoPanel
+                  moduleType={selectedModule}
+                  events={events}
+                  onClose={() => setSelectedModule(null)}
+                  inline
+                />
+              ) : (
+                /* Default GenAI Summary */
+                <div className="p-6 flex flex-col gap-6 h-full">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 text-emerald-400"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>
+                    </div>
+                    <div>
+                      <h2 className="text-base font-semibold text-zinc-100">Aegis Detection Modules</h2>
+                      <p className="text-[11px] text-zinc-500">AI-powered threat detection suite</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+                    <div className="text-xs font-medium text-zinc-300 mb-3 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                      System Health
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-black/20 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-semibold text-emerald-300">{Object.values(health?.modules ?? {}).filter(s => s === "up").length}</div>
+                        <div className="text-[10px] text-zinc-500 mt-1">Modules Online</div>
+                      </div>
+                      <div className="bg-black/20 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-semibold text-red-300">{events?.scams.filter(s => s.verdict !== "legit").length ?? 0}</div>
+                        <div className="text-[10px] text-zinc-500 mt-1">Scam Detections</div>
+                      </div>
+                      <div className="bg-black/20 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-semibold text-amber-300">{events?.counterfeits.filter(c => c.verdict === "fake").length ?? 0}</div>
+                        <div className="text-[10px] text-zinc-500 mt-1">Counterfeits Found</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-5 flex-1">
+                    <div className="text-xs font-medium text-zinc-300 mb-3">AI Intelligence Overview</div>
+                    <div className="text-[12px] leading-relaxed text-zinc-400 space-y-3">
+                      <p>
+                        The Aegis detection suite is actively monitoring threats across <strong className="text-zinc-200">two primary domains</strong>: 
+                        voice-based scam detection via the Fraud Shield NLP engine, and currency authenticity verification via the Counterfeit Vision neural network.
+                      </p>
+                      <p>
+                        Recent analysis shows <strong className="text-red-300">{events?.scams.length ?? 0} scam calls</strong> processed 
+                        and <strong className="text-amber-300">{events?.counterfeits.length ?? 0} currency scans</strong> completed. 
+                        The models continuously learn from new patterns to improve detection accuracy.
+                      </p>
+                      <p>
+                        <strong className="text-zinc-200">Recommendation:</strong> Click on either the Scam Call or Note Scan card on the left 
+                        to view detailed reports, individual verdicts, and a consolidated AI summary of the latest detections.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-zinc-600 text-center">
+                    Click a module on the left to view detailed analysis →
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Full screen blur overlay for Fraud Rings — side-by-side layout */}
@@ -389,14 +475,6 @@ export default function Page() {
         </div>
       )}
 
-      {/* InfoPanel for selected module in ModulesDrawer */}
-      {selectedModule && (
-        <InfoPanel
-          moduleType={selectedModule}
-          events={events}
-          onClose={() => setSelectedModule(null)}
-        />
-      )}
 
       <FusionChatBot
         fusion={lastFusion}
