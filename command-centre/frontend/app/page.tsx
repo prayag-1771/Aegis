@@ -13,7 +13,7 @@ import { injectDemoRing } from "@/lib/api";
 import { usePolling } from "@/lib/usePolling";
 import AlertChips from "@/components/AlertChips";
 import AlertsDrawer from "@/components/AlertsDrawer";
-import AnalyticsDrawer from "@/components/AnalyticsDrawer";
+
 import FusionChatBot from "@/components/FusionChatBot";
 import Drawer from "@/components/Drawer";
 import FraudConsole from "@/components/FraudConsole";
