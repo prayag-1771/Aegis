@@ -144,39 +144,90 @@ export default function RingViewer({
     setPicked(null);
     if (!containerRef.current) return;
 
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline();
-      
-      // Reset state for animation
-      gsap.set(".gsap-node", { opacity: 0, scale: 0, transformOrigin: "center" });
-      gsap.set(".gsap-edge", { opacity: 0 });
-      gsap.set(".gsap-anim-flow", { opacity: 0 }); // Hide flow animations during build
-      
-      // Animate nodes popping in
-      tl.to(".gsap-node", {
-        opacity: 1,
-        scale: 1,
-        duration: 0.4,
-        stagger: 0.1,
-        ease: "back.out(1.5)"
-      });
-      
-      // Animate edges fading in
-      tl.to(".gsap-edge", {
-        opacity: 1,
-        duration: 0.2,
-        stagger: 0.05
-      }, "-=0.2");
+    // Build an ordered walk through the ring following the money trail
+    const visited = new Set<string>();
+    const orderedNodeIds: string[] = [];
+    const orderedEdgeIndices: number[] = [];
 
-      // Show flow animations at the end
+    // Find a starting node (one with no incoming edges from ring members, or just the first node)
+    const ringNodes = nodes.filter((n) => !n.satellite);
+    const incomingSources = new Set(merged.map((e) => e.target));
+    const startNode = ringNodes.find((n) => !incomingSources.has(n.id)) ?? ringNodes[0];
+
+    // BFS/DFS walk following edge order
+    if (startNode) {
+      const queue = [startNode.id];
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        if (visited.has(current)) continue;
+        visited.add(current);
+        orderedNodeIds.push(current);
+
+        // Find all edges from this node and queue their targets
+        merged.forEach((e, idx) => {
+          if (e.source === current && !visited.has(e.target)) {
+            orderedEdgeIndices.push(idx);
+            queue.push(e.target);
+          }
+        });
+      }
+    }
+
+    // Add any remaining nodes/edges not reached by the walk
+    nodes.forEach((n) => {
+      if (!visited.has(n.id)) {
+        orderedNodeIds.push(n.id);
+      }
+    });
+    merged.forEach((_, idx) => {
+      if (!orderedEdgeIndices.includes(idx)) {
+        orderedEdgeIndices.push(idx);
+      }
+    });
+
+    gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+
+      // Hide everything first
+      gsap.set(".gsap-node", { opacity: 0, scale: 0 });
+      gsap.set(".gsap-edge", { opacity: 0 });
+      gsap.set(".gsap-anim-flow", { opacity: 0 });
+
+      // Step through: show source node → draw edge → show target node → repeat
+      orderedNodeIds.forEach((nodeId, i) => {
+        const nodeEl = `.gsap-node-${nodeId.replace(/[^a-zA-Z0-9]/g, "_")}`;
+
+        // Pop the node in with a nice bounce
+        tl.to(nodeEl, {
+          opacity: 1,
+          scale: 1,
+          duration: 0.6,
+          ease: "back.out(1.7)",
+        });
+
+        // After this node appears, draw all edges that originate from it (in order)
+        const nodeEdgeIndices = orderedEdgeIndices.filter(
+          (idx) => merged[idx].source === nodeId
+        );
+        nodeEdgeIndices.forEach((edgeIdx) => {
+          const edgeEl = `.gsap-edge-${edgeIdx}`;
+          tl.to(edgeEl, {
+            opacity: 1,
+            duration: 0.5,
+            ease: "power1.inOut",
+          }, "-=0.15"); // slight overlap for smooth flow
+        });
+      });
+
+      // Finally, activate all the flowing dash animations
       tl.to(".gsap-anim-flow", {
         opacity: 1,
-        duration: 0.5
-      });
-      
+        duration: 0.8,
+        stagger: 0.06,
+        ease: "power1.inOut",
+      }, "+=0.3");
+
     }, containerRef);
-    
-    // Just run once, don't return cleanup to avoid reverting when function ends
   };
 
   return (
@@ -276,7 +327,7 @@ export default function RingViewer({
                 e.amount != null &&
                 Math.abs(e.amount - trail.amount) <= Math.max(0.01 * trail.amount, 1);
               return (
-                <g key={i} className="gsap-edge">
+                <g key={i} className={`gsap-edge gsap-edge-${i}`}>
                   <line
                     x1={x1}
                     y1={y1}
@@ -320,7 +371,7 @@ export default function RingViewer({
               if (!p) return null;
               if (n.satellite) {
                 return (
-                  <g key={n.id} className="gsap-node animate-in zoom-in duration-300" style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+                  <g key={n.id} className={`gsap-node gsap-node-${n.id.replace(/[^a-zA-Z0-9]/g, "_")} animate-in zoom-in duration-300`} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
                     <circle cx={p.x} cy={p.y} r={6} fill="#27272a" stroke="#52525b" strokeWidth={1} />
                     <text x={p.x} y={p.y + 16} textAnchor="middle" fontSize="7.5" fill="#71717a">
                       {short(n.id)}
@@ -334,7 +385,7 @@ export default function RingViewer({
                 <g
                   key={n.id}
                   onClick={() => setPicked(n)}
-                  className="cursor-pointer gsap-node animate-in zoom-in duration-300"
+                  className={`cursor-pointer gsap-node gsap-node-${n.id.replace(/[^a-zA-Z0-9]/g, "_")} animate-in zoom-in duration-300`}
                   style={{ transformOrigin: `${p.x}px ${p.y}px` }}
                 >
                   <circle
