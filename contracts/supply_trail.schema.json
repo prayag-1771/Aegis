@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SupplyTrail",
+  "description": "Inferred provenance trail for counterfeit currency — a weighted hypothesis, NOT forensic proof. Every claim in evidence[] must be traceable to a real signal or curated reference.",
+  "type": "object",
+  "required": ["schema_version", "trail_id", "generated_at", "commodity", "mode", "seizures", "corridor", "inferred_origin", "confidence", "confidence_band", "evidence"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "trail_id": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "commodity": { "type": "string", "enum": ["counterfeit_currency"] },
+    "mode": { "type": "string", "enum": ["rail", "road", "ship", "air"] },
+    "seizures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["event_id", "lat", "lon", "district"],
+        "additionalProperties": false,
+        "properties": {
+          "event_id": { "type": "string" },
+          "lat": { "type": "number" },
+          "lon": { "type": "number" },
+          "district": { "type": "string" },
+          "denomination": { "type": "string" },
+          "timestamp": { "type": "string" }
+        }
+      }
+    },
+    "corridor": {
+      "type": "object",
+      "required": ["id", "name", "mode", "node_path"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "mode": { "type": "string" },
+        "node_path": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["name", "lat", "lon"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "lat": { "type": "number" },
+              "lon": { "type": "number" },
+              "is_major_hub": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "cluster_centroid": {
+      "type": "object",
+      "required": ["lat", "lon"],
+      "additionalProperties": false,
+      "properties": {
+        "lat": { "type": "number" },
+        "lon": { "type": "number" },
+        "radius_km": { "type": "number" }
+      }
+    },
+    "inferred_origin": {
+      "type": "object",
+      "required": ["name", "lat", "lon"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "lat": { "type": "number" },
+        "lon": { "type": "number" },
+        "district": { "type": "string" },
+        "reasoning": { "type": "string" }
+      }
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "confidence_band": { "type": "string", "enum": ["low", "medium", "high"] },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["type", "detail"],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "seizure_cluster",
+              "corridor_snap",
+              "corridor_terminus",
+              "fir_mention",
+              "transport_gap"
+            ]
+          },
+          "detail": { "type": "string" },
+          "ref": { "type": "string" },
+          "weight": { "type": "number" }
+        }
+      }
+    },
+    "disclaimer": {
+      "type": "string"
+    }
+  }
+}
