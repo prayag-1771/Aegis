@@ -1,0 +1,98 @@
+[
+  {
+    "ref": "FIR-JHK-2024-0041",
+    "district": "Dhanbad",
+    "state": "Jharkhand",
+    "lat": 23.7957,
+    "lon": 86.4304,
+    "date": "2024-03-12",
+    "source": "Times of India (Dhanbad edition), 2024-03-13",
+    "text": "Dhanbad railway GRP arrested two persons at platform 3 with a suitcase containing 320 counterfeit ₹500 notes. The accused told police they had received the consignment from a contact in Asansol and were transporting it toward Delhi. Notes were of high quality, passing initial UV check at a local bank.",
+    "places": ["Dhanbad", "Asansol", "Delhi"],
+    "crime_types": ["counterfeit_currency", "transport"]
+  },
+  {
+    "ref": "FIR-WB-2024-0187",
+    "district": "Asansol",
+    "state": "West Bengal",
+    "lat": 23.6833,
+    "lon": 86.9667,
+    "date": "2024-01-28",
+    "source": "Anandabazar Patrika (translated), 2024-01-29",
+    "text": "CID West Bengal raided a rented room near Asansol railway colony. Seized offset printing press, chemical inks, and partially printed ₹500 sheets. Primary suspect claims notes were distributed through railway parcel service. Three arrested; main operator absconding.",
+    "places": ["Asansol"],
+    "crime_types": ["counterfeit_currency", "printing_press", "distribution"]
+  },
+  {
+    "ref": "FIR-UP-2023-1102",
+    "district": "Kanpur",
+    "state": "Uttar Pradesh",
+    "lat": 26.4499,
+    "lon": 80.3319,
+    "date": "2023-11-05",
+    "source": "Hindustan (UP edition, translated), 2023-11-06",
+    "text": "Special Task Force seized ₹4.8 lakh in fake ₹500 notes from a hawker near Kanpur Central railway station. Accused disclosed a supply chain originating from Jharkhand — notes purchased in bulk at ₹100 per fake ₹500, transported by train. Police believe a single distributor supplies multiple UP towns.",
+    "places": ["Kanpur", "Jharkhand"],
+    "crime_types": ["counterfeit_currency", "distribution", "hawala"]
+  },
+  {
+    "ref": "FIR-JHK-2023-0829",
+    "district": "Jamtara",
+    "state": "Jharkhand",
+    "lat": 23.9578,
+    "lon": 86.8041,
+    "date": "2023-08-17",
+    "source": "Prabhat Khabar (translated), 2023-08-18",
+    "text": "Jamtara district police, acting on a tip, intercepted a vehicle on the Jamtara–Asansol road and recovered 580 counterfeit ₹500 notes. The driver stated he was to deliver the notes to a person at Asansol railway station. Suspects are known associates of a fraud ring previously implicated in digital arrest cases in the district.",
+    "places": ["Jamtara", "Asansol"],
+    "crime_types": ["counterfeit_currency", "transport", "digital_arrest_ring"]
+  },
+  {
+    "ref": "FIR-DELHI-2024-0334",
+    "district": "New Delhi",
+    "state": "Delhi",
+    "lat": 28.6432,
+    "lon": 77.2194,
+    "date": "2024-02-20",
+    "source": "Delhi Police Press Release #2024-112",
+    "text": "EOW Delhi arrested a currency exchange operative at New Delhi railway station IRCTC office. Notes were wrapped in legitimate-looking cash bundles destined for multiple recipients in West Delhi. Preliminary investigation suggests notes entered Delhi via the Grand Chord rail route from Jharkhand/Bihar.",
+    "places": ["New Delhi", "Jharkhand", "Bihar"],
+    "crime_types": ["counterfeit_currency", "distribution", "money_laundering"]
+  },
+  {
+    "ref": "FIR-MH-2023-0562",
+    "district": "Mumbai",
+    "state": "Maharashtra",
+    "lat": 18.9683,
+    "lon": 72.8187,
+    "date": "2023-06-11",
+    "source": "Maharashtra ATS press briefing, 2023-06-12",
+    "text": "Anti-Terrorism Squad seized ₹12.6 lakh in counterfeit ₹500 notes from a parcel at Mumbai Central station goods shed. The parcel was dispatched from Ratlam (Madhya Pradesh) and addressed to a fictitious company in Dharavi. Notes matched a printing signature linked to a 2022 Vadodara press seizure.",
+    "places": ["Mumbai", "Ratlam", "Vadodara"],
+    "crime_types": ["counterfeit_currency", "distribution"]
+  },
+  {
+    "ref": "FIR-GJ-2024-0091",
+    "district": "Vadodara",
+    "state": "Gujarat",
+    "lat": 22.3072,
+    "lon": 73.1812,
+    "date": "2024-04-03",
+    "source": "Gujarat CID press release, 2024-04-04",
+    "text": "CID Gujarat busted a counterfeit note syndicate operating from a farmhouse in Vadodara outskirts. The gang sourced paper from a vendor in Ahmedabad and used commercial offset printers acquired online. Distribution was primarily through railway parcel and private courier services toward North India.",
+    "places": ["Vadodara", "Ahmedabad"],
+    "crime_types": ["counterfeit_currency", "printing_press", "distribution"]
+  },
+  {
+    "ref": "FIR-JHK-2024-0193",
+    "district": "Deoghar",
+    "state": "Jharkhand",
+    "lat": 24.4764,
+    "lon": 86.6944,
+    "date": "2024-05-22",
+    "source": "Jharkhand Police website, case summary #JHK-2024-0193",
+    "text": "Deoghar police arrested three individuals in possession of printing equipment and 1,200 fake ₹500 notes near the Deoghar railway station goods yard. Accused admitted to receiving currency paper from an unknown source via bus parcel from West Bengal and distributing finished notes through railway luggage van service. Links to Jamtara cybercrime network under investigation.",
+    "places": ["Deoghar", "West Bengal", "Jamtara"],
+    "crime_types": ["counterfeit_currency", "printing_press", "cybercrime_link"]
+  }
+]

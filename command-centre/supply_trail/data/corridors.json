@@ -1,0 +1,96 @@
+[
+  {
+    "id": "rail_grand_chord_jharkhand",
+    "name": "Howrah–Delhi Grand Chord (Jharkhand corridor)",
+    "mode": "rail",
+    "description": "Primary eastbound trunk line through the Jamtara–Dhanbad–Asansol belt — historically the highest counterfeit-note transit corridor in East India (RBI intelligence, 2023).",
+    "node_path": [
+      {"name": "Howrah", "lat": 22.5839, "lon": 88.3424, "is_major_hub": true},
+      {"name": "Asansol", "lat": 23.6833, "lon": 86.9667, "is_major_hub": true},
+      {"name": "Dhanbad", "lat": 23.7957, "lon": 86.4304, "is_major_hub": true},
+      {"name": "Bokaro Steel City", "lat": 23.6693, "lon": 85.9636, "is_major_hub": false},
+      {"name": "Gomoh Jn", "lat": 23.8745, "lon": 86.1557, "is_major_hub": false},
+      {"name": "Koderma", "lat": 24.4636, "lon": 85.5932, "is_major_hub": false},
+      {"name": "Gaya", "lat": 24.7914, "lon": 85.0002, "is_major_hub": true},
+      {"name": "Pt. Deen Dayal Upadhyaya Jn (Mughal Sarai)", "lat": 25.2802, "lon": 83.1122, "is_major_hub": true},
+      {"name": "Allahabad Jn", "lat": 25.4358, "lon": 81.8463, "is_major_hub": true},
+      {"name": "Kanpur Central", "lat": 26.4499, "lon": 80.3319, "is_major_hub": true},
+      {"name": "Agra Cantt", "lat": 27.1767, "lon": 78.0081, "is_major_hub": false},
+      {"name": "Mathura Jn", "lat": 27.4924, "lon": 77.6737, "is_major_hub": false},
+      {"name": "New Delhi", "lat": 28.6432, "lon": 77.2194, "is_major_hub": true}
+    ]
+  },
+  {
+    "id": "rail_delhi_mumbai_central",
+    "name": "Delhi–Mumbai Central Railway",
+    "mode": "rail",
+    "description": "Western trunk corridor — major note-seizure activity documented between Ratlam and Vadodara divisions (NCRB 2022 annual report, counterfeit currency chapter).",
+    "node_path": [
+      {"name": "New Delhi", "lat": 28.6432, "lon": 77.2194, "is_major_hub": true},
+      {"name": "Mathura Jn", "lat": 27.4924, "lon": 77.6737, "is_major_hub": false},
+      {"name": "Sawai Madhopur", "lat": 26.0193, "lon": 76.3555, "is_major_hub": false},
+      {"name": "Kota Jn", "lat": 25.1802, "lon": 75.8292, "is_major_hub": true},
+      {"name": "Ratlam Jn", "lat": 23.3314, "lon": 75.0367, "is_major_hub": true},
+      {"name": "Vadodara Jn", "lat": 22.3072, "lon": 73.1812, "is_major_hub": true},
+      {"name": "Surat", "lat": 21.1702, "lon": 72.8311, "is_major_hub": false},
+      {"name": "Vapi", "lat": 20.3718, "lon": 72.9090, "is_major_hub": false},
+      {"name": "Borivali", "lat": 19.2307, "lon": 72.8567, "is_major_hub": false},
+      {"name": "Mumbai Central", "lat": 18.9683, "lon": 72.8187, "is_major_hub": true}
+    ]
+  },
+  {
+    "id": "road_nh19_jharkhand_up",
+    "name": "NH-19 Jharkhand–Uttar Pradesh (Highway)",
+    "mode": "road",
+    "description": "National Highway 19 — Dhanbad to Varanasi. Secondary overland corridor used by couriers avoiding railway checks.",
+    "node_path": [
+      {"name": "Dhanbad", "lat": 23.7957, "lon": 86.4304, "is_major_hub": true},
+      {"name": "Hazaribagh", "lat": 23.9968, "lon": 85.3568, "is_major_hub": false},
+      {"name": "Koderma", "lat": 24.4636, "lon": 85.5932, "is_major_hub": false},
+      {"name": "Gaya", "lat": 24.7914, "lon": 85.0002, "is_major_hub": true},
+      {"name": "Sasaram", "lat": 24.9468, "lon": 84.0327, "is_major_hub": false},
+      {"name": "Varanasi", "lat": 25.3176, "lon": 82.9739, "is_major_hub": true}
+    ]
+  },
+  {
+    "id": "road_nh48_delhi_mumbai",
+    "name": "NH-48 Delhi–Mumbai Expressway (Highway)",
+    "mode": "road",
+    "description": "Fastest highway corridor linking Delhi to Mumbai via Rajasthan and Gujarat.",
+    "node_path": [
+      {"name": "New Delhi", "lat": 28.6432, "lon": 77.2194, "is_major_hub": true},
+      {"name": "Gurugram", "lat": 28.4595, "lon": 77.0266, "is_major_hub": false},
+      {"name": "Jaipur", "lat": 26.9124, "lon": 75.7873, "is_major_hub": true},
+      {"name": "Ajmer", "lat": 26.4499, "lon": 74.6399, "is_major_hub": false},
+      {"name": "Udaipur", "lat": 24.5854, "lon": 73.7125, "is_major_hub": false},
+      {"name": "Ahmedabad", "lat": 23.0225, "lon": 72.5714, "is_major_hub": true},
+      {"name": "Vadodara", "lat": 22.3072, "lon": 73.1812, "is_major_hub": false},
+      {"name": "Surat", "lat": 21.1702, "lon": 72.8311, "is_major_hub": false},
+      {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777, "is_major_hub": true}
+    ]
+  },
+  {
+    "id": "air_kolkata_delhi",
+    "name": "Kolkata–Delhi Air Corridor",
+    "mode": "air",
+    "description": "Netaji Subhas Chandra Bose International (CCU) to Indira Gandhi International (DEL). Documented airport seizure attempts at CCU departures security (BCAS incident logs, 2021–23).",
+    "node_path": [
+      {"name": "Kolkata (CCU)", "lat": 22.6520, "lon": 88.4463, "is_major_hub": true},
+      {"name": "Patna (PAT)", "lat": 25.5913, "lon": 85.0880, "is_major_hub": false},
+      {"name": "Delhi (DEL)", "lat": 28.5562, "lon": 77.1000, "is_major_hub": true}
+    ]
+  },
+  {
+    "id": "ship_haldia_mumbai",
+    "name": "Haldia–Mumbai Coastal Shipping",
+    "mode": "ship",
+    "description": "Haldia (West Bengal) to JNPT Mumbai. Coastal shipping container route — rare but documented mode for bulk counterfeit consignments (DRI intelligence, 2022).",
+    "node_path": [
+      {"name": "Haldia Port", "lat": 22.0667, "lon": 88.0725, "is_major_hub": true},
+      {"name": "Paradip Port", "lat": 20.3167, "lon": 86.6083, "is_major_hub": false},
+      {"name": "Visakhapatnam Port", "lat": 17.6868, "lon": 83.2185, "is_major_hub": true},
+      {"name": "Chennai Port", "lat": 13.0827, "lon": 80.2707, "is_major_hub": true},
+      {"name": "JNPT Mumbai", "lat": 18.9480, "lon": 72.9390, "is_major_hub": true}
+    ]
+  }
+]
