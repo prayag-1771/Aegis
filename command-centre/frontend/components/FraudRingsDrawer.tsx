@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
+import { gsap, useGSAP } from "@/lib/gsap";
 import type { EventsResponse, FraudGraph, Ring } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { Activity, Network } from "./Icons";
@@ -48,13 +47,14 @@ export default function FraudRingsDrawer({
 
   useGSAP(() => {
     // Stagger in the top elements and rings
-    gsap.from(".gsap-ring-item", {
-      x: -30,
-      opacity: 0,
-      duration: 0.4,
-      stagger: 0.05,
-      ease: "power2.out",
-    });
+    // Fade + subtle scale (compositor transform) instead of a positional slide
+    // — `.glass` over the map re-blurs on a moving transform. Scale stays smooth.
+    gsap.fromTo(".gsap-ring-item",
+      { opacity: 0, scale: 0.96, y: 10 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.4, stagger: 0.05,
+        ease: "power3.out", force3D: true,
+        willChange: "transform,opacity", clearProps: "all" },
+    );
   }, { scope: container, dependencies: [rings.length] });
 
   const names = namesRaw.split(",").map((n) => n.trim()).filter(Boolean);

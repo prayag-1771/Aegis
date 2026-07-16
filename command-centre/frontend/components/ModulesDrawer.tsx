@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
+import { gsap, useGSAP } from "@/lib/gsap";
 import type { EventsResponse, HealthResponse } from "@/lib/api";
 import { clockTime, pct, titleCase } from "@/lib/format";
 import {
@@ -35,13 +34,14 @@ export default function ModulesDrawer({
   const container = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    gsap.from(".gsap-module-item", {
-      x: -30,
-      opacity: 0,
-      duration: 0.4,
-      stagger: 0.1,
-      ease: "power2.out",
-    });
+    // Fade + subtle scale (compositor transform) instead of a positional slide
+    // — `.glass` over the map re-blurs on a moving transform. Scale stays smooth.
+    gsap.fromTo(".gsap-module-item",
+      { opacity: 0, scale: 0.96, y: 10 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.4, stagger: 0.06,
+        ease: "power3.out", force3D: true,
+        willChange: "transform,opacity", clearProps: "all" },
+    );
   }, { scope: container });
 
   const confidences = [
@@ -92,14 +92,14 @@ export default function ModulesDrawer({
       <div className="gsap-module-item glass p-4 space-y-3">
         <div className="text-xs font-semibold text-zinc-300 mb-2">Connected Websites</div>
         <div className="space-y-2">
-          <a href="#" target="_blank" className="block p-2 rounded-lg bg-white/5 hover:bg-white/10 transition border border-white/5">
+          <a href="#" target="_blank" className="block p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
             <div className="flex items-center justify-between text-xs text-zinc-200">
               <span className="font-medium">Citizen Portal</span>
               <ArrowUpRight className="h-3 w-3" />
             </div>
             <div className="text-[10px] text-zinc-400 mt-1">Report scams, verify notes.</div>
           </a>
-          <a href="#" target="_blank" className="block p-2 rounded-lg bg-white/5 hover:bg-white/10 transition border border-white/5">
+          <a href="#" target="_blank" className="block p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
             <div className="flex items-center justify-between text-xs text-zinc-200">
               <span className="font-medium">Investigator Dashboard</span>
               <ArrowUpRight className="h-3 w-3" />
@@ -118,7 +118,7 @@ export default function ModulesDrawer({
       </div>
 
       {/* latest scam card */}
-      <button onClick={() => onSelectModule?.("scam")} className="gsap-module-item glass p-3 text-left transition hover:bg-white/5 relative group border hover:border-red-500/30 cursor-pointer">
+      <button onClick={() => onSelectModule?.("scam")} className="gsap-module-item glass glass-hover p-3 text-left relative group border !border-white/8 hover:!border-red-500/30 cursor-pointer">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-[11px] text-zinc-300">
             <Phone className="h-3.5 w-3.5 text-red-400" /> Scam Call
@@ -158,7 +158,7 @@ export default function ModulesDrawer({
       </button>
 
       {/* latest note card */}
-      <button onClick={() => onSelectModule?.("counterfeit")} className="gsap-module-item glass p-3 text-left transition hover:bg-white/5 relative group border hover:border-amber-500/30 cursor-pointer">
+      <button onClick={() => onSelectModule?.("counterfeit")} className="gsap-module-item glass glass-hover p-3 text-left relative group border !border-white/8 hover:!border-amber-500/30 cursor-pointer">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-[11px] text-zinc-300">
             <Banknote className="h-3.5 w-3.5 text-amber-400" /> Note Scan

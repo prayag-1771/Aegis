@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
+import { gsap, useGSAP } from "@/lib/gsap";
 import { X, Shield, Phone, Banknote, MapPin, Zap } from "./Icons";
 import { titleCase, pct, clockTime } from "@/lib/format";
 import type { EventsResponse } from "@/lib/api";
@@ -24,24 +23,23 @@ export default function InfoPanel({
     if (!moduleType) return;
     
     // Animate the main panel sliding in
+    // Fade + subtle scale (compositor transform) instead of a positional slide
+    // — panel/rows are `.glass` over the map, which re-blurs on a moving slide.
     if (!inline) {
-      gsap.from(container.current, {
-        x: 50,
-        opacity: 0,
-        duration: 0.4,
-        ease: "power2.out",
-      });
+      gsap.fromTo(container.current,
+        { opacity: 0, scale: 0.98 },
+        { opacity: 1, scale: 1, duration: 0.35, ease: "power3.out",
+          transformOrigin: "right center", force3D: true,
+          willChange: "transform,opacity", clearProps: "all" },
+      );
     }
 
-    // Stagger the internal children
-    gsap.from(".gsap-panel-item", {
-      y: 20,
-      opacity: 0,
-      duration: 0.4,
-      stagger: 0.05,
-      ease: "power2.out",
-      delay: 0.1,
-    });
+    gsap.fromTo(".gsap-panel-item",
+      { opacity: 0, scale: 0.96, y: 10 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.4, stagger: 0.05, delay: 0.08,
+        ease: "power3.out", force3D: true,
+        willChange: "transform,opacity", clearProps: "all" },
+    );
   }, { scope: container, dependencies: [moduleType] });
 
   if (!moduleType) return null;
@@ -98,7 +96,7 @@ export default function InfoPanel({
             <div className="space-y-4">
               <div className="text-xs font-medium text-zinc-300 mb-2 gsap-panel-item">Recent Reports</div>
               {dataList.slice().reverse().map((data: any, idx: number) => (
-                <div key={idx} className="gsap-panel-item glass p-4 rounded-xl relative overflow-hidden group">
+                <div key={idx} className="gsap-panel-item glass glass-hover p-4 rounded-xl relative overflow-hidden group">
                   <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${moduleType === "scam" ? "from-red-500 to-transparent" : "from-amber-500 to-transparent"}`} />
                   <div className="relative z-10 flex flex-col gap-3">
                     <div className="flex justify-between items-start">
