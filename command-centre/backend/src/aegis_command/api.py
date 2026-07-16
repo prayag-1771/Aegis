@@ -257,6 +257,26 @@ def hotspots() -> dict:
     }
 
 
+@app.get("/intel/plate-families")
+def intel_plate_families() -> dict:
+    """Plate-family linkage — group fake notes by shared printing-defect
+    signature (missing_features). Same defects + same denomination is
+    consistent with a common production source: standard currency-forensics
+    practice (counterfeit "classes"), framed as an investigative lead."""
+    from .intel import plate_families, plate_family_summary
+
+    _, counterfeits, _ = store.snapshot()
+    families = plate_families(counterfeits)
+    return {
+        "families": families,
+        "summary": plate_family_summary(families),
+        "disclaimer": (
+            "Defect-signature matching is an investigative lead based on shared "
+            "printing defects — not forensic proof of common origin."
+        ),
+    }
+
+
 @app.get("/supply-trail")
 def supply_trail(mode: str | None = None) -> dict:
     """Supply Trail — infer counterfeit note provenance along transport corridors.
