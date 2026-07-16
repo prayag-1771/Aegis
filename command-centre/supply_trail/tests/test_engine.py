@@ -170,3 +170,58 @@ class TestContractCompliance:
         assert trail is not None
         # Remove cluster_centroid if present (optional field) — it must match the schema
         jsonschema.validate(instance=trail, schema=schema)
+
+
+class TestTemporalFlow:
+    """Time-ordered seizures along a corridor prove direction + speed."""
+
+    @staticmethod
+    def _stamped(days: list[int]) -> list[dict]:
+        """Jamtara → Dhanbad → Deoghar with timestamps `days` apart."""
+        pts = [dict(JAMTARA), dict(DHANBAD), dict(DEOGHAR)]
+        for p, d in zip(pts, days):
+            p["timestamp"] = f"2026-07-{7 + d:02d}T10:00:00Z"
+        return pts
+
+    def test_no_timestamps_no_flow(self):
+        trail = compute_trail([JAMTARA, DEOGHAR, DHANBAD])
+        assert trail is not None
+        assert trail.get("flow") is None
+
+    def test_progressing_timestamps_produce_flow(self):
+        trail = compute_trail(self._stamped([0, 2, 4]))
+        assert trail is not None
+        flow = trail.get("flow")
+        assert flow is not None
+        assert flow["speed_km_per_day"] >= 5.0
+        assert 0.0 <= flow["consistency"] <= 1.0
+        node_names = {n["name"] for n in trail["corridor"]["node_path"]}
+        assert flow["direction_toward"] in node_names
+        assert "time-stamped" in flow["basis"]
+
+    def test_reversed_timestamps_flip_direction(self):
+        fwd = compute_trail(self._stamped([0, 2, 4]))["flow"]
+        rev = compute_trail(self._stamped([4, 2, 0]))["flow"]
+        assert fwd is not None and rev is not None
+        assert fwd["direction_toward"] != rev["direction_toward"]
+
+    def test_next_hub_eta_is_a_window(self):
+        flow = compute_trail(self._stamped([0, 2, 4]))["flow"]
+        nxt = flow.get("next_hub_at_risk")
+        if nxt is not None:  # depends on corridor geometry — window must be honest
+            assert nxt["eta_days_min"] < nxt["eta_days_max"]
+            assert nxt["distance_km"] > 0
+
+    def test_flow_trail_still_validates_against_schema(self):
+        import json
+        import jsonschema
+
+        schema_path = (
+            Path(__file__).resolve().parents[3] / "contracts" / "supply_trail.schema.json"
+        )
+        if not schema_path.exists():
+            pytest.skip("schema not found")
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        trail = compute_trail(self._stamped([0, 2, 4]))
+        assert trail["flow"] is not None
+        jsonschema.validate(instance=trail, schema=schema)

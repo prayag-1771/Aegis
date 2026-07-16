@@ -317,6 +317,123 @@ def _score(
     return round(score, 3), band
 
 
+# ── temporal flow: direction + speed from time-ordered seizures ─────────────
+
+def _parse_ts(ts: str) -> Optional[datetime]:
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _cumulative_km(corridor: Corridor) -> list[float]:
+    """Distance from node 0 to each node, walking the node_path."""
+    cum = [0.0]
+    for a, b in zip(corridor.nodes, corridor.nodes[1:]):
+        cum.append(cum[-1] + _hav(a.lat, a.lon, b.lat, b.lon))
+    return cum
+
+# Flow slower than this is indistinguishable from stationary seizures.
+MIN_FLOW_KM_PER_DAY = 5.0
+
+
+def _temporal_flow(
+    snaps: list[SnapResult],
+    corridor: Corridor,
+    origin_node: Optional[Node],
+) -> Optional[dict]:
+    """Direction + speed of movement from time-ordered corridor positions.
+
+    Geometry alone cannot prove direction — but if seizures appear
+    progressively FURTHER along the corridor over days, the least-squares fit
+    of position-vs-time gives direction, speed, and a consistency (R²) that
+    makes the strength of the inference explicit. Needs >=2 time-stamped
+    seizures at distinct positions; anything less returns None.
+    """
+    cum = _cumulative_km(corridor)
+    obs: list[tuple[float, float]] = []  # (days since epoch, km along corridor)
+    for s in snaps:
+        t = _parse_ts(s.seizure.timestamp)
+        if t is not None:
+            obs.append((t.timestamp() / 86400.0, cum[s.node_index]))
+    if len(obs) < 2:
+        return None
+    t0 = min(o[0] for o in obs)
+    xs = [o[0] - t0 for o in obs]
+    ys = [o[1] for o in obs]
+    if max(xs) == min(xs) or max(ys) == min(ys):
+        return None  # simultaneous, or no movement along the corridor
+
+    n = len(obs)
+    mx, my = sum(xs) / n, sum(ys) / n
+    sxx = sum((x - mx) ** 2 for x in xs)
+    sxy = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    slope = sxy / sxx  # km/day along the corridor (sign = direction)
+    if abs(slope) < MIN_FLOW_KM_PER_DAY:
+        return None
+    syy = sum((y - my) ** 2 for y in ys)
+    r2 = (sxy * sxy) / (sxx * syy) if syy > 0 else 0.0
+
+    forward = slope > 0  # toward higher node index
+    toward = corridor.nodes[-1] if forward else corridor.nodes[0]
+
+    # Next major hub beyond the furthest seizure, in the flow direction.
+    edge_idx = max(s.node_index for s in snaps) if forward else min(s.node_index for s in snaps)
+    edge_pos = cum[edge_idx]
+    ahead = (
+        range(edge_idx + 1, len(corridor.nodes)) if forward
+        else range(edge_idx - 1, -1, -1)
+    )
+    hub_idx = next((i for i in ahead if corridor.nodes[i].is_major_hub), None)
+    if hub_idx is None:
+        hub_idx = len(corridor.nodes) - 1 if forward else 0
+        if hub_idx == edge_idx:
+            hub_idx = None
+
+    speed = abs(slope)
+    next_hub = None
+    if hub_idx is not None:
+        hub = corridor.nodes[hub_idx]
+        dist = abs(cum[hub_idx] - edge_pos)
+        if dist > 1.0:
+            eta = dist / speed
+            next_hub = {
+                "name": hub.name,
+                "lat": hub.lat,
+                "lon": hub.lon,
+                "distance_km": round(dist, 1),
+                # honest window, not a point estimate — speed fits are noisy
+                "eta_days_min": round(eta * 0.7, 1),
+                "eta_days_max": round(eta * 1.5, 1),
+            }
+
+    # Independent corroboration: does the flow point AWAY from the inferred
+    # origin (i.e. the origin sits upstream of the movement)?
+    origin_consistent: Optional[bool] = None
+    if origin_node is not None:
+        o_idx = next(
+            (i for i, nd in enumerate(corridor.nodes) if nd.name == origin_node.name),
+            None,
+        )
+        if o_idx is not None:
+            origin_consistent = (cum[o_idx] <= edge_pos) if forward else (cum[o_idx] >= edge_pos)
+
+    return {
+        "direction_toward": toward.name,
+        "speed_km_per_day": round(speed, 1),
+        "consistency": round(max(0.0, min(1.0, r2)), 3),
+        "basis": f"{n} time-stamped seizures fitted position-vs-time along the corridor",
+        "next_hub_at_risk": next_hub,
+        "origin_consistent": origin_consistent,
+        "note": (
+            "Forecast aid from seizure timing, not a claim — direction/speed hold "
+            "only if the seizures belong to one consignment flow."
+        ),
+    }
+
+
 # ── main API ────────────────────────────────────────────────────────────────
 
 def compute_trail(
@@ -430,7 +547,25 @@ def compute_trail(
                 "weight": 0.15,
             })
 
-        # Evidence 4: FIR corroboration
+        # Evidence 4: temporal flow — time-ordered seizures prove direction
+        flow = _temporal_flow(corridor_snaps, corridor, origin_node)
+        if flow and flow["consistency"] >= 0.5:
+            arrow = f"moving toward {flow['direction_toward']} at ~{flow['speed_km_per_day']:.0f} km/day"
+            nxt = flow.get("next_hub_at_risk")
+            eta_txt = (
+                f"; next hub at risk: {nxt['name']} in {nxt['eta_days_min']:.0f}–{nxt['eta_days_max']:.0f} days"
+                if nxt else ""
+            )
+            evidence.append({
+                "type": "temporal_flow",
+                "detail": (
+                    f"Seizure timestamps progress along the corridor — {arrow} "
+                    f"(consistency R²={flow['consistency']:.2f}){eta_txt}"
+                ),
+                "weight": 0.15,
+            })
+
+        # Evidence 5: FIR corroboration
         for fir in fir_hits[:3]:  # cap at 3 to avoid flooding the evidence panel
             evidence.append({
                 "type": "fir_mention",
@@ -501,6 +636,7 @@ def compute_trail(
             "confidence": score,
             "confidence_band": band,
             "evidence": evidence,
+            "flow": flow,
             "disclaimer": (
                 "This trail is an investigative hypothesis — a weighted inference "
                 "from seizure locations, transport geodata, and public intelligence. "
