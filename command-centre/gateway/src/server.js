@@ -106,6 +106,37 @@ app.post("/api/demo/reset", (_req, res) =>
   forward(res, "/demo/reset", { method: "POST" })
 );
 
+// ---- bare-path aliases ----
+// The dashboard (post supply-trail integration) calls these WITHOUT the /api
+// prefix, matching the backend's own route names. Alias them here so both the
+// legacy /api/* convention and the bare paths work through the gateway.
+app.get("/health", (_req, res) => forward(res, "/health"));
+app.get("/events", (_req, res) => forward(res, "/events"));
+app.get("/hotspots", (_req, res) => forward(res, "/hotspots"));
+app.get("/fusion/latest", (_req, res) => forward(res, "/fusion/latest"));
+app.post("/fuse", (_req, res) => forward(res, "/fuse", { method: "POST" }));
+app.get("/supply-trail", (req, res) =>
+  forward(res, `/supply-trail${req.query.mode ? `?mode=${encodeURIComponent(req.query.mode)}` : ""}`)
+);
+// intelligence layer: plate families + scam campaigns (bare + /api forms)
+app.get("/intel/plate-families", (_req, res) => forward(res, "/intel/plate-families"));
+app.get("/intel/campaigns", (_req, res) => forward(res, "/intel/campaigns"));
+app.get("/api/intel/plate-families", (_req, res) => forward(res, "/intel/plate-families"));
+app.get("/api/intel/campaigns", (_req, res) => forward(res, "/intel/campaigns"));
+app.post("/analyze/scam", (req, res) =>
+  forward(res, "/analyze/scam", { method: "POST", body: req.body ?? {} })
+);
+app.post("/analyze/counterfeit", (req, res) =>
+  forward(res, "/analyze/counterfeit", { method: "POST", body: req.body ?? {} })
+);
+app.post("/demo/inject-ring", (req, res) =>
+  forward(res, "/demo/inject-ring", { method: "POST", body: req.body ?? {} })
+);
+app.post("/demo/score-custom", (req, res) =>
+  forward(res, "/demo/score-custom", { method: "POST", body: req.body ?? {} })
+);
+app.post("/demo/reset", (_req, res) => forward(res, "/demo/reset", { method: "POST" }));
+
 app.listen(PORT, () => {
   console.log(`aegis-gateway listening on :${PORT} -> ${COMMAND_API}`);
 });
