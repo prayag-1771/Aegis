@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Hub, MapPoint } from "@/lib/api";
+import type { Hub, MapPoint, SupplyTrail } from "@/lib/api";
 import { titleCase } from "@/lib/format";
 import { Layers } from "./Icons";
 
@@ -52,10 +52,12 @@ export default function CrimeMap({
   points,
   hubs,
   focus,
+  trail,
 }: {
   points: MapPoint[];
   hubs: Hub[];
   focus: { lat: number; lon: number } | null;
+  trail?: SupplyTrail | null;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -64,6 +66,7 @@ export default function CrimeMap({
   const scalablesRef = useRef<HTMLElement[]>([]);
   const modeRef = useRef<"dark" | "sat">("dark");
   const blockedRef = useRef({ dark: false, sat: false });
+  const trailAnimRef = useRef<number | null>(null);   // rAF handle for trail dash animation
   const [ready, setReady] = useState(false);
   const [satellite, setSatellite] = useState(false);
 
@@ -243,6 +246,168 @@ export default function CrimeMap({
     if (!mapRef.current || !ready || !focus) return;
     mapRef.current.flyTo({ center: [focus.lon, focus.lat], zoom: 12.2, duration: 2200 });
   }, [focus, ready]);
+
+  // ── Supply Trail rendering ──────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+
+    // Cancel any running trail animation
+    if (trailAnimRef.current !== null) {
+      cancelAnimationFrame(trailAnimRef.current);
+      trailAnimRef.current = null;
+    }
+
+    // Remove old trail layers / sources
+    ["trail-corridor", "trail-glow", "trail-dashes", "trail-seizures", "trail-origin"].forEach((id) => {
+      if (map.getLayer(id)) map.removeLayer(id);
+    });
+    ["trail-line-src", "trail-seizures-src", "trail-origin-src"].forEach((id) => {
+      if (map.getSource(id)) map.removeSource(id);
+    });
+
+    if (!trail) return;
+
+    // Build corridor LineString
+    const lineCoords = trail.corridor.node_path.map((n) => [n.lon, n.lat]);
+    map.addSource("trail-line-src", {
+      type: "geojson",
+      data: {
+        type: "Feature",
+        properties: {},
+        geometry: { type: "LineString", coordinates: lineCoords },
+      },
+    });
+
+    // 1 — glow (wide, very transparent orange)
+    map.addLayer({
+      id: "trail-glow",
+      type: "line",
+      source: "trail-line-src",
+      paint: {
+        "line-color": "#f97316",
+        "line-width": 14,
+        "line-opacity": 0.12,
+        "line-blur": 6,
+      },
+    });
+
+    // 2 — solid underline
+    map.addLayer({
+      id: "trail-corridor",
+      type: "line",
+      source: "trail-line-src",
+      paint: {
+        "line-color": "#f97316",
+        "line-width": 2.5,
+        "line-opacity": 0.55,
+      },
+    });
+
+    // 3 — animated dashes on top
+    map.addLayer({
+      id: "trail-dashes",
+      type: "line",
+      source: "trail-line-src",
+      paint: {
+        "line-color": "#fb923c",
+        "line-width": 2.5,
+        "line-dasharray": [4, 4],
+        "line-opacity": 0.9,
+      },
+    });
+
+    // Animate dash offset to simulate movement along the corridor
+    let offset = 0;
+    const dashPatterns: [number, number][] = [
+      [0, 4, 4], [0.5, 4, 4], [1, 4, 4], [1.5, 4, 4], [2, 4, 4],
+      [2.5, 4, 4], [3, 4, 4], [3.5, 4, 4],
+    ].map((a) => [a[1], a[2]] as [number, number]);
+    void dashPatterns; // suppress unused warning — we use rAF approach instead
+
+    const animateDashes = () => {
+      offset = (offset - 0.15) % 8; // moves dashes "forward" along the line
+      if (map.getLayer("trail-dashes")) {
+        map.setPaintProperty("trail-dashes", "line-dasharray", [
+          Math.abs(offset % 4),
+          4,
+        ]);
+      }
+      trailAnimRef.current = requestAnimationFrame(animateDashes);
+    };
+    trailAnimRef.current = requestAnimationFrame(animateDashes);
+
+    // 4 — Seizure points (red circles)
+    map.addSource("trail-seizures-src", {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: trail.seizures.map((s) => ({
+          type: "Feature",
+          properties: { district: s.district, denomination: s.denomination },
+          geometry: { type: "Point", coordinates: [s.lon, s.lat] },
+        })),
+      },
+    });
+    map.addLayer({
+      id: "trail-seizures",
+      type: "circle",
+      source: "trail-seizures-src",
+      paint: {
+        "circle-radius": 8,
+        "circle-color": "#ef4444",
+        "circle-opacity": 0.85,
+        "circle-stroke-width": 2,
+        "circle-stroke-color": "#fca5a5",
+      },
+    });
+
+    // 5 — Inferred origin (glowing orange pin)
+    map.addSource("trail-origin-src", {
+      type: "geojson",
+      data: {
+        type: "Feature",
+        properties: { name: trail.inferred_origin.name },
+        geometry: {
+          type: "Point",
+          coordinates: [trail.inferred_origin.lon, trail.inferred_origin.lat],
+        },
+      },
+    });
+    map.addLayer({
+      id: "trail-origin",
+      type: "circle",
+      source: "trail-origin-src",
+      paint: {
+        "circle-radius": 14,
+        "circle-color": "#f97316",
+        "circle-opacity": 0.9,
+        "circle-stroke-width": 3,
+        "circle-stroke-color": "#fed7aa",
+        "circle-blur": 0.3,
+      },
+    });
+
+    // Fly to show the full corridor
+    if (lineCoords.length >= 2) {
+      const lons = lineCoords.map((c) => c[0]);
+      const lats = lineCoords.map((c) => c[1]);
+      map.fitBounds(
+        [
+          [Math.min(...lons) - 0.5, Math.min(...lats) - 0.5],
+          [Math.max(...lons) + 0.5, Math.max(...lats) + 0.5],
+        ],
+        { padding: 80, duration: 1800 }
+      );
+    }
+
+    return () => {
+      if (trailAnimRef.current !== null) {
+        cancelAnimationFrame(trailAnimRef.current);
+        trailAnimRef.current = null;
+      }
+    };
+  }, [trail, ready]);
 
   return (
     <div className="absolute inset-0">

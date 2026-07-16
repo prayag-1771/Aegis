@@ -8,8 +8,10 @@ import type {
   HealthResponse,
   HotspotsResponse,
   Ring,
+  SupplyTrail,
+  SupplyTrailResponse,
 } from "@/lib/api";
-import { injectDemoRing } from "@/lib/api";
+import { fetchSupplyTrail, injectDemoRing } from "@/lib/api";
 import { usePolling } from "@/lib/usePolling";
 import AlertChips from "@/components/AlertChips";
 import AlertsDrawer from "@/components/AlertsDrawer";
@@ -24,6 +26,7 @@ import RingViewer from "@/components/RingViewer";
 import ToastContainer, { type Toast } from "@/components/ToastContainer";
 import TopNav from "@/components/TopNav";
 import InfoPanel from "@/components/InfoPanel";
+import SupplyTrailPanel from "@/components/SupplyTrailPanel";
 
 const CrimeMap = dynamic(() => import("@/components/CrimeMap"), { ssr: false });
 
@@ -76,10 +79,10 @@ async function geocodePlace(
 }
 
 export default function Page() {
-  const { data: events, refresh: refreshEvents } = usePolling<EventsResponse>("/api/events", 5000);
-  const { data: health } = usePolling<HealthResponse>("/api/health", 10000);
+  const { data: events, refresh: refreshEvents } = usePolling<EventsResponse>("/events", 5000);
+  const { data: health } = usePolling<HealthResponse>("/health", 10000);
   const { data: hotspots, refresh: refreshHotspots } = usePolling<HotspotsResponse>(
-    "/api/hotspots",
+    "/hotspots",
     8000
   );
 
@@ -93,6 +96,12 @@ export default function Page() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [cityAlerts, setCityAlerts] = useState<{district: string; alerts: any[]} | null>(null);
   const [selectedModule, setSelectedModule] = useState<"scam" | "counterfeit" | null>(null);
+
+  // Supply Trail state
+  const [supplyTrailOpen, setSupplyTrailOpen] = useState(false);
+  const [supplyTrailLoading, setSupplyTrailLoading] = useState(false);
+  const [supplyTrailData, setSupplyTrailData] = useState<SupplyTrailResponse | null>(null);
+  const [activeTrail, setActiveTrail] = useState<SupplyTrail | null>(null);
 
   const pushToast = useCallback((msg: string, type: Toast["type"] = "error") => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -108,6 +117,22 @@ export default function Page() {
     setFocus(p);
     setActiveTab("map");
   }, []);
+
+  // Fetch and open the supply trail panel
+  const handleOpenSupplyTrail = useCallback(async () => {
+    setSupplyTrailOpen(true);
+    setSupplyTrailLoading(true);
+    try {
+      const data = await fetchSupplyTrail();
+      setSupplyTrailData(data);
+      setActiveTrail(data.best_trail);
+    } catch (e) {
+      pushToast("Supply Trail fetch failed — is the backend running?", "error");
+      setSupplyTrailOpen(false);
+    } finally {
+      setSupplyTrailLoading(false);
+    }
+  }, [pushToast]);
 
   const handleConsoleCommitted = useCallback(
     (district: string) => {
@@ -257,7 +282,12 @@ export default function Page() {
 
   return (
     <main className="relative h-dvh w-screen select-none overflow-hidden bg-zinc-950">
-      <CrimeMap points={hotspots?.points ?? []} hubs={hotspots?.hubs ?? []} focus={focus} />
+      <CrimeMap
+        points={hotspots?.points ?? []}
+        hubs={hotspots?.hubs ?? []}
+        focus={focus}
+        trail={activeTrail}
+      />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-zinc-950/80 to-transparent" />
 
@@ -548,6 +578,41 @@ export default function Page() {
 
       {consoleOpen && (
         <FraudConsole onClose={() => setConsoleOpen(false)} onCommitted={handleConsoleCommitted} />
+      )}
+
+      {/* ── Supply Trail floating button (map view only) ── */}
+      {activeTab === "map" && (
+        <button
+          onClick={handleOpenSupplyTrail}
+          className={`pointer-events-auto absolute bottom-6 right-56 z-20 flex items-center gap-2 rounded-full border px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide shadow-xl backdrop-blur-sm transition-all duration-300 ${
+            activeTrail
+              ? "border-orange-500/60 bg-orange-500/20 text-orange-300 hover:bg-orange-500/30"
+              : "border-white/10 bg-zinc-900/80 text-zinc-400 hover:border-white/20 hover:text-zinc-200"
+          }`}
+          title="Open Supply Trail — counterfeit note provenance"
+        >
+          {activeTrail && (
+            <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-pulse" />
+          )}
+          🚂 Supply Trail
+        </button>
+      )}
+
+      {/* ── Supply Trail slide-in panel (right side, over map) ── */}
+      {supplyTrailOpen && (
+        <div className="pointer-events-auto absolute right-0 top-0 z-40 flex h-full w-[400px] max-w-[90vw] flex-col border-l border-white/10 bg-zinc-950/95 shadow-2xl backdrop-blur-xl transition-transform duration-300">
+          <SupplyTrailPanel
+            trail={activeTrail}
+            allTrails={supplyTrailData?.all_trails ?? []}
+            loading={supplyTrailLoading}
+            onClose={() => {
+              setSupplyTrailOpen(false);
+              setActiveTrail(null);
+            }}
+            onFlyTo={(lat, lon) => setFocus({ lat, lon })}
+            onSelectTrail={(t) => setActiveTrail(t)}
+          />
+        </div>
       )}
 
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
