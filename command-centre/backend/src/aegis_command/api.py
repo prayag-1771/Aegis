@@ -255,3 +255,74 @@ def hotspots() -> dict:
         "n_cross_domain": sum(1 for h in hubs if h.cross_domain),
         "points": correlation.map_hotspots,
     }
+
+
+@app.get("/supply-trail")
+def supply_trail(mode: str | None = None) -> dict:
+    """Supply Trail — infer counterfeit note provenance along transport corridors.
+
+    Takes all fake-note seizures currently in the store (location_hint required),
+    snaps them to the closest rail/road/ship/air corridor, traces the cluster
+    toward the likely injection point, and corroborates with the FIR corpus.
+
+    Returns the highest-confidence trail, plus trails for all other modes that
+    had at least one seizure snap.
+
+    Query param:
+        mode: optional filter — one of rail | road | ship | air
+              (omit to return the best trail regardless of mode)
+
+    Response:
+        {
+          "best_trail": <TrailObject | null>,
+          "all_trails": [<TrailObject>, ...],   // sorted by confidence desc
+          "seizures_used": N,
+          "disclaimer": "..."
+        }
+    """
+    from aegis_supply_trail import compute_trail, compute_trails_all_modes
+
+    _, counterfeits, _ = store.snapshot()
+
+    # Only use fake/uncertain verdicts with a known location
+    seizures = [
+        {
+            "event_id": c.get("event_id", "unknown"),
+            "lat": c["location_hint"]["lat"],
+            "lon": c["location_hint"]["lon"],
+            "district": c["location_hint"].get("district", "unknown"),
+            "denomination": c.get("denomination", "unknown"),
+            "timestamp": c.get("timestamp", ""),
+        }
+        for c in counterfeits
+        if c.get("verdict") in ("fake", "uncertain")
+        and c.get("location_hint")
+        and c["location_hint"].get("lat")
+        and c["location_hint"].get("lon")
+    ]
+
+    if not seizures:
+        return {
+            "best_trail": None,
+            "all_trails": [],
+            "seizures_used": 0,
+            "disclaimer": (
+                "No located fake-note seizures in the store yet. "
+                "Analyse a note with a location_hint set to fake/uncertain to generate a trail."
+            ),
+        }
+
+    best = compute_trail(seizures, mode_filter=mode)
+    all_trails = compute_trails_all_modes(seizures) if mode is None else ([best] if best else [])
+
+    return {
+        "best_trail": best,
+        "all_trails": all_trails,
+        "seizures_used": len(seizures),
+        "disclaimer": (
+            "Supply Trail is an investigative hypothesis — a weighted inference "
+            "from seizure locations, transport geodata, and public intelligence. "
+            "Not forensic proof. FIR corpus is representative sample data pending "
+            "law-enforcement integration."
+        ),
+    }
