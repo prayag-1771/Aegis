@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
+import { gsap, useGSAP } from "@/lib/gsap";
 import type { EventsResponse, FusionOutput, HotspotsResponse } from "@/lib/api";
 import { clockTime, inr, titleCase } from "@/lib/format";
 import { AlertTriangle, Banknote, MapPin, Network, Phone, ArrowUpRight } from "./Icons";
@@ -45,13 +44,15 @@ export default function AlertsDrawer({
   const container = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    gsap.from(".gsap-alert-item", {
-      x: -30,
-      opacity: 0,
-      duration: 0.4,
-      stagger: 0.05,
-      ease: "power2.out",
-    });
+    // Fade + subtle scale (compositor transform) instead of a positional x
+    // slide — these are `.glass` (backdrop-filter) over the map, where a moving
+    // slide re-blurs every frame and stutters. Scale samples the blur once.
+    gsap.fromTo(".gsap-alert-item",
+      { opacity: 0, scale: 0.96, y: 10 },
+      { opacity: 1, scale: 1, y: 0, duration: 0.4, stagger: 0.05,
+        ease: "power3.out", force3D: true,
+        willChange: "transform,opacity", clearProps: "all" },
+    );
   }, { scope: container });
 
   const crossHubs = (hotspots?.hubs ?? []).filter((h) => h.cross_domain);
@@ -185,7 +186,7 @@ export default function AlertsDrawer({
         >
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-200">
             <MapPin className="h-3.5 w-3.5" />
-            Coordinated hub — {h.district ?? "unknown"}
+            {h.tier === "coordinated" ? "Coordinated hub" : "Multi-signal hub"} — {h.district ?? "unknown"}
           </div>
           <div className="mt-1 text-[10px] text-zinc-400">
             {h.n_points} signals · {h.domains.map(titleCase).join(" + ")}
