@@ -136,7 +136,7 @@ export interface HotspotsResponse {
 export type DemoRingResponse = FraudGraph;
 
 export async function runFusion(): Promise<FusionOutput> {
-  const r = await fetch(`${API_BASE}/api/fuse`, { method: "POST" });
+  const r = await fetch(`${API_BASE}/fuse`, { method: "POST" });
   if (!r.ok) throw new Error(`fusion failed: ${r.status}`);
   return r.json();
 }
@@ -145,7 +145,7 @@ export async function injectDemoRing(
   district: string,
   accounts?: string[]
 ): Promise<DemoRingResponse> {
-  const r = await fetch(`${API_BASE}/api/demo/inject-ring`, {
+  const r = await fetch(`${API_BASE}/demo/inject-ring`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -184,7 +184,7 @@ export const scoreCustom = (payload: {
   district: string;
   speed: "minutes" | "days";
   transactions: ConsoleTx[];
-}) => post<ConsoleResult>("/api/demo/score-custom", payload);
+}) => post<ConsoleResult>("/demo/score-custom", payload);
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const r = await fetch(`${API_BASE}${path}`, {
@@ -201,8 +201,72 @@ export const analyzeScam = (
   text: string,
   source = "manual_demo",
   location_hint?: LocationHint | null
-) => post<ScamEvent>("/api/analyze/scam", { text, source, location_hint });
+) => post<ScamEvent>("/analyze/scam", { text, source, location_hint });
 
 /** Wow moment #2: analyse a note photo (data URL) and auto-ingest. */
 export const analyzeCounterfeit = (image_b64: string, location_hint?: LocationHint | null) =>
-  post<CounterfeitEvent>("/api/analyze/counterfeit", { image_b64, location_hint });
+  post<CounterfeitEvent>("/analyze/counterfeit", { image_b64, location_hint });
+
+// ── Supply Trail types ───────────────────────────────────────────────────────
+
+export interface TrailNode {
+  name: string;
+  lat: number;
+  lon: number;
+  is_major_hub?: boolean;
+}
+
+export interface TrailCorridor {
+  id: string;
+  name: string;
+  mode: string;
+  node_path: TrailNode[];
+}
+
+export interface TrailEvidence {
+  type: string;
+  detail: string;
+  ref?: string;
+  weight?: number;
+}
+
+export interface TrailSeizure {
+  event_id: string;
+  lat: number;
+  lon: number;
+  district: string;
+  denomination?: string;
+  timestamp?: string;
+}
+
+export interface SupplyTrail {
+  schema_version: string;
+  trail_id: string;
+  generated_at: string;
+  commodity: string;
+  mode: string;
+  seizures: TrailSeizure[];
+  corridor: TrailCorridor;
+  cluster_centroid?: { lat: number; lon: number; radius_km: number };
+  inferred_origin: { name: string; lat: number; lon: number; reasoning: string };
+  confidence: number;
+  confidence_band: "low" | "medium" | "high";
+  evidence: TrailEvidence[];
+  disclaimer: string;
+}
+
+export interface SupplyTrailResponse {
+  best_trail: SupplyTrail | null;
+  all_trails: SupplyTrail[];
+  seizures_used: number;
+  disclaimer: string;
+}
+
+export async function fetchSupplyTrail(mode?: string): Promise<SupplyTrailResponse> {
+  const url = mode
+    ? `${API_BASE}/supply-trail?mode=${mode}`
+    : `${API_BASE}/supply-trail`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`supply-trail failed: ${r.status}`);
+  return r.json();
+}
