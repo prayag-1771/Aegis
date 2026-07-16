@@ -88,11 +88,11 @@ export default function FraudConsole({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="glass max-h-[88vh] w-[620px] max-w-[94vw] overflow-y-auto p-5 scroll-thin"
+        className="glass max-h-[88vh] w-[620px] max-w-[94vw] overflow-y-auto p-5 scroll-thin animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
@@ -103,7 +103,7 @@ export default function FraudConsole({
               Build laundering or a normal day; see what it flags (and what it doesn&apos;t).
             </p>
           </div>
-          <button onClick={onClose} className="text-zinc-500 transition hover:text-zinc-200">
+          <button onClick={onClose} className="rounded-full p-1 text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-200">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -116,7 +116,7 @@ export default function FraudConsole({
               setSpeed("minutes");
               setResult(null);
             }}
-            className="rounded-full border border-red-500/25 bg-red-500/10 px-2.5 py-1 text-red-300 transition hover:border-red-400/50"
+            className="rounded-full border border-red-500/25 bg-red-500/10 px-2.5 py-1 text-red-300 transition-colors hover:border-red-400/50 hover:bg-red-500/15"
           >
             example: laundering loop
           </button>
@@ -126,7 +126,7 @@ export default function FraudConsole({
               setSpeed("days");
               setResult(null);
             }}
-            className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-300 transition hover:border-emerald-400/50"
+            className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-300 transition-colors hover:border-emerald-400/50 hover:bg-emerald-500/15"
           >
             example: normal day
           </button>
@@ -140,14 +140,14 @@ export default function FraudConsole({
                 value={r.source}
                 onChange={(e) => setRow(i, { source: e.target.value })}
                 placeholder="from"
-                className="w-0 flex-1 rounded-lg border border-white/10 bg-zinc-950/70 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-violet-400/60"
+                className="w-0 flex-1 rounded-lg border border-white/10 bg-zinc-950/70 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none transition-colors focus:border-violet-400/60"
               />
               <span className="text-[11px] text-zinc-600">→</span>
               <input
                 value={r.target}
                 onChange={(e) => setRow(i, { target: e.target.value })}
                 placeholder="to"
-                className="w-0 flex-1 rounded-lg border border-white/10 bg-zinc-950/70 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-violet-400/60"
+                className="w-0 flex-1 rounded-lg border border-white/10 bg-zinc-950/70 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none transition-colors focus:border-violet-400/60"
               />
               <input
                 value={r.amount}
@@ -203,20 +203,20 @@ export default function FraudConsole({
           <button
             onClick={run}
             disabled={busy || parsed.length === 0}
-            className="rounded-lg bg-violet-500 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-violet-400 disabled:cursor-wait disabled:opacity-50"
+            className="btn-primary rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white disabled:cursor-wait disabled:opacity-50 disabled:shadow-none"
           >
             {busy ? "Scoring…" : "Run detection"}
           </button>
         </div>
 
         {error && (
-          <div className="mt-3 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-[11px] text-red-300">
+          <div className="mt-3 animate-slide-up rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-[11px] text-red-300">
             {error}
           </div>
         )}
 
         {result && (
-          <div className="mt-3">
+          <div className="mt-3 animate-slide-up">
             {result.ring ? (
               <div className="rounded-xl border border-red-500/30 bg-red-950/40 p-3">
                 <div className="text-[11px] font-bold uppercase tracking-widest text-red-300">

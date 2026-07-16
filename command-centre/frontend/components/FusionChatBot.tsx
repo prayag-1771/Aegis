@@ -69,11 +69,13 @@ export default function FusionChatBot({
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 pointer-events-auto flex flex-col items-end">
-      {/* Expanded Chat Window */}
+    <div className="fixed bottom-6 right-16 z-50 pointer-events-none flex flex-col items-end">
+      {/* Expanded Chat Window — pointer-events only when actually open, so the
+          collapsed (scale-0/opacity-0) panel's still-present layout box can't
+          eat clicks over the alerts drawer / "view all alerts" behind it. */}
       <div
         className={`mb-4 w-96 rounded-2xl border border-white/10 bg-zinc-950/90 backdrop-blur-xl shadow-2xl transition-all duration-500 origin-bottom-right ${
-          isOpen ? "scale-100 opacity-100" : "scale-50 opacity-0 pointer-events-none"
+          isOpen ? "scale-100 opacity-100 pointer-events-auto" : "scale-50 opacity-0 pointer-events-none"
         }`}
       >
         <div className="flex items-center justify-between border-b border-white/5 bg-zinc-900/50 px-4 py-3 rounded-t-2xl">
@@ -191,11 +193,12 @@ export default function FusionChatBot({
         </div>
       </div>
 
-      {/* Floating Action Button */}
+      {/* Floating Action Button — pointer-events-auto because the container is
+          now pointer-events-none (so its empty area doesn't block clicks). */}
       <button
         onClick={() => (fusion ? setIsOpen(!isOpen) : fire())}
         disabled={busy}
-        className="group relative flex h-14 items-center gap-3 rounded-full bg-zinc-100 pl-4 pr-5 font-semibold text-zinc-900 shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all hover:scale-105 hover:bg-white hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] disabled:opacity-50"
+        className="pointer-events-auto group relative flex h-14 items-center gap-3 rounded-full bg-zinc-100 pl-4 pr-5 font-semibold text-zinc-900 shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all hover:scale-105 hover:bg-white hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] disabled:opacity-50"
       >
         <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 transition-transform ${busy ? "animate-spin" : "group-hover:rotate-12"}`}>
           <Zap className="h-4 w-4 text-zinc-100" />
