@@ -12,6 +12,7 @@ dependencies = [
     "jsonschema>=4.23",
     "aegis-fusion",
     "aegis-geospatial",
+    "aegis-supply-trail",
 ]
 
 [project.optional-dependencies]
@@ -20,6 +21,7 @@ dev = ["pytest>=8.3"]
 [tool.uv.sources]
 aegis-fusion = { path = "../fusion", editable = true }
 aegis-geospatial = { path = "../geospatial", editable = true }
+aegis-supply-trail = { path = "../supply_trail", editable = true }
 
 [build-system]
 requires = ["hatchling"]
