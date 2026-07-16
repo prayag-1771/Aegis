@@ -10,6 +10,31 @@ body {
   background: #09090b;
 }
 
+/* a calm accent glow fixed behind everything — gives the dark UI depth instead
+   of a flat black void, without costing any layout or paint on scroll. */
+body {
+  background-image:
+    radial-gradient(1200px 600px at 15% -10%, rgb(139 92 246 / 0.05), transparent 60%),
+    radial-gradient(900px 500px at 100% 10%, rgb(248 113 113 / 0.03), transparent 55%);
+  background-attachment: fixed;
+}
+
+/* custom text-selection colour — the default blue clashes with the violet/dark
+   palette everywhere else in the UI. */
+::selection {
+  background: rgb(167 139 250 / 0.35);
+  color: #fff;
+}
+
+/* consistent, visible keyboard-focus ring across every interactive element —
+   was missing entirely before (accessibility + polish gap). Mouse users never
+   see it (:focus-visible), keyboard users always do. */
+:focus-visible {
+  outline: 2px solid rgb(167 139 250 / 0.7);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* ---------- floating glass panels (redesigned glassmorphism) ---------- */
 .glass {
   background: rgba(14, 14, 20, 0.5);
@@ -17,7 +42,27 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 0.5px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.38);
+  box-shadow:
+    0 12px 32px rgb(0 0 0 / 0.38),
+    0 1px 0 0 rgb(255 255 255 / 0.04) inset;
+}
+
+/* opt-in hover lift for clickable glass cards — a small rise + brighter
+   border + deeper shadow, so cards feel tactile instead of flat. Purely
+   `transform`/`box-shadow`/`border-color`, all GPU-cheap and won't fight the
+   backdrop-filter blur the way a positional slide would. */
+.glass-hover {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.glass-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgb(255 255 255 / 0.16);
+  box-shadow:
+    0 16px 40px rgb(0 0 0 / 0.45),
+    0 1px 0 0 rgb(255 255 255 / 0.06) inset;
+}
+.glass-hover:active {
+  transform: translateY(-1px) scale(0.995);
 }
 
 /* icon rail — left dock */
@@ -34,6 +79,21 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-right: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ---------- primary CTA button — one consistent recipe instead of each modal
+   inventing its own violet button styling ---------- */
+.btn-primary {
+  background: linear-gradient(180deg, rgb(167 139 250), rgb(139 92 246));
+  box-shadow: 0 2px 12px rgb(139 92 246 / 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 18px rgb(139 92 246 / 0.5);
+}
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 /* ---------- animations ---------- */
@@ -65,6 +125,14 @@ body {
   animation: slide-up 0.3s ease-out;
 }
 
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
 /* ---------- graceful degradation for backdrop-filter ---------- */
 @supports not (backdrop-filter: blur(1px)) {
   .glass,
@@ -74,13 +142,38 @@ body {
   }
 }
 
-/* thin dark scrollbars */
+/* thin dark scrollbars, used on scrollable panels */
 .scroll-thin::-webkit-scrollbar {
   width: 4px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
   background: rgb(255 255 255 / 0.14);
   border-radius: 2px;
+}
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 0.24);
+}
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.14) transparent;
+}
+
+/* ---------- skeleton loading shimmer — for cards waiting on first poll ---------- */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.04);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+  animation: skeleton-sweep 1.6s ease-in-out infinite;
+}
+@keyframes skeleton-sweep {
+  100% { transform: translateX(100%); }
 }
 
 /* ---------- map signal markers (cloud shaded radial) ---------- */
@@ -90,16 +183,17 @@ body {
   height: 48px;
   cursor: pointer;
 }
+/* smaller cloud (larger insets shrink the visible dot; same soft look) */
 .sig-core {
   position: absolute;
-  inset: 12px;
+  inset: 18px;
   border-radius: 9999px;
   background: radial-gradient(circle, var(--sig) 0%, transparent 70%);
   opacity: 0.9;
 }
 .sig-ring {
   position: absolute;
-  inset: 0;
+  inset: 11px;
   border-radius: 9999px;
   background: radial-gradient(circle, var(--sig) 0%, transparent 60%);
   opacity: 0.6;
@@ -125,43 +219,100 @@ body {
   }
 }
 
-/* ---------- hotspot hubs ---------- */
+/* ---------- hotspot hubs (layered "active target": soft bloom + glowing ring + sonar sweep) ---------- */
 .hub {
   position: relative;
   border-radius: 9999px;
-  border: 1px solid rgb(255 255 255 / 0.25);
-  background: radial-gradient(circle, rgb(244 244 245 / 0.14) 0%, rgb(244 244 245 / 0.03) 70%);
+  /* gentle inner bloom — softer/smaller than before so it frames rather than
+     smudges, and reads on the satellite basemap. */
+  background: radial-gradient(
+    circle,
+    rgb(255 110 90 / 0.18) 0%,
+    rgb(240 70 55 / 0.08) 38%,
+    transparent 62%
+  );
   pointer-events: auto;
   cursor: pointer;
 }
+/* crisp glowing ring OUTLINE hugging the cluster — the "attractive" edge that a
+   plain bloom lacks. Sits inside the hub, glows both ways. */
+.hub-cross::before {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  border-radius: 9999px;
+  border: 1.5px solid rgb(255 130 120 / 0.7);
+  box-shadow:
+    0 0 8px 0 rgb(255 90 80 / 0.30),          /* outer glow (softened) */
+    inset 0 0 9px 0 rgb(255 90 80 / 0.18);    /* inner glow (softened) */
+  animation: hub-ring-breathe 3s ease-in-out infinite;
+}
+/* slow sonar sweep expanding outward from the ring — the eye-catching motion. */
+.hub-cross::after {
+  content: "";
+  position: absolute;
+  inset: 20%;
+  border-radius: 9999px;
+  border: 1.5px solid rgb(255 120 110 / 0.6);
+  animation: hub-sonar 3s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+/* non-cross hubs get a fainter, neutral bloom so they don't shout */
+.hub:not(.hub-cross) {
+  background: radial-gradient(
+    circle,
+    rgb(255 255 255 / 0.08) 0%,
+    rgb(200 200 210 / 0.04) 40%,
+    transparent 66%
+  );
+}
 .hub-cross {
-  border-color: rgb(248 113 113 / 0.7);
-  background: radial-gradient(circle, rgb(248 113 113 / 0.22) 0%, rgb(248 113 113 / 0.04) 70%);
-  animation: hub-pulse 2.6s ease-in-out infinite;
+  animation: hub-pulse 3.2s ease-in-out infinite;
+}
+@keyframes hub-ring-breathe {
+  0%, 100% {
+    box-shadow: 0 0 7px 0 rgb(255 90 80 / 0.24), inset 0 0 8px 0 rgb(255 90 80 / 0.16);
+  }
+  50% {
+    box-shadow: 0 0 12px 1px rgb(255 90 80 / 0.36), inset 0 0 11px 1px rgb(255 90 80 / 0.24);
+  }
+}
+@keyframes hub-sonar {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
 }
 .hub-label {
   position: absolute;
   left: 50%;
-  top: -1.4rem;
+  top: -1.6rem;
   transform: translateX(-50%);
   white-space: nowrap;
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
   font-weight: 600;
-  color: #fecaca;
-  background: rgb(127 29 29 / 0.75);
-  border: 1px solid rgb(248 113 113 / 0.45);
-  border-radius: 9999px;
+  color: #fecdd3;
+  background: rgb(24 24 27 / 0.85);
+  border: 1px solid rgb(251 113 133 / 0.35);
+  border-radius: 6px;
   padding: 2px 8px;
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
+/* the bloom gently breathes in OPACITY only — never transform, because the
+   zoom handler sets an inline transform: scale() on this same element and the
+   two would fight. A soft heartbeat, no hard ring. */
 @keyframes hub-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(248 113 113 / 0.35);
+    opacity: 0.8;
   }
   50% {
-    box-shadow: 0 0 24px 6px rgb(248 113 113 / 0.18);
+    opacity: 1;
   }
 }
 
@@ -200,4 +351,26 @@ body {
 .maplibregl-popup-tip {
   border-top-color: rgb(24 24 27 / 0.92) !important;
   border-bottom-color: rgb(24 24 27 / 0.92) !important;
+}
+
+/* Compact attribution: force it COLLAPSED to just the ⓘ. MapLibre opens the
+   <details> by default AND re-opens it after load, so JS is unreliable — instead
+   we override its `compact-show` rule outright: hide the credits text always,
+   and reveal it only while the user hovers the ⓘ. Dark chrome to match. */
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  background-color: rgb(24 24 27 / 0.75) !important;
+  backdrop-filter: blur(10px);
+}
+.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner {
+  display: none !important;
+}
+.maplibregl-ctrl-attrib.maplibregl-compact:hover .maplibregl-ctrl-attrib-inner {
+  display: block !important;
+}
+/* dark-theme the ⓘ button and the revealed credit links */
+.maplibregl-ctrl-attrib-button {
+  filter: invert(1) brightness(1.2);
+}
+.maplibregl-ctrl-attrib a {
+  color: rgb(161 161 170) !important;
 }
