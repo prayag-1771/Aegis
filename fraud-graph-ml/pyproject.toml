@@ -23,6 +23,19 @@ dev = [
     "pytest>=8.3",
     "ruff>=0.8",
 ]
+advanced = [
+    "torch>=2.0",
+    "torch-geometric>=2.5",
+    "leidenalg>=0.10",
+    "igraph>=0.11",
+    "scipy>=1.11",
+    "deap>=1.4",
+    "matplotlib>=3.8",
+]
+rl = [
+    "stable-baselines3>=2.0",
+    "gymnasium>=0.29",
+]
 
 [project.scripts]
 fraud-graph = "aegis_fraud_graph.cli:app"

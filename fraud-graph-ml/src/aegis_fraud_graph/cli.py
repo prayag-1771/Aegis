@@ -4,6 +4,9 @@
     fraud-graph detect             # score, cluster rings, write output/fraud_graph.json
     fraud-graph demo               # train + detect + validate, one shot
     fraud-graph serve              # start the FastAPI server for the command centre
+    fraud-graph ghost-ring         # federated cross-bank detection
+    fraud-graph arms-race          # adversarial evolutionary loop
+    fraud-graph spectral           # spectral analysis + sonification
 """
 
 from __future__ import annotations
@@ -66,6 +69,95 @@ def serve(
     import uvicorn
 
     uvicorn.run("aegis_fraud_graph.api:app", host=host, port=port)
+
+
+@app.command(name="ghost-ring")
+def ghost_ring(
+    source: str = typer.Option("synthetic", help="Data source"),
+    n_banks: int = typer.Option(4, help="Number of bank partitions"),
+):
+    """Ghost Ring: federated cross-bank fraud detection.
+
+    Partitions the graph into N isolated banks, trains GraphSAGE per bank,
+    matches boundary nodes via embeddings, and fuses for ring detection.
+    Reports the recall gap (per-bank vs fused) — that IS the result.
+    """
+    from .ghost_ring import run_ghost_ring
+
+    report = run_ghost_ring(source=source, n_banks=n_banks)
+    typer.echo(json.dumps(report.to_dict(), indent=2))
+    typer.echo(f"\n{'='*50}")
+    typer.echo(f"RECALL GAP (fused - per-bank): {report.recall_gap:+.4f}")
+    typer.echo(f"Matching precision: {report.matching_precision:.4f}")
+    typer.echo(f"False-merge rate: {report.false_merge_rate:.4f}")
+
+
+@app.command(name="arms-race")
+def arms_race(
+    generations: int = typer.Option(30, help="Number of evolutionary generations"),
+    population: int = typer.Option(50, help="Population size"),
+    retrain_every: int = typer.Option(5, help="Retrain detector every N generations"),
+    source: str = typer.Option("synthetic"),
+):
+    """Criminal Trains the Cop: adversarial evolutionary arms race.
+
+    Evolves criminal strategies to evade the XGBoost detector; retrains the
+    detector periodically. Outputs arms_race.png with escape rate + recall.
+    """
+    from .adversarial import run_arms_race
+    from .adversarial_plots import plot_arms_race
+
+    history = run_arms_race(
+        n_generations=generations,
+        population_size=population,
+        retrain_every=retrain_every,
+        source=source,
+    )
+
+    # Save history
+    history.to_csv(OUTPUT_DIR / "arms_race_history.csv", index=False)
+    typer.echo(f"History saved: {OUTPUT_DIR / 'arms_race_history.csv'}")
+
+    # Plot
+    try:
+        plot_path = plot_arms_race(history)
+        typer.echo(f"Plot saved: {plot_path}")
+    except ImportError:
+        typer.echo("matplotlib not available — skipping plot")
+
+    # Summary
+    last = history.iloc[-1]
+    typer.echo(f"\nFinal generation {int(last['generation'])}:")
+    typer.echo(f"  Criminal escape rate: {last['best_escape_rate']:.4f}")
+    typer.echo(f"  Detector recall:      {last['detector_recall']:.4f}")
+
+
+@app.command()
+def spectral(
+    source: str = typer.Option("synthetic"),
+    sonify: bool = typer.Option(True, help="Generate WAV audio files"),
+    export_json: bool = typer.Option(True, help="Export SED data for browser sonifier"),
+):
+    """Frequency of Fraud: spectral graph analysis + sonification.
+
+    Runs per-community eigendecomposition, measures spectral shift between
+    clean and ring communities, and optionally generates audio WAV files.
+    """
+    from .spectral import export_sed_json, run_spectral_analysis
+
+    report = run_spectral_analysis(source=source)
+    typer.echo(json.dumps(report.to_dict(), indent=2))
+
+    if sonify:
+        from .spectral_audio import sonify_communities
+        wavs = sonify_communities(report)
+        for name, path in wavs.items():
+            typer.echo(f"  WAV: {name} -> {path}")
+
+    if export_json:
+        json_path = export_sed_json(report)
+        typer.echo(f"  SED JSON: {json_path}")
+        typer.echo(f"  Open output/spectral_sonifier.html in a browser to listen!")
 
 
 if __name__ == "__main__":
