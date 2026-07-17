@@ -798,24 +798,24 @@ export default function Page() {
         <div className="absolute inset-0 z-50 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-6 pointer-events-auto">
           <div ref={modulesScope} className="w-full max-w-[95vw] max-h-[90vh] flex gap-4 relative">
             {/* Close button */}
-            <button 
+            <button
               onClick={closeModules}
-              className="absolute -top-2 -right-2 text-zinc-400 hover:text-zinc-100 p-2 rounded-full hover:bg-white/10 transition z-10 bg-zinc-900/80 border border-white/10"
+              className="absolute -top-2 -right-2 text-zinc-400 hover:text-zinc-100 p-2 hover:bg-white/10 transition z-10 bg-zinc-900/80 border border-white/10"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
 
             {/* LEFT: Modules list */}
-            <div className="gsap-panel w-[380px] shrink-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 rounded-2xl shadow-2xl">
-              <ModulesDrawer 
-                events={events} 
-                health={health} 
-                onSelectModule={setSelectedModule} 
+            <div className="gsap-panel w-[380px] shrink-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 shadow-2xl">
+              <ModulesDrawer
+                events={events}
+                health={health}
+                onSelectModule={setSelectedModule}
               />
             </div>
 
             {/* RIGHT: InfoPanel or GenAI summary */}
-            <div className="gsap-panel flex-1 min-w-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 rounded-2xl shadow-2xl">
+            <div className="gsap-panel flex-1 min-w-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 shadow-2xl">
               {selectedModule ? (
                 <InfoPanel
                   moduleType={selectedModule}
@@ -827,7 +827,7 @@ export default function Page() {
                 /* Default GenAI Summary */
                 <div className="p-6 flex flex-col gap-6 h-full">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20">
+                    <div className="flex h-10 w-10 items-center justify-center bg-emerald-500/20">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 text-emerald-400"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>
                     </div>
                     <div>
@@ -836,28 +836,28 @@ export default function Page() {
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+                  <div className="bg-white/5 border border-white/10 p-5">
                     <div className="text-xs font-medium text-zinc-300 mb-3 flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                       System Health
                     </div>
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <div className="bg-black/20 p-3 text-center">
                         <div className="text-2xl font-semibold text-emerald-300">{Object.values(health?.modules ?? {}).filter(s => s === "up").length}</div>
                         <div className="text-[10px] text-zinc-500 mt-1">Modules Online</div>
                       </div>
-                      <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <div className="bg-black/20 p-3 text-center">
                         <div className="text-2xl font-semibold text-red-300">{events?.scams.filter(s => s.verdict !== "legit").length ?? 0}</div>
                         <div className="text-[10px] text-zinc-500 mt-1">Scam Detections</div>
                       </div>
-                      <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <div className="bg-black/20 p-3 text-center">
                         <div className="text-2xl font-semibold text-amber-300">{events?.counterfeits.filter(c => c.verdict === "fake").length ?? 0}</div>
                         <div className="text-[10px] text-zinc-500 mt-1">Counterfeits Found</div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-5 flex-1">
+                  <div className="bg-white/5 border border-white/10 p-5 flex-1">
                     <div className="text-xs font-medium text-zinc-300 mb-3">AI Intelligence Overview</div>
                     <div className="text-[12px] leading-relaxed text-zinc-400 space-y-3">
                       <p>
@@ -893,13 +893,13 @@ export default function Page() {
             {/* Close button */}
             <button
               onClick={closeRings}
-              className="absolute -top-2 -right-2 text-zinc-400 hover:text-zinc-100 p-2 rounded-full hover:bg-white/10 transition z-10 bg-zinc-900/80 border border-white/10"
+              className="absolute -top-2 -right-2 text-zinc-400 hover:text-zinc-100 p-2 hover:bg-white/10 transition z-10 bg-zinc-900/80 border border-white/10"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
 
             {/* LEFT: Fraud ring list */}
-            <div className="gsap-panel w-[380px] shrink-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 rounded-2xl shadow-2xl">
+            <div className="gsap-panel w-[380px] shrink-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 shadow-2xl">
               <FraudRingsDrawer
                 events={events}
                 onInjectRing={handleInjectRing}
@@ -911,7 +911,7 @@ export default function Page() {
             </div>
 
             {/* RIGHT: GenAI summary OR RingViewer */}
-            <div className="gsap-panel flex-1 min-w-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 rounded-2xl shadow-2xl">
+            <div className="gsap-panel flex-1 min-w-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 shadow-2xl">
               {viewRing && viewerData ? (
                 <div className="p-5">
                   <RingViewer
@@ -930,7 +930,7 @@ export default function Page() {
                 /* Default GenAI Summary Card */
                 <div className="p-6 flex flex-col gap-6 h-full">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/20">
+                    <div className="flex h-10 w-10 items-center justify-center bg-violet-500/20">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 text-violet-400"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" /></svg>
                     </div>
                     <div>
@@ -939,28 +939,28 @@ export default function Page() {
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+                  <div className="bg-white/5 border border-white/10 p-5">
                     <div className="text-xs font-medium text-zinc-300 mb-3 flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                       Network Status
                     </div>
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <div className="bg-black/20 p-3 text-center">
                         <div className="text-2xl font-semibold text-violet-300">{events?.fraud_graph?.rings?.length ?? 0}</div>
                         <div className="text-[10px] text-zinc-500 mt-1">Active Rings</div>
                       </div>
-                      <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <div className="bg-black/20 p-3 text-center">
                         <div className="text-2xl font-semibold text-amber-300">{events?.fraud_graph?.accounts?.length ?? 0}</div>
                         <div className="text-[10px] text-zinc-500 mt-1">Flagged Accounts</div>
                       </div>
-                      <div className="bg-black/20 rounded-lg p-3 text-center">
+                      <div className="bg-black/20 p-3 text-center">
                         <div className="text-2xl font-semibold text-red-300">{events?.fraud_graph?.edges?.length ?? 0}</div>
                         <div className="text-[10px] text-zinc-500 mt-1">Transactions</div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-5 flex-1">
+                  <div className="bg-white/5 border border-white/10 p-5 flex-1">
                     <div className="text-xs font-medium text-zinc-300 mb-3">Consolidated AI Summary</div>
                     <div className="text-[12px] leading-relaxed text-zinc-400 space-y-3">
                       <p>

@@ -12,7 +12,7 @@
  *   onSelectTrail — user switched to a different trail (mode)
  */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SupplyTrail } from "@/lib/api";
 import { playPanelExit, usePanelEntrance } from "@/lib/gsap";
 
@@ -73,6 +73,12 @@ export default function SupplyTrailPanel({
   // reveals the new content instead of swapping it silently.
   usePanelEntrance(scope, ".gsap-panel", [trail?.trail_id, loading]);
   const close = () => playPanelExit(scope, onClose);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   return (
     <div ref={scope} className="flex flex-col h-full overflow-hidden">

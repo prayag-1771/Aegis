@@ -16,6 +16,24 @@
     background: var(--bg); color: var(--text);
     display: flex; flex-direction: column; height: 100vh;
   }
+
+  /* ── SCROLLBAR — hidden by default, subtle on hover ── */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  *:hover {
+    scrollbar-color: rgba(255,255,255,0.12) transparent;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 3px;
+    transition: background 0.3s;
+  }
+  *:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+  *:hover::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
   header {
     display: flex; align-items: center; gap: 12px;
     padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
@@ -307,6 +325,13 @@ function togglePaymentForm(formId) {
     if (amtInput) amtInput.focus();
   }
 }
+
+// ESC closes any open payment form
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.payment-form.open').forEach(f => f.classList.remove('open'));
+  }
+});
 
 async function submitPayment(formId, eventId) {
   const amtInput = document.getElementById('amt_' + formId);

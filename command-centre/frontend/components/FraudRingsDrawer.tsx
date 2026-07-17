@@ -118,12 +118,12 @@ export default function FraudRingsDrawer({
           <Activity className="h-3.5 w-3.5" />
         </div>
         {onInjectRing && (
-          <div className="mt-3 rounded-2xl border border-violet-500/15 bg-violet-500/5 p-3 gsap-ring-item">
+          <div className="mt-3 border border-violet-500/15 bg-violet-500/5 p-3 gsap-ring-item">
             <div className="flex items-center gap-2">
               <select
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-zinc-950/70 px-2.5 py-2 text-[11px] text-zinc-200 outline-none transition focus:border-violet-400/60"
+                className="min-w-0 flex-1 border border-white/10 bg-zinc-950/70 px-2.5 py-2 text-[11px] text-zinc-200 outline-none transition focus:border-violet-400/60"
               >
                 {DEMO_DISTRICTS.map((name) => (
                   <option key={name} value={name}>
@@ -134,13 +134,13 @@ export default function FraudRingsDrawer({
               <button
                 onClick={handleInject}
                 disabled={running || injecting || namesTooFew}
-                className="rounded-lg bg-violet-500 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-violet-400 disabled:cursor-wait disabled:opacity-50"
+                className="bg-violet-500 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-violet-400 disabled:cursor-wait disabled:opacity-50"
               >
                 {running ? "Committing…" : "Inject ring"}
               </button>
             </div>
             {phase && (
-              <div className="mt-2 flex items-center gap-2 rounded-lg bg-violet-500/10 px-2.5 py-2">
+              <div className="mt-2 flex items-center gap-2 bg-violet-500/10 px-2.5 py-2">
                 <span className="h-1.5 w-1.5 animate-ping rounded-full bg-violet-400" />
                 <span className="animate-pulse text-[10px] text-violet-200">{phase}</span>
               </div>
@@ -149,7 +149,7 @@ export default function FraudRingsDrawer({
               value={namesRaw}
               onChange={(e) => setNamesRaw(e.target.value)}
               placeholder="name the criminals (optional): ravi, pinky, quickcash"
-              className="mt-2 w-full rounded-lg border border-white/10 bg-zinc-950/70 px-2.5 py-2 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-violet-400/60"
+              className="mt-2 w-full border border-white/10 bg-zinc-950/70 px-2.5 py-2 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-violet-400/60"
             />
             {namesTooFew && (
               <p className="mt-1 text-[10px] text-amber-400/90">
@@ -160,7 +160,7 @@ export default function FraudRingsDrawer({
               <button
                 onClick={() => caught.ring && onViewRing?.(caught.ring)}
                 disabled={!caught.ring}
-                className="mt-2 w-full rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-2 text-left transition enabled:hover:border-emerald-400/60"
+                className="mt-2 w-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-2 text-left transition enabled:hover:border-emerald-400/60"
               >
                 <div className="text-[11px] font-semibold text-emerald-300">{caught.title}</div>
                 <div className="mt-0.5 text-[10px] text-emerald-200/70">{caught.detail}</div>
@@ -173,7 +173,7 @@ export default function FraudRingsDrawer({
             {onOpenConsole && (
               <button
                 onClick={onOpenConsole}
-                className="mt-2 w-full rounded-lg border border-white/10 px-2.5 py-1.5 text-[10px] text-zinc-300 transition hover:border-violet-400/50 hover:text-violet-200"
+                className="mt-2 w-full border border-white/10 px-2.5 py-1.5 text-[10px] text-zinc-300 transition hover:border-violet-400/50 hover:text-violet-200"
               >
                 ⚖ Fraud console — design the transactions yourself
               </button>
@@ -185,7 +185,7 @@ export default function FraudRingsDrawer({
             <button
               key={r.ring_id}
               onClick={() => onViewRing?.(r)}
-              className="gsap-ring-item block w-full rounded-lg px-1 py-0.5 text-left transition hover:bg-white/5"
+              className="gsap-ring-item block w-full px-1 py-0.5 text-left transition hover:bg-white/5"
               title="view the money flow"
             >
               <div className="flex items-center justify-between text-[11px]">
@@ -196,9 +196,9 @@ export default function FraudRingsDrawer({
                   {r.size} accts · {inr(r.total_amount)}
                 </span>
               </div>
-              <div className="mt-1 h-1 rounded bg-white/5">
+              <div className="mt-1 h-1 bg-white/5">
                 <div
-                  className="h-1 rounded bg-gradient-to-r from-violet-500 to-fuchsia-400"
+                  className="h-1 bg-gradient-to-r from-violet-500 to-fuchsia-400"
                   style={{ width: `${Math.round(r.risk_score * 100)}%` }}
                 />
               </div>

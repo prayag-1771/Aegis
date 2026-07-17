@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { scoreCustom, type ConsoleResult, type ConsoleTx } from "@/lib/api";
 import { X } from "./Icons";
 
@@ -48,6 +48,12 @@ export default function FraudConsole({
   const [result, setResult] = useState<ConsoleResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   const parsed: ConsoleTx[] = rows
     .filter((r) => r.source.trim() && r.target.trim() && Number(r.amount) > 0)
     .map((r) => ({
@@ -92,7 +98,7 @@ export default function FraudConsole({
       onClick={onClose}
     >
       <div
-        className="glass max-h-[88vh] w-[620px] max-w-[94vw] overflow-y-auto p-5 scroll-thin animate-slide-up"
+        className="glass !rounded-none max-h-[88vh] w-[620px] max-w-[94vw] overflow-y-auto p-5 scroll-thin animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
@@ -103,7 +109,7 @@ export default function FraudConsole({
               Build laundering or a normal day; see what it flags (and what it doesn&apos;t).
             </p>
           </div>
-          <button onClick={onClose} className="rounded-full p-1 text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-200">
+          <button onClick={onClose} className="p-1 text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-200">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -116,7 +122,7 @@ export default function FraudConsole({
               setSpeed("minutes");
               setResult(null);
             }}
-            className="rounded-full border border-red-500/25 bg-red-500/10 px-2.5 py-1 text-red-300 transition-colors hover:border-red-400/50 hover:bg-red-500/15"
+            className="border border-red-500/25 bg-red-500/10 px-2.5 py-1 text-red-300 transition-colors hover:border-red-400/50 hover:bg-red-500/15"
           >
             example: laundering loop
           </button>
@@ -126,7 +132,7 @@ export default function FraudConsole({
               setSpeed("days");
               setResult(null);
             }}
-            className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-300 transition-colors hover:border-emerald-400/50 hover:bg-emerald-500/15"
+            className="border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-300 transition-colors hover:border-emerald-400/50 hover:bg-emerald-500/15"
           >
             example: normal day
           </button>
@@ -140,21 +146,21 @@ export default function FraudConsole({
                 value={r.source}
                 onChange={(e) => setRow(i, { source: e.target.value })}
                 placeholder="from"
-                className="w-0 flex-1 rounded-lg border border-white/10 bg-zinc-950/70 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none transition-colors focus:border-violet-400/60"
+                className="w-0 flex-1 border border-white/10 bg-zinc-950/70 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none transition-colors focus:border-violet-400/60"
               />
               <span className="text-[11px] text-zinc-600">→</span>
               <input
                 value={r.target}
                 onChange={(e) => setRow(i, { target: e.target.value })}
                 placeholder="to"
-                className="w-0 flex-1 rounded-lg border border-white/10 bg-zinc-950/70 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none transition-colors focus:border-violet-400/60"
+                className="w-0 flex-1 border border-white/10 bg-zinc-950/70 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none transition-colors focus:border-violet-400/60"
               />
               <input
                 value={r.amount}
                 onChange={(e) => setRow(i, { amount: e.target.value.replace(/[^\d]/g, "") })}
                 placeholder="₹ amount"
                 inputMode="numeric"
-                className="w-24 rounded-lg border border-white/10 bg-zinc-950/70 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-violet-400/60"
+                className="w-24 border border-white/10 bg-zinc-950/70 px-2.5 py-1.5 text-[11px] text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-violet-400/60"
               />
               <button
                 onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
@@ -170,13 +176,13 @@ export default function FraudConsole({
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
           <button
             onClick={() => setRows((rs) => [...rs, { ...EMPTY_ROW }])}
-            className="rounded-lg border border-white/10 px-2.5 py-1.5 text-zinc-300 transition hover:border-white/25"
+            className="border border-white/10 px-2.5 py-1.5 text-zinc-300 transition hover:border-white/25"
           >
             + transaction
           </button>
           <button
             onClick={loopBack}
-            className="rounded-lg border border-white/10 px-2.5 py-1.5 text-zinc-300 transition hover:border-white/25"
+            className="border border-white/10 px-2.5 py-1.5 text-zinc-300 transition hover:border-white/25"
             title="add a transfer closing the loop back to the first account"
           >
             ↺ loop it back
@@ -185,7 +191,7 @@ export default function FraudConsole({
           <select
             value={district}
             onChange={(e) => setDistrict(e.target.value)}
-            className="rounded-lg border border-white/10 bg-zinc-950/70 px-2 py-1.5 text-zinc-200 outline-none"
+            className="border border-white/10 bg-zinc-950/70 px-2 py-1.5 text-zinc-200 outline-none"
           >
             {DISTRICTS.map((d) => (
               <option key={d}>{d}</option>
@@ -194,7 +200,7 @@ export default function FraudConsole({
           <select
             value={speed}
             onChange={(e) => setSpeed(e.target.value as "minutes" | "days")}
-            className="rounded-lg border border-white/10 bg-zinc-950/70 px-2 py-1.5 text-zinc-200 outline-none"
+            className="border border-white/10 bg-zinc-950/70 px-2 py-1.5 text-zinc-200 outline-none"
             title="tempo of the transfers — laundering moves in minutes, life moves in days"
           >
             <option value="minutes">minutes apart</option>
@@ -203,14 +209,14 @@ export default function FraudConsole({
           <button
             onClick={run}
             disabled={busy || parsed.length === 0}
-            className="btn-primary rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white disabled:cursor-wait disabled:opacity-50 disabled:shadow-none"
+            className="btn-primary px-3 py-1.5 text-[11px] font-semibold text-white disabled:cursor-wait disabled:opacity-50 disabled:shadow-none"
           >
             {busy ? "Scoring…" : "Run detection"}
           </button>
         </div>
 
         {error && (
-          <div className="mt-3 animate-slide-up rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-[11px] text-red-300">
+          <div className="mt-3 animate-slide-up border border-red-500/25 bg-red-500/10 px-3 py-2 text-[11px] text-red-300">
             {error}
           </div>
         )}
@@ -218,7 +224,7 @@ export default function FraudConsole({
         {result && (
           <div className="mt-3 animate-slide-up">
             {result.ring ? (
-              <div className="rounded-xl border border-red-500/30 bg-red-950/40 p-3">
+              <div className="border border-red-500/30 bg-red-950/40 p-3">
                 <div className="text-[11px] font-bold uppercase tracking-widest text-red-300">
                   ⚠ Fraud ring detected
                 </div>
@@ -229,7 +235,7 @@ export default function FraudConsole({
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/40 p-3">
+              <div className="border border-emerald-500/25 bg-emerald-950/40 p-3">
                 <div className="text-[11px] font-bold uppercase tracking-widest text-emerald-300">
                   ✓ No fraud pattern
                 </div>
@@ -250,9 +256,9 @@ export default function FraudConsole({
                       {a.in_ring ? " · in ring" : ""}
                     </span>
                   </div>
-                  <div className="mt-0.5 h-1 rounded bg-white/5">
+                  <div className="mt-0.5 h-1 bg-white/5">
                     <div
-                      className={`h-1 rounded ${
+                      className={`h-1 ${
                         a.illicit_probability >= 0.5
                           ? "bg-gradient-to-r from-red-500 to-rose-400"
                           : "bg-gradient-to-r from-emerald-600 to-emerald-400"

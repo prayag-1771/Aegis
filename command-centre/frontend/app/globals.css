@@ -134,7 +134,24 @@ body {
   }
 }
 
-/* thin dark scrollbars, used on scrollable panels */
+/* ── GLOBAL SCROLLBAR — invisible by default, subtle on hover ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: rgb(255 255 255 / 0.12) transparent;
+}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+*:hover::-webkit-scrollbar-thumb { background: rgb(255 255 255 / 0.12); }
+*:hover::-webkit-scrollbar-thumb:hover { background: rgb(255 255 255 / 0.24); }
+
+/* thin dark scrollbars, used on scrollable panels (always-visible variant) */
 .scroll-thin::-webkit-scrollbar {
   width: 4px;
 }

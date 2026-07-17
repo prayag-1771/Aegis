@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { X, Shield, Phone, Banknote, MapPin, Zap } from "./Icons";
 import { titleCase, pct, clockTime } from "@/lib/format";
@@ -18,6 +18,12 @@ export default function InfoPanel({
   inline?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   useGSAP(() => {
     if (!moduleType) return;
@@ -51,7 +57,7 @@ export default function InfoPanel({
     <div className={inline ? "h-full flex flex-col" : "h-full w-full bg-zinc-950/95 backdrop-blur-2xl border-l border-white/10 shadow-[-20px_0_40px_rgba(0,0,0,0.5)] flex flex-col pointer-events-auto"}>
       <div className="flex items-center justify-between p-5 border-b border-white/10 gsap-panel-item">
         <div className="flex items-center gap-2">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${moduleType === "scam" ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}>
+          <div className={`flex h-8 w-8 items-center justify-center ${moduleType === "scam" ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}>
             {moduleType === "scam" ? <Phone className="h-4 w-4" /> : <Banknote className="h-4 w-4" />}
           </div>
           <div>
@@ -61,7 +67,7 @@ export default function InfoPanel({
             <span className="text-[10px] text-zinc-500">{dataList.length} recent reports</span>
           </div>
         </div>
-        <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 text-zinc-400 transition">
+        <button onClick={onClose} className="p-2 hover:bg-white/10 text-zinc-400 transition">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -74,7 +80,7 @@ export default function InfoPanel({
                 <Zap className="h-4 w-4 text-violet-400" />
                 Consolidated AI Summary
               </div>
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-xs font-light leading-relaxed text-zinc-300">
+              <div className="bg-white/5 border border-white/10 p-4 text-xs font-light leading-relaxed text-zinc-300">
                 {moduleType === "scam" ? (
                   <p>
                     The Fraud Shield NLP engine has flagged <strong>{dataList.length}</strong> recent calls.
@@ -96,7 +102,7 @@ export default function InfoPanel({
             <div className="space-y-4">
               <div className="text-xs font-medium text-zinc-300 mb-2 gsap-panel-item">Recent Reports</div>
               {dataList.slice().reverse().map((data: any, idx: number) => (
-                <div key={idx} className="gsap-panel-item glass glass-hover p-4 rounded-xl relative overflow-hidden group">
+                <div key={idx} className="gsap-panel-item glass !rounded-none glass-hover p-4 relative overflow-hidden group">
                   <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${moduleType === "scam" ? "from-red-500 to-transparent" : "from-amber-500 to-transparent"}`} />
                   <div className="relative z-10 flex flex-col gap-3">
                     <div className="flex justify-between items-start">
@@ -119,7 +125,7 @@ export default function InfoPanel({
                         {data.location_hint?.district ?? "unknown location"}
                       </div>
                       {moduleType === "scam" && data.scam_type && (
-                        <div className="text-[11px] text-zinc-400 bg-black/20 px-2 py-0.5 rounded-full">
+                        <div className="text-[11px] text-zinc-400 bg-black/20 px-2 py-0.5">
                           {titleCase(data.scam_type)}
                         </div>
                       )}

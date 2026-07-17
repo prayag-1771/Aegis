@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { playPanelExit, usePanelEntrance } from "@/lib/gsap";
 
 export default function Drawer({
@@ -24,6 +24,12 @@ export default function Drawer({
   // Closing has to defer the unmount, or React removes the drawer before the
   // tween can run and the exit is a hard cut.
   const close = () => playPanelExit(scope, onClose);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   return (
     <div ref={scope}>

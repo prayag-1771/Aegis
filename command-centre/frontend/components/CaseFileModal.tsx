@@ -27,13 +27,19 @@ export default function CaseFileModal({
     };
   }, [district]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="glass max-h-[88vh] w-[560px] max-w-[94vw] overflow-y-auto p-5 scroll-thin animate-slide-up"
+        className="glass !rounded-none max-h-[88vh] w-[560px] max-w-[94vw] overflow-y-auto p-5 scroll-thin animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
@@ -47,7 +53,7 @@ export default function CaseFileModal({
           </div>
           <button
             onClick={onClose}
-            className="rounded-full p-1.5 text-zinc-400 transition hover:bg-white/10 hover:text-zinc-100"
+            className="p-1.5 text-zinc-400 transition hover:bg-white/10 hover:text-zinc-100"
           >
             <X className="h-4 w-4" />
           </button>
@@ -60,7 +66,7 @@ export default function CaseFileModal({
         {!data && !error && (
           <div className="mt-4 space-y-2">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="skeleton h-10 rounded-lg" />
+              <div key={i} className="skeleton h-10" />
             ))}
           </div>
         )}
@@ -69,9 +75,9 @@ export default function CaseFileModal({
           <div className="mt-4 space-y-4 text-left">
             {/* evidence counts strip */}
             <div className="flex gap-2 text-[10px] text-zinc-400">
-              <span className="rounded-full bg-white/5 px-2 py-0.5">{data.dossier.counts.scams} scams</span>
-              <span className="rounded-full bg-white/5 px-2 py-0.5">{data.dossier.counts.fake_notes} fake notes</span>
-              <span className="rounded-full bg-white/5 px-2 py-0.5">{data.dossier.counts.rings} rings</span>
+              <span className="bg-white/5 px-2 py-0.5">{data.dossier.counts.scams} scams</span>
+              <span className="bg-white/5 px-2 py-0.5">{data.dossier.counts.fake_notes} fake notes</span>
+              <span className="bg-white/5 px-2 py-0.5">{data.dossier.counts.rings} rings</span>
             </div>
 
             <section>
@@ -90,7 +96,7 @@ export default function CaseFileModal({
               </section>
             )}
 
-            <section className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
+            <section className="border border-amber-500/25 bg-amber-500/5 p-3">
               <h3 className="text-[10px] font-semibold uppercase tracking-widest text-amber-400">Hypothesis</h3>
               <p className="mt-1 text-[11px] leading-relaxed text-zinc-200">{data.case_file.hypothesis}</p>
             </section>

@@ -101,7 +101,7 @@ export default function AlertsDrawer({
   return (
     <div ref={container} className="flex flex-col gap-4 p-4">
       {/* ── Live Signal Volume ── */}
-      <section className="gsap-alert-item glass p-4 rounded-xl">
+      <section className="gsap-alert-item glass p-4 !rounded-none">
         <div className="flex items-center justify-between text-xs text-zinc-400">
           <span>Live Signal Volume</span>
           <ArrowUpRight className="h-3.5 w-3.5" />
@@ -116,7 +116,7 @@ export default function AlertsDrawer({
           {SHAPE.map((v, i) => (
             <div
               key={i}
-              className={`flex-1 rounded-sm ${i === hour ? "bg-red-400/90" : "bg-zinc-600/60"}`}
+              className={`flex-1 ${i === hour ? "bg-red-400/90" : "bg-zinc-600/60"}`}
               style={{ height: `${(v / max) * 100}%` }}
               title={`${String(i).padStart(2, "0")}:00`}
             />
@@ -132,7 +132,7 @@ export default function AlertsDrawer({
       </section>
 
       {/* ── Pipeline Visualization (Vertical) ── */}
-      <section className="gsap-alert-item glass p-4 rounded-xl">
+      <section className="gsap-alert-item glass p-4 !rounded-none">
         <div className="text-xs text-zinc-400">Criminal Pipeline</div>
         <div className="mt-3 flex flex-col items-center gap-1">
           <PipeStage n="1" verb="TAKE" tone="text-red-300" accent="border-red-500/30" line={`${scamCount} scam signal${scamCount === 1 ? "" : "s"}`} />
@@ -147,12 +147,12 @@ export default function AlertsDrawer({
 
       {/* intelligence: scam campaigns — one gang, one script, many districts */}
       {(campaigns?.campaigns ?? []).map((c) => (
-        <div key={c.campaign_id} className="gsap-alert-item rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/30 p-3">
+        <div key={c.campaign_id} className="gsap-alert-item border border-fuchsia-500/30 bg-fuchsia-950/30 p-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-fuchsia-300">
               Campaign detected · {titleCase(c.scam_type)}
             </span>
-            <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${TIER_BADGE[c.tier]}`}>
+            <span className={`border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${TIER_BADGE[c.tier]}`}>
               {c.tier}
             </span>
           </div>
@@ -167,12 +167,12 @@ export default function AlertsDrawer({
 
       {/* intelligence: plate families — shared printing defects = common source */}
       {(families?.families ?? []).map((f) => (
-        <div key={f.family_id} className="gsap-alert-item rounded-xl border border-teal-500/30 bg-teal-950/30 p-3">
+        <div key={f.family_id} className="gsap-alert-item border border-teal-500/30 bg-teal-950/30 p-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-teal-300">
               Plate family · ₹{f.denomination} × {f.n_notes} notes
             </span>
-            <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${TIER_BADGE[f.tier]}`}>
+            <span className={`border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${TIER_BADGE[f.tier]}`}>
               {f.tier}
             </span>
           </div>
@@ -186,10 +186,10 @@ export default function AlertsDrawer({
 
       {/* fusion verdict */}
       {fusion && (
-        <div className="gsap-alert-item rounded-xl border border-red-500/30 bg-red-950/40 p-3">
+        <div className="gsap-alert-item border border-red-500/30 bg-red-950/40 p-3">
           <div className="flex items-center justify-between">
             <span
-              className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+              className={`border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
                 THREAT_COLOR[fusion.threat_level] ?? "bg-white/5 text-zinc-300 border-white/10"
               }`}
             >
@@ -204,7 +204,7 @@ export default function AlertsDrawer({
             {fusion.correlation_basis.map((b) => (
               <span
                 key={b}
-                className="rounded-full bg-red-500/10 px-1.5 py-0.5 text-[9px] text-red-300"
+                className="bg-red-500/10 px-1.5 py-0.5 text-[9px] text-red-300"
               >
                 {b.replaceAll("_", " ")}
               </span>
@@ -218,7 +218,7 @@ export default function AlertsDrawer({
         <button
           key={a.id}
           onClick={a.lat != null ? () => onLocate({ lat: a.lat!, lon: a.lon! }) : undefined}
-          className="gsap-alert-item w-full rounded-xl border border-violet-500/30 bg-violet-950/40 p-3 text-left transition hover:border-violet-400/60"
+          className="gsap-alert-item w-full border border-violet-500/30 bg-violet-950/40 p-3 text-left transition hover:border-violet-400/60"
         >
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-violet-300">
@@ -243,7 +243,7 @@ export default function AlertsDrawer({
         <button
           key={h.hub_id}
           onClick={() => onLocate({ lat: h.lat, lon: h.lon })}
-          className="gsap-alert-item w-full rounded-xl border border-amber-500/25 bg-amber-950/30 p-3 text-left transition hover:border-amber-400/50"
+          className="gsap-alert-item w-full border border-amber-500/25 bg-amber-950/30 p-3 text-left transition hover:border-amber-400/50"
         >
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-200">
             <MapPin className="h-3.5 w-3.5" />
@@ -259,7 +259,7 @@ export default function AlertsDrawer({
                   e.stopPropagation();
                   setCaseDistrict(h.district);
                 }}
-                className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-300 transition hover:bg-amber-500/20"
+                className="border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-300 transition hover:bg-amber-500/20"
               >
                 📋 case file
               </span>
@@ -344,7 +344,7 @@ function Row({
     <button
       onClick={onClick}
       disabled={!onClick}
-      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition enabled:hover:bg-white/5"
+      className="flex w-full items-center gap-2 px-2 py-1.5 text-left transition enabled:hover:bg-white/5"
     >
       {icon}
       <span className="flex-1 truncate text-[11px] text-zinc-300">{text}</span>
@@ -355,7 +355,7 @@ function Row({
 
 function PipeStage({ n, verb, tone, accent, line }: { n: string; verb: string; tone: string; accent: string; line: string; }) {
   return (
-    <div className={`w-full rounded-xl border ${accent} bg-zinc-950/60 px-4 py-2.5 text-center`}>
+    <div className={`w-full border ${accent} bg-zinc-950/60 px-4 py-2.5 text-center`}>
       <div className={`text-[10px] font-bold uppercase tracking-widest ${tone}`}>
         {n} · {verb}
       </div>
@@ -371,7 +371,7 @@ function PipeArrow({ lit, litClass, chip }: { lit: boolean; litClass: string; ch
         ↓
       </span>
       {chip && lit && (
-        <span className="mt-0.5 rounded-full bg-red-500/15 px-1.5 py-px text-[8px] font-semibold text-red-300">
+        <span className="mt-0.5 bg-red-500/15 px-1.5 py-px text-[8px] font-semibold text-red-300">
           {chip}
         </span>
       )}
