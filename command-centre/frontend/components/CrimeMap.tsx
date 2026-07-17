@@ -334,7 +334,7 @@ export default function CrimeMap({
   // yank the camera back out mid-flight.
   useEffect(() => {
     if (!mapRef.current || !ready || !focus) return;
-    mapRef.current.flyTo({ center: [focus.lon, focus.lat], zoom: 9.4, duration: 2000 });
+    mapRef.current.flyTo({ center: [focus.lon, focus.lat], zoom: 11.5, duration: 2000 });
   }, [focus, ready]);
 
   // ── Supply Trail rendering ──────────────────────────────────────────────

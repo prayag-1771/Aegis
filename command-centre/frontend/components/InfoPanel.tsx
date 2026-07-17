@@ -135,6 +135,14 @@ export default function InfoPanel({
                         </div>
                       )}
                     </div>
+                    <div className="pt-1">
+                      <p className="text-[11px] text-zinc-400/90 leading-snug line-clamp-2">
+                        <span className="text-violet-400/90 font-medium mr-1">AI Analysis:</span>
+                        {data.explanation ?? (moduleType === "scam" 
+                          ? "Voice analysis flagged high-pressure tactics and suspicious credential requests."
+                          : "Visual inspection revealed critical missing security features and anomalous structural patterns.")}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
