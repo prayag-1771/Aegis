@@ -55,6 +55,7 @@ export default function CrimeMap({
   focus,
   trail,
   entryRoute,
+  suppressTrailFit,
 }: {
   points: MapPoint[];
   hubs: Hub[];
@@ -63,6 +64,9 @@ export default function CrimeMap({
   /** Highest-plausibility route by which notes could have entered the searched
    *  city. Drawn from the source press to the seizure district. */
   entryRoute?: EntryRoute | null;
+  /** Draw the trail without framing it. Set on search, where the searched city
+   *  owns the viewport and the corridor is only context. */
+  suppressTrailFit?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -250,13 +254,14 @@ export default function CrimeMap({
   }, [points, hubs, ready]);
 
   // fly to a located alert / fusion hotspot.
-  // A trail frames its whole corridor via fitBounds below; zooming to a single
-  // city would fight that and strand the view mid-corridor. The trail is the
-  // wider story, so it wins — don't rely on the fetch landing second.
+  // The searched city is what the user asked to see, so it owns the viewport.
+  // Routes draw around it at whatever zoom this lands on — the corridor runs
+  // off-screen by design; it is context, not the subject. Nothing else calls
+  // fitBounds on search, so there is no race to lose.
   useEffect(() => {
-    if (!mapRef.current || !ready || !focus || trail) return;
-    mapRef.current.flyTo({ center: [focus.lon, focus.lat], zoom: 12.2, duration: 2200 });
-  }, [focus, ready, trail]);
+    if (!mapRef.current || !ready || !focus) return;
+    mapRef.current.flyTo({ center: [focus.lon, focus.lat], zoom: 9.4, duration: 2000 });
+  }, [focus, ready]);
 
   // ── Supply Trail rendering ──────────────────────────────────────────────
   useEffect(() => {
@@ -480,8 +485,10 @@ export default function CrimeMap({
       }
     }
 
-    // Fly to show the full corridor
-    if (lineCoords.length >= 2) {
+    // Fly to show the full corridor — but only when the trail IS the subject
+    // (the Supply Trail panel). On search the city owns the viewport and the
+    // corridor is context, so framing it would zoom away from what was asked for.
+    if (lineCoords.length >= 2 && !suppressTrailFit) {
       const lons = lineCoords.map((c) => c[0]);
       const lats = lineCoords.map((c) => c[1]);
       map.fitBounds(
@@ -639,15 +646,9 @@ export default function CrimeMap({
       );
     });
 
-    const lons = coords.map((c) => c[0]);
-    const lats = coords.map((c) => c[1]);
-    map.fitBounds(
-      [
-        [Math.min(...lons) - 0.4, Math.min(...lats) - 0.4],
-        [Math.max(...lons) + 0.4, Math.max(...lats) + 0.4],
-      ],
-      { padding: 90, duration: 1600 },
-    );
+    // No fitBounds here: this route is drawn in response to a search, and the
+    // searched city already owns the viewport. Framing the route would zoom
+    // away from the place the user asked to see.
 
     return cleanup;
   }, [entryRoute, ready]);

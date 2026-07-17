@@ -243,6 +243,16 @@ export default function Page() {
     [events, refreshEvents, refreshHotspots]
   );
 
+  /** Search dismissed from the top nav — take everything it drew back off the
+   *  map. Without this the routes and the panel outlive the search that
+   *  produced them. */
+  const clearSearch = useCallback(() => {
+    setEntryRoutes(null);
+    setActiveTrail(null);
+    setCityOrigin(null);
+    setCityAlerts(null);
+  }, []);
+
   const handleSearch = async (query: string) => {
     const q = query.trim();
     if (!q) return;
@@ -337,11 +347,12 @@ export default function Page() {
         setCityOrigin(null);
       }
 
+      // Only the panel auto-hides — it is a popup and would sit in the way.
+      // The map highlights stay until the search is cleared from the top nav,
+      // so they cannot vanish out from under someone still reading them.
       setTimeout(() => {
         setCityAlerts(null);
         setCityOrigin(null);
-        setEntryRoutes(null);
-        setActiveTrail(null);
       }, 10000);
       return;
     }
@@ -376,11 +387,13 @@ export default function Page() {
         points={hotspots?.points ?? []}
         hubs={hotspots?.hubs ?? []}
         focus={focus}
-        // An entry route and a corridor trail both frame the map and would
-        // fight over it. The entry route is the more specific claim (this
-        // city's source), so it wins while it is showing.
-        trail={entryRoutes ? null : activeTrail}
+        // Both are shown together: the orange corridor is the wider context
+        // (how notes move through the region), the violet entry route is the
+        // specific claim (how they reached THIS city). Neither auto-frames the
+        // map — the view stays on the searched city, see focus handling.
+        trail={activeTrail}
         entryRoute={entryRoutes?.routes?.[0] ?? null}
+        suppressTrailFit={!!entryRoutes}
       />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-zinc-950/80 to-transparent" />
@@ -392,6 +405,7 @@ export default function Page() {
         onTabChange={(t) => setActiveTab((cur) => (cur === t && t !== "map" ? "map" : t))}
         onBell={() => setActiveTab("alerts")}
         onSearch={handleSearch}
+        onSearchClear={clearSearch}
       />
 
       {/* Centered localized alerts panel (from search) */}
@@ -403,10 +417,11 @@ export default function Page() {
               {cityAlerts.district} Alerts
             </h3>
             <button
+              // Dismisses the popup only. The map highlights belong to the
+              // search, not to this panel, and clear from the top nav.
               onClick={() => {
                 setCityAlerts(null);
                 setCityOrigin(null);
-                setEntryRoutes(null);
               }}
               className="text-zinc-400 hover:text-zinc-100"
             >

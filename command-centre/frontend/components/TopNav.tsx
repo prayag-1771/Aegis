@@ -21,6 +21,7 @@ export default function TopNav({
   onTabChange,
   onBell,
   onSearch,
+  onSearchClear,
 }: {
   health: HealthResponse | null;
   alertCount: number;
@@ -28,6 +29,8 @@ export default function TopNav({
   onTabChange: (tab: TabKey) => void;
   onBell?: () => void;
   onSearch?: (query: string) => void;
+  /** Search dismissed — clear anything it drew on the map. */
+  onSearchClear?: () => void;
 }) {
   const backendUp = health?.status === "ok";
   const [searchQuery, setSearchQuery] = useState("");
@@ -129,7 +132,15 @@ export default function TopNav({
                 placeholder="Search city..."
                 className="bg-transparent border-none outline-none text-sm text-zinc-100 w-full placeholder-zinc-500"
               />
-              <button type="button" onClick={() => setSearchOpen(false)} className="p-1 text-zinc-500 transition-colors hover:text-zinc-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchOpen(false);
+                  setSearchQuery("");
+                  onSearchClear?.(); // drop map highlights — the search is over
+                }}
+                className="p-1 text-zinc-500 transition-colors hover:text-zinc-200"
+              >
                 <X className="h-3 w-3" />
               </button>
             </form>
