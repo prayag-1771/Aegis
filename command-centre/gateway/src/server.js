@@ -42,12 +42,17 @@ app.use(
 );
 app.use(express.json({ limit: "5mb" }));
 
-/** Forward a request to the FastAPI command backend and relay its response. */
-async function forward(res, path, { method = "GET", body } = {}) {
+/** Forward a request to the FastAPI command backend and relay its response.
+ *  `headers` lets a route pass through extra headers (e.g. the institution
+ *  X-API-Key) that the backend needs to see. */
+async function forward(res, path, { method = "GET", body, headers } = {}) {
   try {
     const r = await fetch(`${COMMAND_API}${path}`, {
       method,
-      headers: body ? { "content-type": "application/json" } : undefined,
+      headers: {
+        ...(body ? { "content-type": "application/json" } : {}),
+        ...(headers ?? {}),
+      },
       body: body ? JSON.stringify(body) : undefined,
     });
     const payload = await r.json().catch(() => ({}));
@@ -56,6 +61,10 @@ async function forward(res, path, { method = "GET", body } = {}) {
     res.status(502).json({ error: `command backend unreachable at ${COMMAND_API}` });
   }
 }
+
+/** Pass through the B2B API key the institution surface requires. */
+const apiKeyHeader = (req) =>
+  req.headers["x-api-key"] ? { "X-API-Key": req.headers["x-api-key"] } : {};
 
 app.get("/api/gateway/health", (_req, res) =>
   res.json({ status: "ok", service: "aegis-gateway", upstream: COMMAND_API })
@@ -158,6 +167,45 @@ app.post("/demo/score-custom", (req, res) =>
   forward(res, "/demo/score-custom", { method: "POST", body: req.body ?? {} })
 );
 app.post("/demo/reset", (_req, res) => forward(res, "/demo/reset", { method: "POST" }));
+
+// ---- Disrupt / respond: the response-action queue ----
+app.get("/actions", (_req, res) => forward(res, "/actions"));
+app.post("/actions/derive", (_req, res) => forward(res, "/actions/derive", { method: "POST" }));
+app.post("/actions/:id/dispatch", (req, res) =>
+  forward(res, `/actions/${encodeURIComponent(req.params.id)}/dispatch`, { method: "POST" })
+);
+app.post("/actions/:id/acknowledge", (req, res) =>
+  forward(res, `/actions/${encodeURIComponent(req.params.id)}/acknowledge`, { method: "POST" })
+);
+app.post("/actions/:id/dismiss", (req, res) =>
+  forward(res, `/actions/${encodeURIComponent(req.params.id)}/dismiss`, { method: "POST" })
+);
+
+// ---- Model Card: measured metrics ----
+app.get("/metrics", (_req, res) => forward(res, "/metrics"));
+
+// ---- Financial-institution B2B surface (X-API-Key passed through) ----
+app.post("/institution/screen-account", (req, res) =>
+  forward(res, "/institution/screen-account", { method: "POST", body: req.body ?? {}, headers: apiKeyHeader(req) })
+);
+app.post("/institution/verify-note", (req, res) =>
+  forward(res, "/institution/verify-note", { method: "POST", body: req.body ?? {}, headers: apiKeyHeader(req) })
+);
+app.get("/institution/health", (req, res) =>
+  forward(res, "/institution/health", { headers: apiKeyHeader(req) })
+);
+
+// ---- Citizen Fraud Shield: multilingual + multi-channel ----
+app.get("/citizen/languages", (_req, res) => forward(res, "/citizen/languages"));
+app.post("/citizen/analyze", (req, res) =>
+  forward(res, "/citizen/analyze", { method: "POST", body: req.body ?? {} })
+);
+app.post("/citizen/call/analyze", (req, res) =>
+  forward(res, "/citizen/call/analyze", { method: "POST", body: req.body ?? {} })
+);
+app.post("/citizen/whatsapp", (req, res) =>
+  forward(res, "/citizen/whatsapp", { method: "POST", body: req.body ?? {} })
+);
 
 app.listen(PORT, () => {
   console.log(`aegis-gateway listening on :${PORT} -> ${COMMAND_API}`);
