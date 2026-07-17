@@ -72,12 +72,18 @@ per-district case files (AI officer over a deterministic dossier); Supply Trail 
 Keyless free map tiles; LLM failover chain ends in a deterministic template; dashboard degrades
 per-module; everything works with **zero API keys**.
 
-### Slide 12 — Roadmap (what we did NOT overclaim)
-Live-call validation for Fraud Shield; per-denomination counterfeit breakdown; WhatsApp/IVR +
-12-language citizen advisory (Sarvam AI translation pass — wrapper, not retrain); real
-telecom/bank integration behind the already-built action contract.
+### Slide 12 — Citizen: multilingual + multi-channel (delivered)
+- **12 languages** (Sarvam AI translate → Fraud Shield → advisory back) — a wrapper, not a retrain.
+- **Live-call detection:** stream a call transcript turn-by-turn; risk climbs and **intercepts the
+  scam mid-call, before the transfer** (Citizen Portal → Live Call in the demo).
+- **WhatsApp** transport adapter over the same pipeline. Fails safe: no key → English passthrough.
 
-### Slide 13 — Close
+### Slide 13 — Roadmap (what we did NOT overclaim)
+Live-**audio** STT front-end (Sarvam saarika) feeding the call analyzer; IVR transport; live-call
+validation of Fraud Shield on real recordings; per-denomination counterfeit breakdown; real
+telecom/bank wiring behind the already-built response-action contract.
+
+### Slide 14 — Close
 Detect → Disrupt → Respond, for law enforcement, banks, and citizens — every verdict carrying
 its evidence, every action carrying its audit. **From point-of-complaint to point-of-contact.**
 

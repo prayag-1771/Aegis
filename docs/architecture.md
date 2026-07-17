@@ -103,6 +103,10 @@ flowchart LR
 | `POST /institution/screen-account` | AML risk for one account (X-API-Key) |
 | `POST /institution/verify-note` | teller/POS note check (X-API-Key) |
 | `GET /metrics` | Model Card — measured P/R, FPR, AUC, per-family, lead time |
+| `POST /citizen/analyze` | citizen message check in 12 languages (Sarvam translate → Fraud Shield → advisory back) |
+| `POST /citizen/call/analyze` | real-time call monitoring — running verdict from the transcript so far; mid-call intercept |
+| `POST /citizen/whatsapp` | WhatsApp transport adapter over the same pipeline |
+| `GET /citizen/languages` | supported languages + whether translation is live |
 
 - **Additive contract:** `contracts/response_action.schema.json` — an action never asserts guilt;
   it carries `trigger.refs` (evidence chain) + an append-only `audit` log for admissibility.
