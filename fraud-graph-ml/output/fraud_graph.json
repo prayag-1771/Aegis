@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-07-17T23:08:26.731993+00:00",
+  "generated_at": "2026-07-17T23:43:26.477536+00:00",
   "model": "graph_features+xgboost",
   "rings": [
     {
@@ -150,22 +150,6 @@
     {
       "ring_id": "ring_09",
       "account_ids": [
-        "acc_02083",
-        "acc_02084",
-        "acc_02085",
-        "acc_02086",
-        "acc_02087",
-        "acc_02088"
-      ],
-      "risk_score": 0.9999,
-      "size": 6,
-      "total_amount": 7048091.4,
-      "label": "round-tripping cycle",
-      "district": "Jamtara"
-    },
-    {
-      "ring_id": "ring_10",
-      "account_ids": [
         "acc_02073",
         "acc_02074",
         "acc_02075",
@@ -179,7 +163,7 @@
       "district": "Deoghar"
     },
     {
-      "ring_id": "ring_11",
+      "ring_id": "ring_10",
       "account_ids": [
         "acc_02078",
         "acc_02079",
@@ -194,7 +178,7 @@
       "district": "Jamtara"
     },
     {
-      "ring_id": "ring_12",
+      "ring_id": "ring_11",
       "account_ids": [
         "acc_02049",
         "acc_02050",
@@ -208,7 +192,7 @@
       "district": "Jamtara"
     },
     {
-      "ring_id": "ring_13",
+      "ring_id": "ring_12",
       "account_ids": [
         "acc_02069",
         "acc_02070",
@@ -228,7 +212,7 @@
       "illicit_probability": 0.9938,
       "ring_id": "ring_07",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 1,
         "out_degree": 4,
@@ -245,7 +229,7 @@
       "illicit_probability": 0.9992,
       "ring_id": "ring_07",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.1,
         "in_degree": 4,
         "out_degree": 3,
@@ -262,7 +246,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_07",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 2,
@@ -279,7 +263,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_07",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 3,
@@ -296,7 +280,7 @@
       "illicit_probability": 0.9997,
       "ring_id": "ring_07",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 5,
@@ -313,7 +297,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_07",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 2,
@@ -330,7 +314,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_07",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 3,
@@ -347,7 +331,7 @@
       "illicit_probability": 0.9896,
       "ring_id": "ring_03",
       "features": {
-        "degree_centrality": 0.008142,
+        "degree_centrality": 0.008165,
         "clustering_coefficient": 0.0,
         "in_degree": 10,
         "out_degree": 7,
@@ -364,7 +348,7 @@
       "illicit_probability": 0.9561,
       "ring_id": "ring_03",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 0,
@@ -381,7 +365,7 @@
       "illicit_probability": 0.9987,
       "ring_id": "ring_03",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 2,
@@ -398,7 +382,7 @@
       "illicit_probability": 0.9985,
       "ring_id": "ring_03",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 1,
@@ -415,7 +399,7 @@
       "illicit_probability": 0.9987,
       "ring_id": "ring_03",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 1,
         "out_degree": 1,
@@ -432,7 +416,7 @@
       "illicit_probability": 0.9799,
       "ring_id": "ring_03",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 1,
@@ -449,7 +433,7 @@
       "illicit_probability": 0.9958,
       "ring_id": "ring_03",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 1,
         "out_degree": 2,
@@ -466,7 +450,7 @@
       "illicit_probability": 0.9973,
       "ring_id": "ring_03",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 2,
@@ -483,7 +467,7 @@
       "illicit_probability": 0.9998,
       "ring_id": "ring_01",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 5,
         "out_degree": 3,
@@ -500,7 +484,7 @@
       "illicit_probability": 0.9996,
       "ring_id": "ring_01",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 5,
@@ -517,7 +501,7 @@
       "illicit_probability": 0.9998,
       "ring_id": "ring_01",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 3,
@@ -534,7 +518,7 @@
       "illicit_probability": 0.9995,
       "ring_id": "ring_01",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 5,
@@ -551,7 +535,7 @@
       "illicit_probability": 0.9998,
       "ring_id": "ring_01",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 4,
@@ -568,7 +552,7 @@
       "illicit_probability": 0.9997,
       "ring_id": "ring_01",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 5,
@@ -585,7 +569,7 @@
       "illicit_probability": 0.9998,
       "ring_id": "ring_01",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 5,
         "out_degree": 3,
@@ -602,7 +586,7 @@
       "illicit_probability": 0.9998,
       "ring_id": "ring_01",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 5,
         "out_degree": 3,
@@ -619,7 +603,7 @@
       "illicit_probability": 0.9996,
       "ring_id": "ring_01",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 6,
@@ -636,7 +620,7 @@
       "illicit_probability": 0.9987,
       "ring_id": "ring_04",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 0,
         "out_degree": 3,
@@ -653,7 +637,7 @@
       "illicit_probability": 0.9998,
       "ring_id": "ring_04",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 3,
@@ -670,7 +654,7 @@
       "illicit_probability": 0.9998,
       "ring_id": "ring_04",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 3,
@@ -687,7 +671,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_04",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 3,
@@ -704,7 +688,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_04",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 4,
@@ -721,7 +705,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_04",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 5,
         "out_degree": 2,
@@ -738,7 +722,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_04",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 4,
@@ -755,7 +739,7 @@
       "illicit_probability": 0.998,
       "ring_id": "ring_04",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 1,
@@ -772,7 +756,7 @@
       "illicit_probability": 0.9981,
       "ring_id": "ring_05",
       "features": {
-        "degree_centrality": 0.011494,
+        "degree_centrality": 0.011527,
         "clustering_coefficient": 0.0,
         "in_degree": 17,
         "out_degree": 7,
@@ -789,7 +773,7 @@
       "illicit_probability": 0.9991,
       "ring_id": "ring_05",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 0,
@@ -806,7 +790,7 @@
       "illicit_probability": 0.9992,
       "ring_id": "ring_05",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 1,
@@ -823,7 +807,7 @@
       "illicit_probability": 0.9927,
       "ring_id": "ring_05",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 1,
         "out_degree": 3,
@@ -840,7 +824,7 @@
       "illicit_probability": 0.9984,
       "ring_id": "ring_05",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 2,
@@ -857,7 +841,7 @@
       "illicit_probability": 0.9995,
       "ring_id": "ring_05",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 2,
@@ -874,7 +858,7 @@
       "illicit_probability": 0.9972,
       "ring_id": "ring_05",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 1,
         "out_degree": 1,
@@ -891,7 +875,7 @@
       "illicit_probability": 0.9993,
       "ring_id": "ring_05",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 2,
@@ -908,7 +892,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_06",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 4,
@@ -925,7 +909,7 @@
       "illicit_probability": 1.0,
       "ring_id": "ring_06",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 2,
@@ -942,7 +926,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_06",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 3,
@@ -959,7 +943,7 @@
       "illicit_probability": 1.0,
       "ring_id": "ring_06",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 2,
@@ -976,7 +960,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_06",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 4,
@@ -993,7 +977,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_06",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 3,
@@ -1010,7 +994,7 @@
       "illicit_probability": 0.9999,
       "ring_id": "ring_06",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 4,
@@ -1027,7 +1011,7 @@
       "illicit_probability": 1.0,
       "ring_id": "ring_06",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 2,
@@ -1042,9 +1026,9 @@
     {
       "account_id": "acc_02049",
       "illicit_probability": 0.999,
-      "ring_id": "ring_12",
+      "ring_id": "ring_11",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 1,
         "out_degree": 2,
@@ -1059,9 +1043,9 @@
     {
       "account_id": "acc_02050",
       "illicit_probability": 0.9998,
-      "ring_id": "ring_12",
+      "ring_id": "ring_11",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 3,
@@ -1076,9 +1060,9 @@
     {
       "account_id": "acc_02051",
       "illicit_probability": 0.9998,
-      "ring_id": "ring_12",
+      "ring_id": "ring_11",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 4,
@@ -1093,9 +1077,9 @@
     {
       "account_id": "acc_02052",
       "illicit_probability": 0.9948,
-      "ring_id": "ring_12",
+      "ring_id": "ring_11",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 1,
@@ -1112,7 +1096,7 @@
       "illicit_probability": 0.9984,
       "ring_id": "ring_08",
       "features": {
-        "degree_centrality": 0.007663,
+        "degree_centrality": 0.007685,
         "clustering_coefficient": 0.0,
         "in_degree": 9,
         "out_degree": 7,
@@ -1129,7 +1113,7 @@
       "illicit_probability": 0.9995,
       "ring_id": "ring_08",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 0,
@@ -1146,7 +1130,7 @@
       "illicit_probability": 0.965,
       "ring_id": "ring_08",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 0,
@@ -1163,7 +1147,7 @@
       "illicit_probability": 0.9824,
       "ring_id": "ring_08",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 0,
@@ -1180,7 +1164,7 @@
       "illicit_probability": 0.9988,
       "ring_id": "ring_08",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 0,
@@ -1197,7 +1181,7 @@
       "illicit_probability": 0.9985,
       "ring_id": "ring_08",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 0,
@@ -1214,7 +1198,7 @@
       "illicit_probability": 0.9981,
       "ring_id": "ring_08",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 2,
@@ -1231,7 +1215,7 @@
       "illicit_probability": 0.9992,
       "ring_id": "ring_02",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 6,
@@ -1248,7 +1232,7 @@
       "illicit_probability": 0.9994,
       "ring_id": "ring_02",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 5,
         "out_degree": 6,
@@ -1265,7 +1249,7 @@
       "illicit_probability": 0.9995,
       "ring_id": "ring_02",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 5,
@@ -1282,7 +1266,7 @@
       "illicit_probability": 0.9995,
       "ring_id": "ring_02",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 5,
@@ -1299,7 +1283,7 @@
       "illicit_probability": 0.9995,
       "ring_id": "ring_02",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 5,
         "out_degree": 5,
@@ -1316,7 +1300,7 @@
       "illicit_probability": 0.9996,
       "ring_id": "ring_02",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 5,
@@ -1333,7 +1317,7 @@
       "illicit_probability": 0.9995,
       "ring_id": "ring_02",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 5,
@@ -1350,7 +1334,7 @@
       "illicit_probability": 0.9995,
       "ring_id": "ring_02",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 5,
         "out_degree": 5,
@@ -1367,7 +1351,7 @@
       "illicit_probability": 0.9997,
       "ring_id": "ring_02",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 5,
         "out_degree": 4,
@@ -1382,9 +1366,9 @@
     {
       "account_id": "acc_02069",
       "illicit_probability": 0.9984,
-      "ring_id": "ring_13",
+      "ring_id": "ring_12",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 1,
         "out_degree": 4,
@@ -1399,9 +1383,9 @@
     {
       "account_id": "acc_02070",
       "illicit_probability": 0.9998,
-      "ring_id": "ring_13",
+      "ring_id": "ring_12",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 3,
@@ -1416,9 +1400,9 @@
     {
       "account_id": "acc_02071",
       "illicit_probability": 0.9998,
-      "ring_id": "ring_13",
+      "ring_id": "ring_12",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 5,
         "out_degree": 3,
@@ -1433,9 +1417,9 @@
     {
       "account_id": "acc_02072",
       "illicit_probability": 0.9971,
-      "ring_id": "ring_13",
+      "ring_id": "ring_12",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 1,
@@ -1450,9 +1434,9 @@
     {
       "account_id": "acc_02073",
       "illicit_probability": 0.9995,
-      "ring_id": "ring_10",
+      "ring_id": "ring_09",
       "features": {
-        "degree_centrality": 0.011015,
+        "degree_centrality": 0.011047,
         "clustering_coefficient": 0.0,
         "in_degree": 18,
         "out_degree": 5,
@@ -1467,9 +1451,9 @@
     {
       "account_id": "acc_02074",
       "illicit_probability": 0.9993,
-      "ring_id": "ring_10",
+      "ring_id": "ring_09",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 1,
@@ -1484,9 +1468,9 @@
     {
       "account_id": "acc_02075",
       "illicit_probability": 0.9986,
-      "ring_id": "ring_10",
+      "ring_id": "ring_09",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 3,
         "out_degree": 1,
@@ -1501,9 +1485,9 @@
     {
       "account_id": "acc_02076",
       "illicit_probability": 0.9973,
-      "ring_id": "ring_10",
+      "ring_id": "ring_09",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 2,
         "out_degree": 0,
@@ -1518,9 +1502,9 @@
     {
       "account_id": "acc_02077",
       "illicit_probability": 0.9996,
-      "ring_id": "ring_10",
+      "ring_id": "ring_09",
       "features": {
-        "degree_centrality": 0.000958,
+        "degree_centrality": 0.000961,
         "clustering_coefficient": 0.0,
         "in_degree": 1,
         "out_degree": 1,
@@ -1535,9 +1519,9 @@
     {
       "account_id": "acc_02078",
       "illicit_probability": 0.9999,
-      "ring_id": "ring_11",
+      "ring_id": "ring_10",
       "features": {
-        "degree_centrality": 0.002395,
+        "degree_centrality": 0.002402,
         "clustering_coefficient": 0.0,
         "in_degree": 5,
         "out_degree": 4,
@@ -1552,9 +1536,9 @@
     {
       "account_id": "acc_02079",
       "illicit_probability": 0.9999,
-      "ring_id": "ring_11",
+      "ring_id": "ring_10",
       "features": {
-        "degree_centrality": 0.001916,
+        "degree_centrality": 0.001921,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 4,
@@ -1569,9 +1553,9 @@
     {
       "account_id": "acc_02080",
       "illicit_probability": 0.9999,
-      "ring_id": "ring_11",
+      "ring_id": "ring_10",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 3,
@@ -1586,9 +1570,9 @@
     {
       "account_id": "acc_02081",
       "illicit_probability": 0.9999,
-      "ring_id": "ring_11",
+      "ring_id": "ring_10",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 3,
@@ -1603,9 +1587,9 @@
     {
       "account_id": "acc_02082",
       "illicit_probability": 0.9999,
-      "ring_id": "ring_11",
+      "ring_id": "ring_10",
       "features": {
-        "degree_centrality": 0.001437,
+        "degree_centrality": 0.001441,
         "clustering_coefficient": 0.0,
         "in_degree": 4,
         "out_degree": 3,
@@ -1615,108 +1599,6 @@
         "tx_count": 7,
         "mule_score": 0.6281,
         "fan_in_ratio": 0.6667
-      }
-    },
-    {
-      "account_id": "acc_02083",
-      "illicit_probability": 0.9998,
-      "ring_id": "ring_09",
-      "features": {
-        "degree_centrality": 0.000958,
-        "clustering_coefficient": 0.0,
-        "in_degree": 3,
-        "out_degree": 3,
-        "throughput_ratio": 0.9039,
-        "burst_ratio": 0.8333,
-        "round_amount_ratio": 0.1667,
-        "tx_count": 6,
-        "mule_score": 0.802,
-        "fan_in_ratio": 0.5
-      }
-    },
-    {
-      "account_id": "acc_02084",
-      "illicit_probability": 0.9999,
-      "ring_id": "ring_09",
-      "features": {
-        "degree_centrality": 0.000958,
-        "clustering_coefficient": 0.0,
-        "in_degree": 3,
-        "out_degree": 3,
-        "throughput_ratio": 0.98,
-        "burst_ratio": 0.8333,
-        "round_amount_ratio": 0.1667,
-        "tx_count": 6,
-        "mule_score": 0.84,
-        "fan_in_ratio": 0.5
-      }
-    },
-    {
-      "account_id": "acc_02085",
-      "illicit_probability": 0.9999,
-      "ring_id": "ring_09",
-      "features": {
-        "degree_centrality": 0.000958,
-        "clustering_coefficient": 0.0,
-        "in_degree": 3,
-        "out_degree": 3,
-        "throughput_ratio": 0.98,
-        "burst_ratio": 0.8333,
-        "round_amount_ratio": 0.0,
-        "tx_count": 6,
-        "mule_score": 0.84,
-        "fan_in_ratio": 0.5
-      }
-    },
-    {
-      "account_id": "acc_02086",
-      "illicit_probability": 0.9999,
-      "ring_id": "ring_09",
-      "features": {
-        "degree_centrality": 0.000958,
-        "clustering_coefficient": 0.0,
-        "in_degree": 3,
-        "out_degree": 3,
-        "throughput_ratio": 0.98,
-        "burst_ratio": 0.8333,
-        "round_amount_ratio": 0.0,
-        "tx_count": 6,
-        "mule_score": 0.84,
-        "fan_in_ratio": 0.5
-      }
-    },
-    {
-      "account_id": "acc_02087",
-      "illicit_probability": 0.9999,
-      "ring_id": "ring_09",
-      "features": {
-        "degree_centrality": 0.000958,
-        "clustering_coefficient": 0.0,
-        "in_degree": 3,
-        "out_degree": 3,
-        "throughput_ratio": 0.98,
-        "burst_ratio": 0.8333,
-        "round_amount_ratio": 0.0,
-        "tx_count": 6,
-        "mule_score": 0.84,
-        "fan_in_ratio": 0.5
-      }
-    },
-    {
-      "account_id": "acc_02088",
-      "illicit_probability": 0.9999,
-      "ring_id": "ring_09",
-      "features": {
-        "degree_centrality": 0.000958,
-        "clustering_coefficient": 0.0,
-        "in_degree": 3,
-        "out_degree": 3,
-        "throughput_ratio": 0.98,
-        "burst_ratio": 0.8333,
-        "round_amount_ratio": 0.0,
-        "tx_count": 6,
-        "mule_score": 0.84,
-        "fan_in_ratio": 0.5
       }
     }
   ],
@@ -1836,46 +1718,10 @@
       "timestamp": "2026-06-05T00:41:43.174601+00:00"
     },
     {
-      "source": "acc_02083",
-      "target": "acc_02084",
-      "amount": 420000.0,
-      "timestamp": "2026-07-17T23:08:00+00:00"
-    },
-    {
       "source": "acc_02004",
       "target": "acc_02005",
       "amount": 419568.53,
       "timestamp": "2026-06-05T00:51:43.174601+00:00"
-    },
-    {
-      "source": "acc_02084",
-      "target": "acc_02085",
-      "amount": 411600.0,
-      "timestamp": "2026-07-17T23:12:00+00:00"
-    },
-    {
-      "source": "acc_02083",
-      "target": "acc_02084",
-      "amount": 411600.0,
-      "timestamp": "2026-07-17T23:38:00+00:00"
-    },
-    {
-      "source": "acc_02085",
-      "target": "acc_02086",
-      "amount": 403368.0,
-      "timestamp": "2026-07-17T23:16:00+00:00"
-    },
-    {
-      "source": "acc_02084",
-      "target": "acc_02085",
-      "amount": 403368.0,
-      "timestamp": "2026-07-17T23:42:00+00:00"
-    },
-    {
-      "source": "acc_02083",
-      "target": "acc_02084",
-      "amount": 403200.0,
-      "timestamp": "2026-07-18T00:08:00+00:00"
     },
     {
       "source": "acc_02025",
@@ -1896,88 +1742,16 @@
       "timestamp": "2026-06-23T00:56:00.848477+00:00"
     },
     {
-      "source": "acc_02086",
-      "target": "acc_02087",
-      "amount": 395300.64,
-      "timestamp": "2026-07-17T23:20:00+00:00"
-    },
-    {
-      "source": "acc_02085",
-      "target": "acc_02086",
-      "amount": 395300.64,
-      "timestamp": "2026-07-17T23:46:00+00:00"
-    },
-    {
-      "source": "acc_02084",
-      "target": "acc_02085",
-      "amount": 395136.0,
-      "timestamp": "2026-07-18T00:12:00+00:00"
-    },
-    {
-      "source": "acc_02086",
-      "target": "acc_02087",
-      "amount": 387394.63,
-      "timestamp": "2026-07-17T23:50:00+00:00"
-    },
-    {
-      "source": "acc_02087",
-      "target": "acc_02088",
-      "amount": 387394.63,
-      "timestamp": "2026-07-17T23:24:00+00:00"
-    },
-    {
-      "source": "acc_02085",
-      "target": "acc_02086",
-      "amount": 387233.28,
-      "timestamp": "2026-07-18T00:16:00+00:00"
-    },
-    {
       "source": "acc_02027",
       "target": "acc_02028",
       "amount": 385032.13,
       "timestamp": "2026-06-23T01:06:00.848477+00:00"
     },
     {
-      "source": "acc_02087",
-      "target": "acc_02088",
-      "amount": 379646.73,
-      "timestamp": "2026-07-17T23:54:00+00:00"
-    },
-    {
-      "source": "acc_02088",
-      "target": "acc_02083",
-      "amount": 379646.73,
-      "timestamp": "2026-07-17T23:28:00+00:00"
-    },
-    {
-      "source": "acc_02086",
-      "target": "acc_02087",
-      "amount": 379488.61,
-      "timestamp": "2026-07-18T00:20:00+00:00"
-    },
-    {
-      "source": "acc_02088",
-      "target": "acc_02083",
-      "amount": 372053.8,
-      "timestamp": "2026-07-17T23:58:00+00:00"
-    },
-    {
-      "source": "acc_02087",
-      "target": "acc_02088",
-      "amount": 371898.84,
-      "timestamp": "2026-07-18T00:24:00+00:00"
-    },
-    {
       "source": "acc_02028",
       "target": "acc_02029",
       "amount": 368084.93,
       "timestamp": "2026-06-23T01:16:00.848477+00:00"
-    },
-    {
-      "source": "acc_02088",
-      "target": "acc_02083",
-      "amount": 364460.87,
-      "timestamp": "2026-07-18T00:28:00+00:00"
     },
     {
       "source": "acc_02025",
