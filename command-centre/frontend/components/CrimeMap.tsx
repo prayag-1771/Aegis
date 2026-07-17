@@ -83,6 +83,25 @@ export default function CrimeMap({
   const entryMarkersRef = useRef<any[]>([]);          // DOM markers owned by the entry route
   const [ready, setReady] = useState(false);
   const [satellite, setSatellite] = useState(false);
+  /* Bumped every time a map instance finishes loading. Every effect that DRAWS
+     on the map depends on this, not just on `ready`: if the map is ever torn
+     down and rebuilt, `ready` is already true, so nothing would re-run and the
+     layers would silently stay missing on the new instance while markers (which
+     rebuild on each poll) reappear — exactly "the route disappeared". */
+  const [mapVersion, setMapVersion] = useState(0);
+
+  /* Diagnostic: this component has thrown "reading 'y' of null" from inside
+     MapLibre three times, and each fix addressed a real leak that turned out not
+     to be the cause. Log the real stack rather than keep guessing at it. */
+  useEffect(() => {
+    const onErr = (e: ErrorEvent) => {
+      if (!/reading '[xy]'/.test(e.message || "")) return;
+      // eslint-disable-next-line no-console
+      console.error("[CrimeMap diagnostic] map-projection error\n", e.error?.stack || e.message);
+    };
+    window.addEventListener("error", onErr);
+    return () => window.removeEventListener("error", onErr);
+  }, []);
 
   /* Drive layer visibility + the darken filter from the current mode and which
      CDNs are blocked. Falls back to (darkened) OSM whenever the chosen provider
@@ -150,6 +169,7 @@ export default function CrimeMap({
       map.on("load", () => {
         if (cancelled) return;
         setReady(true);
+        setMapVersion((v) => v + 1); // new instance → every draw effect must redraw
         // proactively detect blocked CARTO CDN so the first paint is already correct.
         // We bypass the ESRI probe as it can falsely fail via img tags.
         probeTile(CARTO_PROBE).then((darkOk) => {
@@ -202,7 +222,13 @@ export default function CrimeMap({
     const lib = libRef.current;
     if (!map || !lib || !ready) return;
 
-    markersRef.current.forEach((m) => m.remove());
+    markersRef.current.forEach((m) => {
+      try {
+        m.remove();
+      } catch {
+        /* belonged to a previous map instance */
+      }
+    });
     markersRef.current = [];
     scalablesRef.current = [];
 
@@ -293,7 +319,7 @@ export default function CrimeMap({
       markersRef.current = [];
       scalablesRef.current = [];
     };
-  }, [points, hubs, ready]);
+  }, [points, hubs, ready, mapVersion]);
 
   // fly to a located alert / fusion hotspot.
   // The searched city is what the user asked to see, so it owns the viewport.
@@ -325,7 +351,13 @@ export default function CrimeMap({
     ["trail-line-src", "trail-seizures-src", "trail-origin-src"].forEach((id) => {
       if (map.getSource(id)) map.removeSource(id);
     });
-    trailMarkersRef.current.forEach((m) => m.remove());
+    trailMarkersRef.current.forEach((m) => {
+      try {
+        m.remove();
+      } catch {
+        /* belonged to a previous map instance */
+      }
+    });
     trailMarkersRef.current = [];
 
     if (!trail) return;
@@ -562,7 +594,7 @@ export default function CrimeMap({
       });
       trailMarkersRef.current = [];
     };
-  }, [trail, ready]);
+  }, [trail, ready, mapVersion]);
 
   // ── Entry route: how notes reached the searched city ────────────────────
   // Separate from the trail above. That one answers "which direction along a
@@ -709,7 +741,7 @@ export default function CrimeMap({
     // away from the place the user asked to see.
 
     return cleanup;
-  }, [entryRoute, ready]);
+  }, [entryRoute, ready, mapVersion]);
 
   return (
     <div className="absolute inset-0">
