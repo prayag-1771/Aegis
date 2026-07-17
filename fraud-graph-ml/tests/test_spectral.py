@@ -109,8 +109,12 @@ class TestSpectralShift:
             # Connect to some existing nodes
             ring.add_edge(i, i % 30)
 
-        result = measure_spectral_shift(clean, ring, feature_signal="degree")
-        # Ring should have higher Rayleigh quotient (more high-freq energy)
+        # No features passed → falls back to the degree signal. That is the
+        # right choice for THIS test: the injected structure is a dense clique,
+        # which really does spike node degree, so degree is a faithful signal
+        # here. (On the real graph fraud is a money pattern, not a degree spike,
+        # which is why the pipeline uses SIGNAL_FEATURE instead — see spectral.py.)
+        result = measure_spectral_shift(clean, ring)
         assert result.shift_magnitude > -0.5  # allow some tolerance
 
 

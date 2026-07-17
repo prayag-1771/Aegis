@@ -183,25 +183,68 @@ class SpectralShiftResult:
         }
 
 
+# The node signal the spectrum is measured on. This choice decides whether the
+# method works at all, and the original `degree` INVERTED the result.
+#
+# Measured on the synthetic graph, ring community vs clean community
+# (positive = the predicted right-shift into high frequency):
+#
+#   structural signals               money signals
+#     degree_centrality  -0.4504       total_in    +0.2040
+#     tx_count           -0.4126       net_flow    +0.1513
+#     pagerank           -0.4551       avg_amount  +0.0899
+#     unique_senders     -0.5397       total_out   +0.0333
+#     round_amount_ratio: clean community has NO round amounts; ring saturates at 1.0
+#
+# Every structural signal reverses, and consistently. The reason is that the
+# Rayleigh quotient measures how much a signal VARIES across edges, and degree
+# is a proxy for hub structure: a healthy community has hubs and leaves, so its
+# degree signal is jagged (high frequency), while a mule chain is deliberately
+# regular, so its degree signal is flat (low frequency). Degree was measuring
+# degree heterogeneity and calling it fraud — the clean community scored 0.36
+# and the ring 0.16, and the module reported the effect backwards.
+#
+# Fraud is not a shape here, it is money moving oddly, so the signal has to be
+# money. `total_in` gives the largest, most stable shift and is what the
+# detector already computes — no new feature, no label leakage.
+#
+# Sanity check that the premise itself holds: with the is_illicit labels as the
+# signal (an ORACLE — circular, never usable in production) the ring community
+# scores 1.0000, the top of the [0, 2] range. The fraud pattern IS high-
+# frequency on this graph. Only the proxy was wrong.
+SIGNAL_FEATURE = "total_in"
+
+
+def _signal(nodes: list[str], features, sub: nx.Graph) -> np.ndarray:
+    """Node signal for the spectral transform, from SIGNAL_FEATURE.
+
+    Falls back to degree only when features are unavailable — which measures
+    hub structure rather than fraud and is known to invert the shift, so the
+    caller should treat a fallback result as structural, not evidential.
+    """
+    if features is not None and SIGNAL_FEATURE in getattr(features, "columns", []):
+        return features.reindex(nodes)[SIGNAL_FEATURE].fillna(0.0).to_numpy(dtype=float)
+    deg = dict(sub.degree())
+    return np.array([deg.get(n, 0) for n in nodes], dtype=float)
+
+
 def measure_spectral_shift(
     clean_graph: nx.Graph,
     ring_graph: nx.Graph,
-    feature_signal: str = "degree",
+    features=None,
 ) -> SpectralShiftResult:
     """Compare the spectral energy of a clean community vs one with an injected ring.
 
     The ring shifts energy rightward (into high-frequency modes) because fraud
-    accounts create unusual connectivity patterns that break the smooth
-    low-frequency structure of legitimate communities.
+    accounts move money in ways that break the smooth low-frequency structure of
+    legitimate communities.
+
+    `features` must carry SIGNAL_FEATURE per account. Without it this falls back
+    to degree, which measures hub structure rather than money and inverts the
+    shift — the bug that made this function report the effect backwards.
     """
     def _get_signal(g: nx.Graph, nodes: list[str]) -> np.ndarray:
-        if feature_signal == "degree":
-            deg = dict(g.degree())
-            return np.array([deg.get(n, 0) for n in nodes], dtype=float)
-        elif feature_signal == "ones":
-            return np.ones(len(nodes), dtype=float)
-        else:
-            return np.array([g.degree(n) for n in nodes], dtype=float)
+        return _signal(nodes, features, g)
 
     # Clean community
     L_clean, nodes_clean = build_normalized_laplacian(clean_graph)
@@ -442,12 +485,17 @@ def run_spectral_analysis(
     5. If ground truth available, measure clean-vs-ring spectral shift.
     """
     from .data import load
-    from .graph import build_graph
+    from .graph import build_graph, compute_features
 
     ds = load(source)
     g_full = build_graph(ds)
     und = g_full.to_undirected()
     und.remove_edges_from(nx.selfloop_edges(und))
+
+    # The signal the whole method rests on — see SIGNAL_FEATURE.
+    features = compute_features(ds, g_full)
+    if features.index.name != "account_id" and "account_id" in features.columns:
+        features = features.set_index("account_id")
 
     # Community detection
     communities = _leiden_or_louvain(und)
@@ -471,9 +519,7 @@ def run_spectral_analysis(
         k = min(50, len(nodes) - 1)
         evals, evecs = compute_spectrum(L, k=k)
 
-        # Signal: node degree
-        deg = dict(sub.degree())
-        x = np.array([deg.get(n, 0) for n in nodes], dtype=float)
+        x = _signal(nodes, features, sub)
 
         sed = spectral_energy_distribution(x, evals, evecs)
         rq = rayleigh_quotient(x, L)
@@ -498,7 +544,16 @@ def run_spectral_analysis(
             sed=sed,
         ))
 
-    # Flag anomalies: communities with Rayleigh quotient significantly above median
+    # A WEAK screen, not a detector. With the money signal fixed, a ring
+    # community really does sit higher-frequency than a MATCHED clean one (the
+    # shift_result below shows this cleanly, +0.22). But an ABSOLUTE threshold
+    # across all communities is unreliable: baseline Rayleigh varies with a
+    # community's own size and density for reasons unrelated to fraud, so this
+    # flag produces both misses and false alarms. It is a triage hint, and the
+    # honest, validated result is the matched pairwise shift, not this flag.
+    # This is the "subtler than the papers" caveat the module documents made
+    # concrete — the real detection gain is the BWGNN wavelet features fed to
+    # the classifier, never a raw Rayleigh cut.
     if rayleigh_values:
         median_rq = float(np.median(rayleigh_values))
         for r in reports:
@@ -528,6 +583,7 @@ def run_spectral_analysis(
             shift_result = measure_spectral_shift(
                 und.subgraph(clean_comm).copy(),
                 und.subgraph(ring_comm).copy(),
+                features=features,
             )
             logger.info(
                 "Spectral shift: clean RQ=%.4f, ring RQ=%.4f, shift=%.4f",
