@@ -881,7 +881,17 @@ export default function Page() {
           changes width at runtime ("Run Fusion" → "Correlating…"), so the gap
           silently closed. right-16 clears the map's zoom controls, which own
           the actual corner. */}
-      <div className="pointer-events-none fixed bottom-6 right-16 z-50 flex items-center gap-3">
+      {/* Slides clear of the Supply Trail panel while it is open, instead of
+          floating over its content. The offset mirrors that panel's own
+          `w-[400px] max-w-[90vw]` exactly, so the two cannot drift apart; the
+          duration matches its slide. Transform, not `right`, so the move is
+          compositor-only over the live map — and the Fusion chat panel, being a
+          child, comes along. */}
+      <div
+        className={`pointer-events-none fixed bottom-6 right-16 z-50 flex items-center gap-3 transition-transform duration-300 ${
+          supplyTrailOpen ? "-translate-x-[min(400px,90vw)]" : ""
+        }`}
+      >
         {/* Hidden while its own panel is open: the row sits above that panel's
             z-index, and "open Supply Trail" is meaningless when it already is. */}
         {activeTab === "map" && !supplyTrailOpen && (
