@@ -207,12 +207,58 @@ def plausible_routes(net: Network, src_key: str, dst_key: str, k: int = 4,
         _consider(_dijkstra(net, src_key, dst_key, prefer=mode))
 
     routes = list(best_by_sig.values())
-    if routes:
-        best_cost = min(r["_cost"] for r in routes)
-        for r in routes:
-            base = best_cost / r["_cost"] if r["_cost"] else 1.0
-            fir_boost = min(0.15, 0.05 * len(r["passes_fir"]))
-            r["plausibility"] = round(min(1.0, base + fir_boost), 3)
-            del r["_cost"]
+    for r in routes:
+        r["plausibility"] = _plausibility(r)
+        del r["_cost"]
     routes.sort(key=lambda r: r["plausibility"], reverse=True)
     return routes[:k]
+
+
+# Distance beyond which a courier route stops being a realistic single hop.
+# Nothing magic about it: the documented FICN corridors (Malda->Jharkhand,
+# Nepal border->UP) run a few hundred km, so ~600 km is where "plausible
+# single movement" starts decaying rather than a hard cutoff.
+_PLAUSIBLE_KM = 600.0
+
+
+def _plausibility(route: dict) -> float:
+    """Absolute plausibility of a route, in [0, 1].
+
+    This was previously `best_cost / route_cost`, which made the cheapest
+    candidate score exactly 1.0 BY CONSTRUCTION — every query, regardless of
+    evidence. Howrah (222 km) and Chennai (3190 km) both scored 1.000 into
+    Jamtara. That is a relative rank wearing the costume of a probability, and
+    the FIR boost then pushed costlier routes to 1.0 too, flattening the very
+    distinction the number exists to make.
+
+    Scored against fixed reference points instead, so it means the same thing
+    across queries and two routes can genuinely differ:
+
+      - distance   0.45  decays from 1.0; a courier hop of _PLAUSIBLE_KM scores
+                         ~0.5. Long hauls are not impossible, just less likely.
+      - mode       0.35  MODE_RISK — rail is the documented primary channel,
+                         air is heavily screened. Averaged over haul legs.
+      - FIR        0.20  corroboration: seizure history ON the route. 0 FIRs
+                         earns 0 — evidence must be present to be credited.
+
+    Capped at 0.9: a route is a hypothesis about how notes moved, never a
+    certainty. Nothing here observed the notes moving.
+    """
+    from .network import MODE_RISK
+
+    km = route.get("total_km") or 0.0
+    dist_score = 1.0 / (1.0 + (km / _PLAUSIBLE_KM)) if km > 0 else 0.5
+
+    hauls = [lg["mode"] for lg in route.get("legs", []) if lg.get("kind") == "haul"]
+    if hauls:
+        risk = sum(MODE_RISK.get(m, 1.3) for m in hauls) / len(hauls)
+        # MODE_RISK 0.9 (best) -> ~1.0, 2.6 (air) -> ~0.2
+        mode_score = max(0.0, min(1.0, (2.9 - risk) / 2.0))
+    else:
+        mode_score = 0.4  # access-only path: no real haul to judge
+
+    n_fir = len(route.get("passes_fir", []))
+    fir_score = min(1.0, n_fir / 4.0)  # 4+ FIRs on route = full corroboration
+
+    raw = 0.45 * dist_score + 0.35 * mode_score + 0.20 * fir_score
+    return round(min(0.9, raw), 3)
