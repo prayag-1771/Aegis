@@ -51,6 +51,64 @@ flowchart LR
 - **Map tiles are keyless & free** (CARTO dark / Esri imagery via MapLibre GL) — the demo
   cannot die on a missing API token.
 
+## Detect → Disrupt → Respond (three stakeholders)
+
+The challenge names three stakeholders (law enforcement, **financial institutions**, citizens)
+and three verbs (**detect, disrupt, respond**). Detection feeds a deterministic **response-action
+engine** that turns a finding into a concrete, recipient-addressed, auditable action; a separate
+**API-key-gated B2B surface** serves banks. Dispatch is *simulated* (no live government/bank wire)
+and every action says so.
+
+```mermaid
+flowchart LR
+    subgraph detect["DETECT (existing)"]
+        SC["Scam / digital-arrest\n(Fraud Shield)"]
+        CV["Counterfeit\n(Vision)"]
+        FGx["Fraud rings\n(Graph ML)"]
+        FUx["Fusion correlation"]
+    end
+
+    subgraph disrupt["DISRUPT / RESPOND (new)"]
+        RE["⚙️ response.py engine\n(deterministic rules)"]
+        Q["📋 Action queue\n/actions (+dispatch/ack/dismiss)\naudit log · SLA · evidence chain"]
+    end
+
+    subgraph stake["STAKEHOLDER SURFACES"]
+        LE["👮 Law enforcement\ndashboard · case files · Disrupt tab"]
+        FI["🏦 Financial institution (B2B)\n/institution/screen-account\n/institution/verify-note (X-API-Key)"]
+        CT["🧑 Citizen\nscam-alert + currency-check sites"]
+    end
+
+    SC --> FUx
+    CV --> FUx
+    FGx --> FUx
+    FUx -- "auto-derive on /fuse" --> RE
+    SC --> RE
+    FGx --> RE
+    RE --> Q
+    Q --> LE
+    FGx --> FI
+    CV --> FI
+    SC --> CT
+    Q -. "freeze / block / MHA alert / intercept" .-> LE
+```
+
+**New endpoints (command-centre backend):**
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /fuse` | now also auto-derives response actions |
+| `GET /actions` · `POST /actions/derive` | the disrupt/respond queue |
+| `POST /actions/{id}/dispatch\|acknowledge\|dismiss` | act on one action (simulated dispatch, audited) |
+| `POST /institution/screen-account` | AML risk for one account (X-API-Key) |
+| `POST /institution/verify-note` | teller/POS note check (X-API-Key) |
+| `GET /metrics` | Model Card — measured P/R, FPR, AUC, per-family, lead time |
+
+- **Additive contract:** `contracts/response_action.schema.json` — an action never asserts guilt;
+  it carries `trigger.refs` (evidence chain) + an append-only `audit` log for admissibility.
+- **Honest posture:** each model is labelled Predictive (Fraud Shield, pre-transfer) /
+  Point-of-contact (Counterfeit) / Fast-classification (Graph) — no overclaiming "predictive".
+
 ## Ports
 
 | Service | Port |
