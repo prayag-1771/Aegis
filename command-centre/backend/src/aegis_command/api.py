@@ -528,6 +528,19 @@ def metrics() -> dict:
             ],
         })
 
+    # Honest posture per model — what is genuinely predictive vs. fast
+    # classification of an already-formed pattern. Overclaiming "predictive" on
+    # the graph is the kind of thing a sharp reviewer catches; scoping it
+    # correctly reads as more credible, not less.
+    POSTURE = {
+        "scam": {"label": "Predictive", "detail": "flags at the point of contact, before any transfer"},
+        "counterfeit": {"label": "Point-of-contact", "detail": "verdict at the counter/POS, not after deposit"},
+        "graph_synth": {"label": "Fast classification", "detail": "scores an already-formed transaction pattern"},
+        "graph_elliptic": {"label": "Fast classification", "detail": "real-data benchmark of the same pipeline"},
+    }
+    for _m in models:
+        _m["posture"] = POSTURE.get(_m["id"])
+
     lead_time = {
         "summary": "Where detection sits relative to victimisation — measured latency, honestly scoped.",
         "points": [

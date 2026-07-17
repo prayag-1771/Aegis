@@ -606,6 +606,7 @@ export interface ModelCard {
   name: string;
   task: string;
   dataset: string;
+  posture?: { label: string; detail: string } | null;
   headline: MetricItem[];
   highlight?: MetricItem | null;
   false_alarm?: { label: string; value: number; basis: string } | null;

@@ -111,7 +111,24 @@ function Card({ model }: { model: ModelCard }) {
   return (
     <div className="gsap-mc flex flex-col border border-white/10 bg-zinc-900/60 p-5">
       <h3 className="text-sm font-semibold text-zinc-100">{model.name}</h3>
-      <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">{model.task}</p>
+      {model.posture && (
+        <div className="mt-1.5 flex items-center gap-2">
+          <span
+            className={`border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
+              model.posture.label === "Predictive"
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                : model.posture.label === "Point-of-contact"
+                ? "border-sky-500/40 bg-sky-500/10 text-sky-300"
+                : "border-zinc-500/40 bg-zinc-500/10 text-zinc-400"
+            }`}
+            title={model.posture.detail}
+          >
+            {model.posture.label}
+          </span>
+          <span className="text-[9px] text-zinc-600">{model.posture.detail}</span>
+        </div>
+      )}
+      <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-500">{model.task}</p>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         {model.headline.map((h) => (
