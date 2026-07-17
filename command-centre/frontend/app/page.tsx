@@ -283,19 +283,8 @@ export default function Page() {
   }, []);
 
   /* ── Search card open/close ──
-     The card centres itself with `-translate-x-1/2 -translate-y-1/2`, so its
-     POSITION lives in the very transform an animation wants to drive. The old
-     `animate-slide-up` keyframes set `transform: translateY(1rem)` outright,
-     which blew that centring away for their duration — the card played its
-     entrance half its size down-and-right, then snapped into place. Any tween
-     that ignores this hits the same wall, so the centring is stated explicitly
-     as xPercent/yPercent and carried through both tweens.
-
-     clearProps afterwards hands positioning back to the CSS classes: the card
-     is draggable, and a leftover inline transform would offset it the moment a
-     drag switches it to left/top. */
-  const CENTRE = { xPercent: -50, yPercent: -50 };
-
+     The card is now anchored to the bottom-left, so it animates in-place
+     using opacity and scale without needing x/y translations. */
   useGSAP(
     () => {
       const el = cardScope.current;
@@ -306,8 +295,8 @@ export default function Page() {
       }
       gsap.fromTo(
         el,
-        { ...CENTRE, opacity: 0, scale: 0.96 },
-        { ...CENTRE, opacity: 1, scale: 1, duration: 0.3, ease: "power3.out", force3D: true, clearProps: "all" },
+        { opacity: 0, scale: 0.96, transformOrigin: "bottom left" },
+        { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(1.2)", force3D: true, clearProps: "all" },
       );
     },
     // District only: dragging re-renders constantly and must not replay this.
@@ -323,16 +312,13 @@ export default function Page() {
         done();
         return;
       }
-      // Dragged: position comes from left/top, so there is no centring to keep.
-      const base = cardPos ? {} : CENTRE;
       gsap.fromTo(
         el,
-        { ...base, opacity: 1, scale: 1 },
+        { opacity: 1, scale: 1, transformOrigin: "bottom left" },
         {
-          ...base,
           opacity: 0,
           scale: 0.96,
-          duration: 0.2,
+          duration: 0.25,
           ease: "power2.in",
           force3D: true,
           overwrite: true,
@@ -583,10 +569,8 @@ export default function Page() {
           // Capped at 70vh and column-flexed: the header stays put while the
           // body scrolls. Previously only the alerts list scrolled, so the entry
           // section grew the card past the viewport and ran off screen.
-          // `animate-slide-up` is gone: its keyframes overrode the centring
-          // transform. GSAP drives both tweens now, centring included.
-          className={`absolute z-40 flex max-h-[70vh] w-80 max-w-[90vw] flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/90 shadow-2xl backdrop-blur-md pointer-events-auto ${
-            cardPos ? "" : "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          className={`absolute z-40 flex h-[350px] max-h-[70vh] w-[320px] min-w-[320px] min-h-[200px] max-w-[90vw] flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/90 shadow-2xl backdrop-blur-md pointer-events-auto resize ${
+            cardPos ? "" : "bottom-10 left-[180px]"
           }`}
           style={cardPos ? { left: cardPos.x, top: cardPos.y } : undefined}
         >

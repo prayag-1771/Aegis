@@ -452,3 +452,13 @@ body {
 /* The ⓘ attribution expander is gone — MapLibre's AttributionControl is no
    longer added, so the rules that fought to keep it collapsed went with it.
    The tile credit is now static text rendered by CrimeMap (bottom-left). */
+
+/* ── Custom Resize Handle for Search Card ── */
+[data-search-card]::-webkit-scrollbar {
+  width: 24px;
+  height: 24px;
+}
+[data-search-card]::-webkit-resizer {
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M16,22 L22,22 L22,16 M10,22 L22,10 M4,22 L22,4" stroke="rgba(255,255,255,0.7)" stroke-width="2" fill="none"/></svg>') no-repeat bottom right;
+  cursor: se-resize;
+}

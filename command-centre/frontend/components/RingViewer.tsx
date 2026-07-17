@@ -197,7 +197,7 @@ export default function RingViewer({
       const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
 
       // Hide everything first
-      gsap.set(".gsap-node", { opacity: 0, scale: 0 });
+      gsap.set(".gsap-node", { opacity: 0, scale: 0, transformOrigin: "50% 50%" });
       gsap.set(".gsap-edge", { opacity: 0 });
       gsap.set(".gsap-anim-flow", { opacity: 0 });
 
@@ -332,7 +332,7 @@ export default function RingViewer({
             if (!p) return null;
             if (n.satellite) {
               return (
-                <g key={n.id} className={`gsap-node gsap-node-${n.id.replace(/[^a-zA-Z0-9]/g, "_")}`} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+                <g key={n.id} className={`gsap-node gsap-node-${n.id.replace(/[^a-zA-Z0-9]/g, "_")}`}>
                   <circle cx={p.x} cy={p.y} r={6} fill="#27272a" stroke="#52525b" strokeWidth={1} />
                   <text x={p.x} y={p.y + 16} textAnchor="middle" fontSize="7.5" fill="#71717a">{short(n.id)}</text>
                   <title>{n.id} — outside account paying into the ring (victim)</title>
@@ -341,7 +341,7 @@ export default function RingViewer({
             }
             const hot = (n.score ?? 0) >= 0.9;
             return (
-              <g key={n.id} onClick={() => setPicked(n)} className={`cursor-pointer gsap-node gsap-node-${n.id.replace(/[^a-zA-Z0-9]/g, "_")}`} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+              <g key={n.id} onClick={() => setPicked(n)} className={`cursor-pointer gsap-node gsap-node-${n.id.replace(/[^a-zA-Z0-9]/g, "_")}`}>
                 <circle cx={p.x} cy={p.y} r={12} fill={hot ? "#7c3aed" : "#3f3f46"} stroke={picked?.id === n.id ? "#f0abfc" : hot ? "#c4b5fd" : "#71717a"} strokeWidth={picked?.id === n.id ? 2.5 : 1.2} />
                 <text x={p.x} y={p.y + 26} textAnchor="middle" fontSize="9" fill="#d4d4d8">{short(n.id)}</text>
                 {n.score != null && (
