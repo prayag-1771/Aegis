@@ -1,13 +1,46 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/gsap";
 import type { EventsResponse, HotspotsResponse } from "@/lib/api";
 import { clockTime, titleCase } from "@/lib/format";
-import { MapPin, Phone } from "./Icons";
+import { Banknote, MapPin, Network, Phone } from "./Icons";
 
-/** The 2–3 most urgent live alerts, as compact glass chips in the top-right —
- *  the declutter of the old tall Warning panel. Full history lives in AlertsDrawer. */
+const ICONS = {
+  hub: MapPin,
+  scam: Phone,
+  counterfeit: Banknote,
+  ring: Network,
+} as const;
+
+/** One live alert, whatever domain produced it. */
+type Notice = {
+  id: string;
+  kind: "hub" | "scam" | "counterfeit" | "ring";
+  title: string;
+  detail: string;
+  /** How many INDEPENDENT domains back this finding. Ranks before score:
+   *  three domains converging on one place is stronger evidence than any
+   *  single detector's confidence, however high. */
+  corroboration: number;
+  /** The producing engine's own score, 0–1. Not invented here. */
+  score: number;
+  at?: string;
+  locate?: { lat: number; lon: number };
+};
+
+/** Rank every live signal and show the top 3, in the top-right.
+ *  Full history lives in AlertsDrawer.
+ *
+ *  Ordering is derived, never fixed. This previously hardcoded the slots —
+ *  always two cross-domain hubs plus whichever scam happened to arrive last —
+ *  so counterfeits and fraud rings could never appear no matter how severe,
+ *  and a 0.4 scam outranked a 0.99 one purely by arriving later.
+ *
+ *  Now every domain competes on evidence: first on corroboration (how many
+ *  independent domains agree), then on the detecting engine's own score. Both
+ *  numbers come from the data. Nothing here decides a hub matters more than a
+ *  ring — the evidence does, and a quiet hub loses to a strong ring. */
 export default function AlertChips({
   events,
   hotspots,
@@ -19,10 +52,81 @@ export default function AlertChips({
   onLocate: (p: { lat: number; lon: number }) => void;
   onOpenAll?: () => void;
 }) {
-  const crossHubs = (hotspots?.hubs ?? []).filter((h) => h.cross_domain).slice(0, 2);
-  const topScam = (events?.scams ?? []).filter((s) => s.verdict !== "legit").at(-1) ?? null;
+  const notices = useMemo<Notice[]>(() => {
+    const all: Notice[] = [];
 
-  const hasAny = crossHubs.length > 0 || topScam;
+    // Hubs — a correlation, so corroboration is its domain count. `tier` is the
+    // engine's own honest label: coordinated = all 3 domains, multi_signal = 2.
+    for (const h of hotspots?.hubs ?? []) {
+      const domains = h.domains?.length ?? 0;
+      if (domains < 2) continue; // single-domain cluster: the raw event says it better
+      all.push({
+        id: `hub:${h.hub_id}`,
+        kind: "hub",
+        title: `${h.tier === "coordinated" ? "Coordinated hub" : "Multi-signal hub"} — ${h.district ?? "unknown"}`,
+        detail: `${h.n_points} signals · ${(h.domains ?? []).map(titleCase).join(" + ")}`,
+        corroboration: domains,
+        // Intensity is unbounded, so it cannot be a probability. Rank hubs of
+        // equal tier against the strongest hub present rather than pretend a
+        // raw intensity is a confidence.
+        score: Math.min(1, h.intensity / Math.max(...(hotspots?.hubs ?? []).map((x) => x.intensity || 1), 1)),
+        locate: { lat: h.lat, lon: h.lon },
+      });
+    }
+
+    for (const s of events?.scams ?? []) {
+      if (s.verdict === "legit") continue;
+      all.push({
+        id: `scam:${s.event_id}`,
+        kind: "scam",
+        title: `${titleCase(s.scam_type ?? "scam")} flagged — ${s.location_hint?.district ?? "unknown"}`,
+        detail: `risk ${Math.round((s.risk_score ?? 0) * 100)}% · ${s.source ?? "reported"}`,
+        corroboration: 1,
+        score: s.risk_score ?? 0,
+        at: s.timestamp,
+        locate:
+          s.location_hint?.lat != null && s.location_hint?.lon != null
+            ? { lat: s.location_hint.lat, lon: s.location_hint.lon }
+            : undefined,
+      });
+    }
+
+    for (const c of events?.counterfeits ?? []) {
+      if (c.verdict !== "fake") continue; // genuine/uncertain is not an alert
+      all.push({
+        id: `note:${c.event_id}`,
+        kind: "counterfeit",
+        title: `Counterfeit ₹${c.denomination} — ${c.location_hint?.district ?? "unknown"}`,
+        detail: `confidence ${Math.round((c.confidence ?? 0) * 100)}%${
+          c.missing_features?.length ? ` · ${c.missing_features.length} features failed` : ""
+        }`,
+        corroboration: 1,
+        score: c.confidence ?? 0,
+        at: c.timestamp,
+        locate:
+          c.location_hint?.lat != null && c.location_hint?.lon != null
+            ? { lat: c.location_hint.lat, lon: c.location_hint.lon }
+            : undefined,
+      });
+    }
+
+    for (const r of events?.fraud_graph?.rings ?? []) {
+      all.push({
+        id: `ring:${r.ring_id}`,
+        kind: "ring",
+        title: `${r.label ?? "Fraud ring"} — ${r.district ?? "unknown"}`,
+        detail: `${r.size} accounts · risk ${Math.round((r.risk_score ?? 0) * 100)}%`,
+        corroboration: 1,
+        score: r.risk_score ?? 0,
+      });
+    }
+
+    return all
+      .sort((a, b) => b.corroboration - a.corroboration || b.score - a.score)
+      .slice(0, 3);
+  }, [events, hotspots]);
+
+  const hasAny = notices.length > 0;
   const container = useRef<HTMLDivElement>(null);
   // Ids already animated & settled — a 5s poll that re-delivers the same alerts
   // must not re-animate existing chips. Seeded lazily on first run below so the
@@ -30,9 +134,7 @@ export default function AlertChips({
   // suppress the very first animation.
   const seen = useRef<Set<string> | null>(null);
 
-  const hubIds = crossHubs.map((h) => `hub:${h.hub_id}`);
-  const scamId = topScam ? `scam:${topScam.event_id}` : null;
-  const chipIds = [...hubIds, ...(scamId ? [scamId] : [])];
+  const chipIds = notices.map((n) => n.id);
   const idKey = chipIds.join("|");
 
   useGSAP(() => {
@@ -76,55 +178,31 @@ export default function AlertChips({
 
   return (
     <div ref={container} className="pointer-events-auto absolute right-4 top-16 z-20 flex w-[19rem] max-w-[calc(100vw-2rem)] flex-col gap-2 overflow-hidden">
-      {crossHubs.map((h, i) => {
-        // scam-bearing hubs read as critical (red), others as warning (amber)
-        const critical = h.domains.includes("scam") || h.domains.includes("fraud_ring");
+      {notices.map((n, i) => {
+        const Icon = ICONS[n.kind];
+        // Severity is the chip's own score, not its kind: a weak signal must not
+        // look critical because of the domain it came from.
+        const critical = n.corroboration > 1 || n.score >= 0.9;
         return (
           <button
-            key={h.hub_id}
-            data-chip-id={`hub:${h.hub_id}`}
-            onClick={() => onLocate({ lat: h.lat, lon: h.lon })}
+            key={n.id}
+            data-chip-id={n.id}
+            onClick={n.locate ? () => onLocate(n.locate!) : onOpenAll}
             className={`gsap-chip glass w-full border-l-2 p-3 text-left transition-[filter] hover:brightness-125 ${
               critical ? "!border-l-red-500/70" : "!border-l-amber-500/70"
             }`}
           >
             <div className="flex items-center gap-1.5">
-              <MapPin className={`h-3.5 w-3.5 ${critical ? "text-red-400" : "text-amber-400"}`} />
-              <span className="text-[12px] font-medium text-zinc-100">
-                {h.tier === "coordinated" ? "Coordinated hub" : "Multi-signal hub"} — {h.district ?? "unknown"}
+              <Icon className={`h-3.5 w-3.5 shrink-0 ${critical ? "text-red-400" : "text-amber-400"}`} />
+              <span className="truncate text-[12px] font-medium text-zinc-100">{n.title}</span>
+              <span className="ml-auto shrink-0 text-[10px] text-zinc-500">
+                {n.at ? clockTime(n.at) : i === 0 ? "live" : ""}
               </span>
-              {i === 0 && (
-                <span className="ml-auto text-[9px] uppercase tracking-widest text-zinc-500">
-                  live
-                </span>
-              )}
             </div>
-            <div className="mt-1 text-[10px] text-zinc-400">
-              {h.n_points} signals · {h.domains.map(titleCase).join(" + ")}
-            </div>
+            <div className="mt-1 text-[10px] text-zinc-400">{n.detail}</div>
           </button>
         );
       })}
-
-      {topScam && (
-        <button
-          data-chip-id={scamId ?? undefined}
-          onClick={
-            topScam.location_hint?.lat != null
-              ? () => onLocate({ lat: topScam.location_hint!.lat!, lon: topScam.location_hint!.lon! })
-              : onOpenAll
-          }
-          className="gsap-chip glass w-full border-l-2 !border-l-red-500/70 p-3 text-left transition-[filter] hover:brightness-125"
-        >
-          <div className="flex items-center gap-1.5">
-            <Phone className="h-3.5 w-3.5 text-red-400" />
-            <span className="text-[12px] font-medium text-zinc-100">
-              {titleCase(topScam.scam_type ?? "scam")} flagged — {topScam.location_hint?.district ?? "?"}
-            </span>
-            <span className="ml-auto text-[10px] text-zinc-500">{clockTime(topScam.timestamp)}</span>
-          </div>
-        </button>
-      )}
 
       {onOpenAll && (
         <button
