@@ -73,7 +73,7 @@ Keyless free map tiles; LLM failover chain ends in a deterministic template; das
 per-module; everything works with **zero API keys**.
 
 ### Slide 12 — Citizen: multilingual + multi-channel (delivered)
-- **12 languages** (Sarvam AI translate → Fraud Shield → advisory back) — a wrapper, not a retrain.
+- **22 languages** — all 22 scheduled Indian languages (Sarvam AI translate → Fraud Shield → advisory back) — a wrapper, not a retrain.
 - **Live-call detection:** stream a call transcript turn-by-turn; risk climbs and **intercepts the
   scam mid-call, before the transfer** (Citizen Portal → Live Call in the demo).
 - **WhatsApp** transport adapter over the same pipeline. Fails safe: no key → English passthrough.

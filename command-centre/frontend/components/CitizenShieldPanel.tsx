@@ -98,7 +98,7 @@ export default function CitizenShieldPanel({ onClose }: { onClose: () => void })
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-lg font-semibold text-zinc-100">Citizen Fraud Shield</h2>
             <span className="border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-violet-300">
-              12 languages
+              22 languages
             </span>
             <span
               className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${

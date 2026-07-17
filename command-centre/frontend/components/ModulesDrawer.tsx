@@ -110,7 +110,7 @@ export default function ModulesDrawer({
               <span className="font-medium">Citizen Portal · Fraud Shield</span>
               <ArrowUpRight className="h-3 w-3" />
             </div>
-            <div className="text-[10px] text-zinc-400 mt-1">Check scams in 12 languages · live-call detection.</div>
+            <div className="text-[10px] text-zinc-400 mt-1">Check scams in 22 languages · live-call detection.</div>
           </button>
           <a href="#" target="_blank" className="block p-2 bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
             <div className="flex items-center justify-between text-xs text-zinc-200">

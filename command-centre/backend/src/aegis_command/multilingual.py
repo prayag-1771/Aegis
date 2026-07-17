@@ -22,7 +22,8 @@ import httpx
 SARVAM_URL = "https://api.sarvam.ai/translate"
 BACKEND_ROOT = Path(__file__).resolve().parents[2]  # command-centre/backend/
 
-# English + 11 scheduled Indian languages = the "12 languages". Sarvam codes.
+# English + all 22 scheduled Indian languages (8th Schedule). Every one of these
+# is confirmed supported by the sarvam-translate:v1 model with this key.
 LANGUAGES: dict[str, str] = {
     "en-IN": "English",
     "hi-IN": "Hindi",
@@ -36,6 +37,17 @@ LANGUAGES: dict[str, str] = {
     "pa-IN": "Punjabi",
     "od-IN": "Odia",
     "as-IN": "Assamese",
+    "ur-IN": "Urdu",
+    "sa-IN": "Sanskrit",
+    "ne-IN": "Nepali",
+    "sd-IN": "Sindhi",
+    "kok-IN": "Konkani",
+    "mai-IN": "Maithili",
+    "doi-IN": "Dogri",
+    "brx-IN": "Bodo",
+    "mni-IN": "Manipuri (Meitei)",
+    "sat-IN": "Santali",
+    "ks-IN": "Kashmiri",
 }
 
 
@@ -76,17 +88,24 @@ def translate(text: str, target: str, source: str = "auto") -> tuple[str, str, b
     key = sarvam_key()
     if not key:
         return text, source, False
+    # Sarvam caps input length; a scam message / short advisory fits well under.
+    payload = {
+        "input": text[:900],
+        "source_language_code": source,
+        "target_language_code": target,
+    }
+    # sarvam-translate:v1 covers ALL 22 scheduled languages but requires an
+    # explicit source. The advisory step (source="en-IN") uses it, so every
+    # language is reachable. The input step (source="auto") omits the model and
+    # uses the default engine, which supports auto-detection.
+    if source != "auto":
+        payload["model"] = "sarvam-translate:v1"
     try:
         with httpx.Client(timeout=8.0) as client:
             r = client.post(
                 SARVAM_URL,
                 headers={"api-subscription-key": key, "Content-Type": "application/json"},
-                # Sarvam caps input length; a scam message / short advisory fits well under.
-                json={
-                    "input": text[:900],
-                    "source_language_code": source,
-                    "target_language_code": target,
-                },
+                json=payload,
             )
             r.raise_for_status()
             d = r.json()
