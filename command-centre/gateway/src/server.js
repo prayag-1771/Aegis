@@ -115,6 +115,15 @@ app.get("/events", (_req, res) => forward(res, "/events"));
 app.get("/hotspots", (_req, res) => forward(res, "/hotspots"));
 app.get("/fusion/latest", (_req, res) => forward(res, "/fusion/latest"));
 app.post("/fuse", (_req, res) => forward(res, "/fuse", { method: "POST" }));
+// Entry channels INTO a district — works from a single seizure, unlike the
+// cluster-shape trail below. `district` is required.
+app.get("/supply-trail/routes", (req, res) => {
+  const qs = new URLSearchParams();
+  if (req.query.district) qs.set("district", req.query.district);
+  if (req.query.k) qs.set("k", req.query.k);
+  forward(res, `/supply-trail/routes?${qs}`);
+});
+
 // `district` scopes the trail to one city ("where are Jamtara's notes coming
 // from?"); `mode` filters the corridor type. Both optional, both forwarded.
 app.get("/supply-trail", (req, res) => {

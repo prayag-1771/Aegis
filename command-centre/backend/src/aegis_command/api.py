@@ -450,3 +450,97 @@ def supply_trail(mode: str | None = None, district: str | None = None) -> dict:
         "district": district,
         "disclaimer": disclaimer,
     }
+
+
+@app.get("/supply-trail/routes")
+def supply_trail_routes(district: str, k: int = 3) -> dict:
+    """How could fake notes have physically REACHED this district?
+
+    A different question from /supply-trail, and one that works from a single
+    seizure. /supply-trail reads direction from the shape of a seizure cluster,
+    so one seizure tells it nothing. But a city with a railway station, a
+    highway and an airport has enumerable entry channels regardless of how many
+    notes were found there — so rank the channels instead of the cluster.
+
+    Sources are the documented printing presses in the FIR corpus (Asansol,
+    Vadodara, Deoghar carry a `printing_press` tag from cited press reports),
+    not guesses. Each candidate route is scored by the deterministic engine on
+    distance, mode risk and FIR corroboration; an LLM then explains the
+    ranking in plain English but never changes it.
+
+    Query params:
+        district: the seizure district to route INTO (required)
+        k: routes per source (default 3)
+    """
+    from aegis_supply_trail.engine import _hav, _nearest_node_key, load_fir_corpus
+    from aegis_supply_trail.narrate import build_facts, narrate_routes_safe
+    from aegis_supply_trail.network import attach_access, build_network
+    from aegis_supply_trail.routes import plausible_routes
+
+    _, counterfeits, _ = store.snapshot()
+    want = district.strip().casefold()
+    here = [
+        c for c in counterfeits
+        if c.get("verdict") in ("fake", "uncertain")
+        and (c.get("location_hint") or {}).get("district", "").casefold() == want
+        and c["location_hint"].get("lat")
+    ]
+    if not here:
+        raise HTTPException(
+            404,
+            f"No located fake-note seizures in {district}. Entry routes are only "
+            "meaningful where notes were actually found.",
+        )
+
+    lat = here[0]["location_hint"]["lat"]
+    lon = here[0]["location_hint"]["lon"]
+
+    fir_corpus = load_fir_corpus()
+    net = build_network()
+    dst = attach_access(net, district, lat, lon)
+
+    # Candidate sources: FIR-documented printing presses only. A press is where
+    # notes are MADE — routing from a mere circulation seizure would just show
+    # how two downstream cities connect, which answers nothing.
+    presses = [f for f in fir_corpus if "printing_press" in (f.crime_types or [])]
+
+    candidates: list[dict] = []
+    for press in presses:
+        if _hav(press.lat, press.lon, lat, lon) < 5.0:
+            continue  # the press is here — no inbound route to compute
+        src_key, _d = _nearest_node_key(net, press.lat, press.lon)
+        for r in plausible_routes(net, src_key, dst, k=k, fir_corpus=fir_corpus):
+            r["source"] = press.district
+            r["source_ref"] = press.ref
+            r["source_evidence"] = press.source
+            candidates.append(r)
+
+    candidates.sort(key=lambda r: r["plausibility"], reverse=True)
+    candidates = candidates[:k]
+
+    if not candidates:
+        raise HTTPException(
+            404, f"No transport route from a documented printing press reaches {district}."
+        )
+
+    facts = build_facts(district, candidates, len(here))
+    narrative, engine = narrate_routes_safe(facts)
+
+    return {
+        "district": district,
+        "seizures_in_district": len(here),
+        "sources_considered": [
+            {"district": p.district, "ref": p.ref, "evidence": p.source} for p in presses
+        ],
+        "routes": candidates,
+        "narrative": narrative.model_dump(),
+        "narrator": engine,
+        "disclaimer": (
+            "Candidate entry channels ranked by a deterministic engine on distance, "
+            "mode risk and FIR corroboration. Sources are printing presses documented "
+            "in cited press/police reports. plausibility is a hypothesis score in "
+            "[0, 0.9], never a probability of guilt — a banknote carries no origin "
+            "label and nothing here observed the notes moving. Investigative "
+            "direction only, not forensic proof."
+        ),
+    }
