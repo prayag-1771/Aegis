@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Aegis Response Action",
+  "description": "A concrete disruptive/response action the platform recommends off a detection or fusion event. This is the 'disrupt/respond' step — turning a detection into a timestamped, auditable action package aimed at a specific recipient (bank, telecom, MHA/I4C, investigating officer, or the citizen). Dispatch is SIMULATED for demonstration: no live government/bank/telecom integration is connected. The action never asserts guilt — it is decision-support with a full audit trail.",
+  "type": "object",
+  "required": [
+    "action_id",
+    "created_at",
+    "action_type",
+    "title",
+    "priority",
+    "status",
+    "recipient",
+    "trigger",
+    "target",
+    "simulated"
+  ],
+  "properties": {
+    "action_id": {
+      "type": "string",
+      "description": "Stable id: '<action_type>:<primary_target>'. Stable so re-deriving does not wipe an officer's dispatch/acknowledge state."
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO-8601 timestamp the action was first proposed."
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "account_freeze",
+        "telecom_block",
+        "mha_alert",
+        "citizen_intercept",
+        "review_queue"
+      ],
+      "description": "account_freeze = ask beneficiary bank/NPCI to freeze a mule account; telecom_block = ask DoT/operator to block a scam number; mha_alert = consolidated national alert to I4C/MHA; citizen_intercept = pre-transfer warning / transaction hold for a potential victim; review_queue = push an intelligence package to an investigating officer."
+    },
+    "title": { "type": "string", "description": "One-line human-readable action summary." },
+    "priority": {
+      "type": "string",
+      "enum": ["critical", "high", "medium"],
+      "description": "critical = money actively moving or victim mid-transfer; high = active infrastructure to disable; medium = investigative follow-up."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["proposed", "dispatched", "acknowledged", "dismissed"],
+      "description": "proposed = system recommends it; dispatched = (simulated) sent to the recipient; acknowledged = recipient/officer confirmed receipt/action; dismissed = ruled out by an officer."
+    },
+    "recipient": {
+      "type": "string",
+      "description": "Who would action this in the real workflow (e.g. 'Beneficiary bank via NPCI', 'DoT / operator (CEIR)', 'I4C / MHA (NCRP 1930)', 'Investigating officer')."
+    },
+    "trigger": {
+      "type": "object",
+      "required": ["source", "refs", "rationale"],
+      "properties": {
+        "source": { "type": "string", "description": "What produced the action (e.g. 'fusion.money_trail', 'scam.detection', 'fraud_graph.ring', 'intel.campaign')." },
+        "refs": { "type": "array", "items": { "type": "string" }, "description": "Evidence event ids / ring ids that justify the action — the audit chain." },
+        "rationale": { "type": "string", "description": "Plain-English reason this action is recommended." }
+      },
+      "additionalProperties": false
+    },
+    "target": {
+      "type": "object",
+      "description": "What the action operates on. Fields present depend on action_type.",
+      "properties": {
+        "account_id": { "type": ["string", "null"] },
+        "ring_id": { "type": ["string", "null"] },
+        "phone_number": { "type": ["string", "null"] },
+        "amount": { "type": ["number", "null"] },
+        "district": { "type": ["string", "null"] },
+        "scam_event_id": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "payload": {
+      "type": ["object", "null"],
+      "description": "The structured body that would be transmitted to the recipient (alert JSON, freeze request, etc.)."
+    },
+    "sla_minutes": {
+      "type": ["integer", "null"],
+      "description": "Target time-to-action in minutes for this priority — used to show lead time against the fraud clock."
+    },
+    "audit": {
+      "type": "array",
+      "description": "Append-only status history. Every state change adds an entry — this is what makes the package auditable.",
+      "items": {
+        "type": "object",
+        "required": ["at", "actor", "event"],
+        "properties": {
+          "at": { "type": "string" },
+          "actor": { "type": "string" },
+          "event": { "type": "string" },
+          "note": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "simulated": {
+      "type": "boolean",
+      "description": "Always true in this build — dispatch is demonstrated, not wired to a live recipient."
+    },
+    "disclaimer": { "type": "string" }
+  },
+  "additionalProperties": false
+}

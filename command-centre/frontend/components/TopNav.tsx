@@ -12,6 +12,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "modules", label: "Modules" },
   { key: "fraud-rings", label: "Fraud Rings" },
   { key: "alerts", label: "Alerts & Analytics" },
+  { key: "disrupt", label: "Disrupt" },
   { key: "research", label: "Research Lab" },
 ];
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from collections import deque
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 
@@ -26,6 +27,9 @@ class EventStore:
         self.counterfeits: deque[dict] = deque(maxlen=MAX_EVENTS)
         self.fraud_graph: dict | None = None
         self.last_fusion: dict | None = None
+        # Response/disrupt actions, keyed by stable action_id. Insertion order is
+        # preserved; the derive-merge keeps an officer's dispatch/ack state.
+        self.actions: dict[str, dict] = {}
 
     # ---- writes ----
     def add_scam(self, event: dict) -> None:
@@ -43,6 +47,56 @@ class EventStore:
     def set_fusion(self, payload: dict) -> None:
         with self._lock:
             self.last_fusion = payload
+
+    # ---- response / disrupt actions ----
+    def set_actions(self, derived: list[dict]) -> list[dict]:
+        """Merge freshly-derived actions over the current set.
+
+        An action an officer has already dispatched/acknowledged/dismissed keeps
+        its status and audit trail (history is never rewritten). A still-`proposed`
+        action is replaced by the fresh derivation so the queue tracks current
+        state. Actions no longer derived are dropped only if still `proposed`.
+        """
+        with self._lock:
+            merged: dict[str, dict] = {}
+            derived_ids = set()
+            for a in derived:
+                aid = a["action_id"]
+                derived_ids.add(aid)
+                existing = self.actions.get(aid)
+                if existing and existing.get("status") != "proposed":
+                    merged[aid] = existing  # preserve officer state + audit
+                else:
+                    merged[aid] = a
+            # Keep acted-on actions that current state no longer re-derives.
+            for aid, a in self.actions.items():
+                if aid not in derived_ids and a.get("status") != "proposed":
+                    merged[aid] = a
+            self.actions = merged
+            return list(self.actions.values())
+
+    def list_actions(self) -> list[dict]:
+        with self._lock:
+            return list(self.actions.values())
+
+    def update_action(self, action_id: str, status: str, actor: str, note: str) -> dict | None:
+        """Transition an action and append an immutable audit entry."""
+        with self._lock:
+            action = self.actions.get(action_id)
+            if action is None:
+                return None
+            action["status"] = status
+            if status == "dispatched":
+                action["dispatched_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            action.setdefault("audit", []).append(
+                {
+                    "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    "actor": actor,
+                    "event": status,
+                    "note": note,
+                }
+            )
+            return action
 
     # ---- reads ----
     def snapshot(self) -> tuple[list[dict], list[dict], dict | None]:

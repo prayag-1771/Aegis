@@ -222,7 +222,8 @@ def events() -> dict:
 
 @app.post("/fuse")
 def fuse_now() -> dict:
-    """THE fusion moment: correlate everything currently known."""
+    """THE fusion moment: correlate everything currently known, then derive the
+    disruptive actions it warrants — detection immediately becomes response."""
     from aegis_fusion.fuse import fuse, validate_against_contract
 
     scams, counterfeits, fraud_graph = store.snapshot()
@@ -230,7 +231,102 @@ def fuse_now() -> dict:
     payload = json.loads(output.model_dump_json())
     validate_against_contract(payload)
     store.set_fusion(payload)
+    _derive_and_store_actions()
     return payload
+
+
+# ── Response / disrupt actions ──────────────────────────────────────────────
+def _validate_action(action: dict) -> dict:
+    try:
+        jsonschema.validate(instance=action, schema=_schema("response_action"))
+    except jsonschema.ValidationError as exc:  # generator bug, not user input
+        raise HTTPException(500, f"response action violates its contract: {exc.message}") from exc
+    return action
+
+
+def _derive_and_store_actions() -> list[dict]:
+    """Re-derive actions from current state and merge them into the store.
+    Called after fusion and by POST /actions/derive."""
+    from .response import derive_actions
+
+    scams, counterfeits, fraud_graph = store.snapshot()
+    derived = derive_actions(scams, counterfeits, fraud_graph, store.last_fusion)
+    for a in derived:
+        _validate_action(a)
+    return store.set_actions(derived)
+
+
+def _actions_response(actions: list[dict]) -> dict:
+    order = {"critical": 0, "high": 1, "medium": 2}
+    actions = sorted(actions, key=lambda a: (order.get(a.get("priority"), 3), a.get("created_at", "")))
+    counts_status: dict[str, int] = {}
+    counts_type: dict[str, int] = {}
+    for a in actions:
+        counts_status[a["status"]] = counts_status.get(a["status"], 0) + 1
+        counts_type[a["action_type"]] = counts_type.get(a["action_type"], 0) + 1
+    return {
+        "actions": actions,
+        "counts_by_status": counts_status,
+        "counts_by_type": counts_type,
+        "open": sum(1 for a in actions if a["status"] == "proposed"),
+        "disclaimer": (
+            "Disrupt/respond recommendations derived deterministically from current "
+            "detections. Dispatch is simulated — no live bank/telecom/MHA integration "
+            "is connected."
+        ),
+    }
+
+
+@app.get("/actions")
+def actions_list() -> dict:
+    """Current response/disrupt queue. Derives on first read so it is never empty
+    when detections already exist (e.g. before any manual /fuse)."""
+    current = store.list_actions()
+    if not current:
+        current = _derive_and_store_actions()
+    return _actions_response(current)
+
+
+@app.post("/actions/derive")
+def actions_derive() -> dict:
+    """Recompute the action queue from current state (idempotent; preserves any
+    dispatched/acknowledged actions)."""
+    return _actions_response(_derive_and_store_actions())
+
+
+@app.post("/actions/{action_id:path}/dispatch")
+def actions_dispatch(action_id: str) -> dict:
+    """Simulate transmitting the action to its recipient. Records a timestamped,
+    auditable dispatch — no live integration is contacted."""
+    action = store.update_action(
+        action_id, "dispatched", actor="operator",
+        note="Simulated dispatch to recipient — demonstration only.",
+    )
+    if action is None:
+        raise HTTPException(404, f"no action {action_id}")
+    return action
+
+
+@app.post("/actions/{action_id:path}/acknowledge")
+def actions_acknowledge(action_id: str) -> dict:
+    action = store.update_action(
+        action_id, "acknowledged", actor="recipient",
+        note="Recipient acknowledged the action.",
+    )
+    if action is None:
+        raise HTTPException(404, f"no action {action_id}")
+    return action
+
+
+@app.post("/actions/{action_id:path}/dismiss")
+def actions_dismiss(action_id: str) -> dict:
+    action = store.update_action(
+        action_id, "dismissed", actor="operator",
+        note="Ruled out by reviewing officer.",
+    )
+    if action is None:
+        raise HTTPException(404, f"no action {action_id}")
+    return action
 
 
 @app.get("/fusion/latest")

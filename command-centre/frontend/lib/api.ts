@@ -482,3 +482,75 @@ export async function fetchResearch(): Promise<ResearchResponse> {
   if (!r.ok) throw new Error(`research failed: ${r.status}`);
   return r.json();
 }
+
+// ── Response / Disrupt actions ───────────────────────────────────────────────
+
+export type ActionType =
+  | "account_freeze"
+  | "telecom_block"
+  | "mha_alert"
+  | "citizen_intercept"
+  | "review_queue";
+export type ActionStatus = "proposed" | "dispatched" | "acknowledged" | "dismissed";
+export type ActionPriority = "critical" | "high" | "medium";
+
+export interface AuditEntry {
+  at: string;
+  actor: string;
+  event: string;
+  note?: string;
+}
+
+export interface ResponseAction {
+  action_id: string;
+  created_at: string;
+  action_type: ActionType;
+  title: string;
+  priority: ActionPriority;
+  status: ActionStatus;
+  recipient: string;
+  trigger: { source: string; refs: string[]; rationale: string };
+  target: {
+    account_id?: string | null;
+    ring_id?: string | null;
+    phone_number?: string | null;
+    amount?: number | null;
+    district?: string | null;
+    scam_event_id?: string | null;
+  };
+  payload?: Record<string, unknown> | null;
+  sla_minutes?: number | null;
+  audit?: AuditEntry[];
+  dispatched_at?: string;
+  simulated: boolean;
+  disclaimer?: string;
+}
+
+export interface ActionsResponse {
+  actions: ResponseAction[];
+  counts_by_status: Record<string, number>;
+  counts_by_type: Record<string, number>;
+  open: number;
+  disclaimer: string;
+}
+
+/** The disrupt/respond queue — concrete actions derived from current detections. */
+export async function fetchActions(): Promise<ActionsResponse> {
+  const r = await fetch(`${API_BASE}/actions`);
+  if (!r.ok) throw new Error(`actions failed: ${r.status}`);
+  return r.json();
+}
+
+export const deriveActions = () => post<ActionsResponse>("/actions/derive", {});
+
+/** Transition an action (dispatch = simulated send; acknowledge; dismiss). */
+export async function actOnAction(
+  actionId: string,
+  op: "dispatch" | "acknowledge" | "dismiss",
+): Promise<ResponseAction> {
+  const r = await fetch(`${API_BASE}/actions/${encodeURIComponent(actionId)}/${op}`, {
+    method: "POST",
+  });
+  if (!r.ok) throw new Error(`action ${op} failed: ${r.status}`);
+  return r.json();
+}

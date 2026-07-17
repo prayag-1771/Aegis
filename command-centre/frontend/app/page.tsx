@@ -26,6 +26,7 @@ import type { TabKey } from "@/components/types";
 import ModulesDrawer from "@/components/ModulesDrawer";
 import ResearchPanel from "@/components/ResearchPanel";
 import RingViewer from "@/components/RingViewer";
+import DisruptPanel from "@/components/DisruptPanel";
 import ToastContainer, { type Toast } from "@/components/ToastContainer";
 import TopNav from "@/components/TopNav";
 import InfoPanel from "@/components/InfoPanel";
@@ -749,6 +750,13 @@ export default function Page() {
       {activeTab === "research" && (
         <div className="absolute inset-0 z-40 pointer-events-auto">
           <ResearchPanel onClose={() => setActiveTab("map")} />
+        </div>
+      )}
+
+      {/* Disrupt & Respond — detections turned into concrete, auditable actions */}
+      {activeTab === "disrupt" && (
+        <div className="absolute inset-0 z-40 pointer-events-auto">
+          <DisruptPanel onClose={() => setActiveTab("map")} />
         </div>
       )}
 
