@@ -341,11 +341,19 @@ export default function CrimeMap({
 
     const animateDashes = () => {
       offset = (offset + dashStep) % 8; // marches dashes in the flow direction
-      if (map.getLayer("trail-dashes")) {
-        map.setPaintProperty("trail-dashes", "line-dasharray", [
-          Math.abs(offset % 4),
-          4,
-        ]);
+      // A queued frame can land after the map is removed (unmount, StrictMode
+      // remount), so re-check the map is still alive — not just the layer.
+      try {
+        if (mapRef.current === map && map.getLayer("trail-dashes")) {
+          map.setPaintProperty("trail-dashes", "line-dasharray", [
+            Math.abs(offset % 4),
+            4,
+          ]);
+        } else {
+          return; // map gone — stop rather than re-queue
+        }
+      } catch {
+        return;
       }
       trailAnimRef.current = requestAnimationFrame(animateDashes);
     };
@@ -484,6 +492,18 @@ export default function CrimeMap({
         cancelAnimationFrame(trailAnimRef.current);
         trailAnimRef.current = null;
       }
+      // Markers must come off here, not only at the top of the next run. On
+      // unmount there IS no next run, so they stayed attached to a map being
+      // torn down; MapLibre then projects a marker whose transform is already
+      // gone and throws "Cannot read properties of null (reading 'y')".
+      trailMarkersRef.current.forEach((m) => {
+        try {
+          m.remove();
+        } catch {
+          /* map already destroyed — nothing to detach from */
+        }
+      });
+      trailMarkersRef.current = [];
     };
   }, [trail, ready]);
 

@@ -44,6 +44,48 @@
   .chip { font-size: 11.5px; padding: 2px 9px; border-radius: 999px;
           background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
   .explain { margin-top: 8px; font-size: 13.5px; }
+
+  /* ── Report Payment button + form ── */
+  .report-payment-btn {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+    padding: 7px 14px; border-radius: 8px; cursor: pointer; font: inherit; font-size: 12.5px;
+    font-weight: 600; border: 1px solid var(--scam);
+    background: rgba(255,89,100,.1); color: var(--scam);
+    transition: all .2s;
+  }
+  .report-payment-btn:hover { background: rgba(255,89,100,.2); transform: translateY(-1px); }
+  .report-payment-btn.done { border-color: var(--legit); color: var(--legit);
+    background: rgba(47,191,113,.1); cursor: default; pointer-events: none; }
+  .payment-form {
+    display: none; margin-top: 10px; padding: 10px 14px; border-radius: 10px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    animation: slideDown .25s ease;
+  }
+  .payment-form.open { display: block; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .payment-form label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+  .payment-form .form-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  .payment-form input, .payment-form select {
+    background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 13px;
+  }
+  .payment-form input:focus { outline: none; border-color: var(--accent); }
+  .payment-form input[type=number] { width: 150px; }
+  .payment-form .submit-payment {
+    padding: 7px 16px; border-radius: 8px; border: none; cursor: pointer;
+    background: var(--scam); color: #fff; font: inherit; font-size: 12.5px; font-weight: 600;
+    transition: all .2s;
+  }
+  .payment-form .submit-payment:hover { filter: brightness(1.15); }
+  .payment-trail {
+    margin-top: 8px; padding: 8px 12px; border-radius: 8px;
+    background: rgba(255,89,100,.08); border: 1px solid rgba(255,89,100,.2);
+    font-size: 12.5px; color: var(--text);
+    animation: slideDown .3s ease;
+  }
+  .payment-trail .trail-status { color: var(--scam); font-weight: 600; }
+  .payment-trail.found .trail-status { color: var(--legit); }
+
   footer { padding: 14px 20px 18px; background: var(--panel); border-top: 1px solid var(--line); }
   .samples { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
   .samples button {
@@ -183,12 +225,44 @@ async function send() {
     } catch { /* command centre offline — fine */ }
     const pct = Math.round(r.risk_score * 100);
     const color = VERDICT_COLOR[r.verdict];
+    const isScammy = r.verdict === 'scam' || r.verdict === 'suspicious';
+    const formId = 'pf_' + r.event_id;
     thinking.innerHTML = `
       <span class="verdict ${r.verdict}">${r.verdict}</span>
       <div class="riskbar"><div style="width:${pct}%;background:${color}"></div></div>
       <div class="meta">risk ${pct}% · type: ${esc(r.scam_type)} · ${esc(r.event_id)}${relayed ? " · ⇢ command centre" : ""}</div>
       ${r.markers.length ? `<div class="chips">${r.markers.map(m => `<span class="chip">${esc(m)}</span>`).join("")}</div>` : ""}
-      <div class="explain">${esc(r.explanation)}</div>`;
+      <div class="explain">${esc(r.explanation)}</div>
+      ${isScammy ? `
+        <button class="report-payment-btn" id="rpb_${formId}" onclick="togglePaymentForm('${formId}')">
+          💰 Report Payment — Did you pay?
+        </button>
+        <div class="payment-form" id="${formId}">
+          <div class="form-row">
+            <div>
+              <label>Amount paid (₹)</label>
+              <input type="number" id="amt_${formId}" placeholder="e.g. 49999" min="1" step="1">
+            </div>
+            <div>
+              <label>Method</label>
+              <select id="method_${formId}">
+                <option value="upi">UPI</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="cash">Cash</option>
+                <option value="giftcard">Gift Card</option>
+                <option value="crypto">Crypto</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <button class="submit-payment" onclick="submitPayment('${formId}', '${r.event_id}')">Trace Money →</button>
+            </div>
+          </div>
+        </div>
+        <div id="trail_${formId}"></div>
+      ` : ''}`;
+    // Store the result so we can attach payment info later
+    if (isScammy) window['_scam_' + r.event_id] = r;
   } catch (e) {
     thinking.innerHTML = `<span style="color:var(--scam)">Error:</span> ${esc(String(e.message || e))}`;
   } finally {
@@ -201,6 +275,81 @@ sendBtn.onclick = send;
 input.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
 });
+
+function togglePaymentForm(formId) {
+  const form = document.getElementById(formId);
+  form.classList.toggle('open');
+  if (form.classList.contains('open')) {
+    const amtInput = document.getElementById('amt_' + formId);
+    if (amtInput) amtInput.focus();
+  }
+}
+
+async function submitPayment(formId, eventId) {
+  const amtInput = document.getElementById('amt_' + formId);
+  const methodSel = document.getElementById('method_' + formId);
+  const trailDiv = document.getElementById('trail_' + formId);
+  const btn = document.getElementById('rpb_' + formId);
+  const amount = parseFloat(amtInput.value);
+  if (!amount || amount <= 0) { amtInput.style.borderColor = 'var(--scam)'; return; }
+
+  const method = methodSel.value;
+  const stored = window['_scam_' + eventId];
+  if (!stored) return;
+
+  // Attach reported_payment to the scam event
+  stored.reported_payment = { amount, method };
+
+  // Update button
+  btn.innerHTML = `✅ Reported ₹${amount.toLocaleString('en-IN')} via ${method}`;
+  btn.classList.add('done');
+  document.getElementById(formId).classList.remove('open');
+
+  // Show "tracing..." message
+  trailDiv.innerHTML = '<div class="payment-trail"><span class="trail-status">🔍 Tracing payment through fraud rings…</span></div>';
+
+  // Re-send to command centre with payment info
+  try {
+    const resp = await fetch(`${COMMAND_CENTRE}/ingest/scam`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(stored),
+    });
+    if (resp.ok) {
+      // Force the command centre to re-run fusion with the new payment data
+      try {
+        const fusionResp = await fetch(`${COMMAND_CENTRE}/fuse`, { method: 'POST' });
+        if (fusionResp.ok) {
+          const fusion = await fusionResp.json();
+          const trails = fusion.money_trails || [];
+          const match = trails.find(t => t.scam_event_id === eventId);
+          if (match) {
+            trailDiv.innerHTML = `<div class="payment-trail found">
+              <span class="trail-status">💰 MONEY TRAIL FOUND</span><br>
+              ₹${amount.toLocaleString('en-IN')} traced → account <b>${esc(match.account_id)}</b>
+              in ring <b>${esc(match.ring_id)}</b>${match.district ? ' (' + esc(match.district) + ')' : ''}
+            </div>`;
+          } else {
+            trailDiv.innerHTML = `<div class="payment-trail">
+              <span class="trail-status">⇢ Payment reported to command centre</span><br>
+              No matching ring transaction found yet — investigators notified.
+            </div>`;
+          }
+        }
+      } catch { /* fusion endpoint unavailable */ }
+    } else {
+      trailDiv.innerHTML = `<div class="payment-trail">
+        <span class="trail-status">⇢ Payment reported</span><br>
+        Command centre offline — payment saved locally for later relay.
+      </div>`;
+    }
+  } catch {
+    trailDiv.innerHTML = `<div class="payment-trail">
+      <span class="trail-status">⇢ Payment recorded</span><br>
+      Command centre offline — will relay when available.
+    </div>`;
+  }
+}
 </script>
 </body>
 </html>
