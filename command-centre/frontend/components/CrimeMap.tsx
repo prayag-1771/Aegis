@@ -621,10 +621,19 @@ export default function CrimeMap({
         entryTimerRef.current = null;
       }
       entryAliveRef.current = false;
-      ["entry-glow", "entry-line", "entry-flow"].forEach((id) => {
-        if (map.getLayer(id)) map.removeLayer(id);
-      });
-      if (map.getSource("entry-src")) map.removeSource("entry-src");
+      // This cleanup can run against a map that is already destroyed: cleanups
+      // fire in definition order on unmount (map-init's remove() goes first),
+      // and after a map rebuild this closure belongs to the PREVIOUS instance.
+      // A removed map has no style, so even getLayer itself throws. Its layers
+      // died with it — "cannot inspect" simply means nothing left to remove.
+      try {
+        ["entry-glow", "entry-line", "entry-flow"].forEach((id) => {
+          if (map.getLayer(id)) map.removeLayer(id);
+        });
+        if (map.getSource("entry-src")) map.removeSource("entry-src");
+      } catch {
+        /* map already destroyed */
+      }
       entryMarkersRef.current.forEach((m) => {
         try {
           m.remove();
