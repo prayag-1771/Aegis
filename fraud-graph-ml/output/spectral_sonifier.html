@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aegis — Spectral Fraud Sonifier</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #111827;
+    --bg-card: rgba(17, 24, 39, 0.7);
+    --accent-clean: #10b981;
+    --accent-ring: #ef4444;
+    --accent-blue: #3b82f6;
+    --accent-purple: #8b5cf6;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border: rgba(148, 163, 184, 0.12);
+    --glow-clean: rgba(16, 185, 129, 0.3);
+    --glow-ring: rgba(239, 68, 68, 0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .bg-mesh {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(59,130,246,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(16,185,129,0.05) 0%, transparent 50%);
+    z-index: 0;
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem;
+  }
+
+  header {
+    text-align: center; margin-bottom: 2.5rem;
+  }
+  header h1 {
+    font-size: 2rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 0.4rem;
+  }
+  header p { color: var(--text-secondary); font-size: 0.95rem; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: box-shadow 0.3s;
+  }
+  .card:hover { box-shadow: 0 0 30px rgba(59,130,246,0.08); }
+  .card h2 {
+    font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+
+  .controls {
+    display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  button {
+    font-family: inherit; font-size: 0.85rem; font-weight: 500;
+    padding: 0.55rem 1.2rem; border: none; border-radius: 8px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-clean {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff;
+  }
+  .btn-clean:hover { box-shadow: 0 0 16px var(--glow-clean); transform: translateY(-1px); }
+  .btn-ring {
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+    color: #fff;
+  }
+  .btn-ring:hover { box-shadow: 0 0 16px var(--glow-ring); transform: translateY(-1px); }
+  .btn-stop {
+    background: var(--bg-secondary); color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .btn-stop:hover { background: #1e293b; }
+
+  select {
+    font-family: inherit; font-size: 0.85rem;
+    padding: 0.55rem 0.9rem; border-radius: 8px;
+    background: var(--bg-secondary); color: var(--text-primary);
+    border: 1px solid var(--border); outline: none;
+  }
+
+  .status {
+    font-size: 0.8rem; color: var(--text-secondary);
+    padding: 0.3rem 0.7rem; border-radius: 6px;
+    background: rgba(148,163,184,0.08);
+  }
+  .status.playing { color: var(--accent-clean); background: rgba(16,185,129,0.1); }
+
+  /* Spectrum canvas */
+  .spectrum-container {
+    position: relative; width: 100%; height: 220px;
+    background: rgba(0,0,0,0.3); border-radius: 12px;
+    overflow: hidden; margin-bottom: 1rem;
+  }
+  canvas { width: 100%; height: 100%; display: block; }
+
+  /* Community list */
+  .community-list {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+  .community-chip {
+    padding: 0.6rem 0.9rem; border-radius: 10px;
+    background: rgba(148,163,184,0.06);
+    border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.2s; font-size: 0.82rem;
+  }
+  .community-chip:hover { border-color: var(--accent-blue); }
+  .community-chip.anomaly { border-color: var(--accent-ring); }
+  .community-chip.anomaly:hover { box-shadow: 0 0 12px var(--glow-ring); }
+  .community-chip .label { font-weight: 600; }
+  .community-chip .meta { color: var(--text-secondary); font-size: 0.75rem; }
+
+  .legend {
+    display: flex; gap: 1.2rem; font-size: 0.78rem; color: var(--text-secondary);
+    margin-top: 0.7rem;
+  }
+  .legend span::before {
+    content: ''; display: inline-block; width: 10px; height: 10px;
+    border-radius: 50%; margin-right: 5px; vertical-align: middle;
+  }
+  .legend .l-clean::before { background: var(--accent-clean); }
+  .legend .l-ring::before { background: var(--accent-ring); }
+  .legend .l-normal::before { background: var(--accent-blue); }
+
+  .info-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    font-size: 0.82rem; margin-top: 0.7rem;
+  }
+  .info-grid dt { color: var(--text-secondary); }
+  .info-grid dd { font-weight: 500; text-align: right; }
+
+  .file-input-wrap {
+    display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1rem;
+  }
+  .file-input-wrap label {
+    font-size: 0.85rem; font-weight: 500;
+    padding: 0.55rem 1.2rem; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    color: #fff; cursor: pointer; transition: all 0.2s;
+  }
+  .file-input-wrap label:hover { transform: translateY(-1px); }
+  .file-input-wrap input { display: none; }
+  .file-input-wrap .filename { color: var(--text-secondary); font-size: 0.82rem; }
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="container">
+
+  <header>
+    <h1>🔊 Spectral Fraud Sonifier</h1>
+    <p>Hear the frequency signature of fraud — clean communities hum low, fraud rings screech high</p>
+  </header>
+
+  <!-- Data loader -->
+  <div class="card">
+    <h2>📂 Load Spectral Data</h2>
+    <div class="file-input-wrap">
+      <label for="fileInput">Choose spectral_data.json</label>
+      <input type="file" id="fileInput" accept=".json">
+      <span class="filename" id="fileName">No file loaded</span>
+    </div>
+    <p style="font-size:0.8rem; color:var(--text-secondary)">
+      Run <code>fraud-graph spectral</code> to generate <code>output/spectral_data.json</code>, then load it here.
+    </p>
+  </div>
+
+  <!-- Playback controls -->
+  <div class="card" id="playbackCard" style="display:none">
+    <h2>🎵 Playback</h2>
+    <div class="controls">
+      <select id="communitySelect"></select>
+      <button class="btn-clean" id="btnPlayClean" style="display:none">▶ Play Clean</button>
+      <button class="btn-ring" id="btnPlayRing" style="display:none">▶ Play Ring</button>
+      <button class="btn-clean" id="btnPlaySelected">▶ Play Selected</button>
+      <button class="btn-stop" id="btnStop">⏹ Stop</button>
+      <span class="status" id="status">Ready</span>
+    </div>
+
+    <!-- Spectrum visualization -->
+    <div class="spectrum-container">
+      <canvas id="spectrumCanvas"></canvas>
+    </div>
+
+    <!-- Info -->
+    <dl class="info-grid" id="infoGrid"></dl>
+
+    <div class="legend">
+      <span class="l-clean">Clean community</span>
+      <span class="l-ring">Ring / anomalous</span>
+      <span class="l-normal">Normal community</span>
+    </div>
+  </div>
+
+  <!-- Community chips -->
+  <div class="card" id="communityCard" style="display:none">
+    <h2>🏘️ Communities</h2>
+    <div class="community-list" id="communityList"></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tone@15/build/Tone.min.js"></script>
+<script>
+(function() {
+  let spectralData = null;
+  let synths = [];
+  let isPlaying = false;
+  let animFrame = null;
+  let currentSED = null;
+  let currentEigenvalues = null;
+  let currentLabel = '';
+
+  const canvas = document.getElementById('spectrumCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // ── File loading ──
+  document.getElementById('fileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('fileName').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        spectralData = JSON.parse(ev.target.result);
+        initUI();
+      } catch (err) {
+        alert('Invalid JSON: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  function initUI() {
+    document.getElementById('playbackCard').style.display = '';
+    document.getElementById('communityCard').style.display = '';
+
+    // Populate community select
+    const sel = document.getElementById('communitySelect');
+    sel.innerHTML = '';
+    spectralData.communities.forEach((c, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `Community ${c.id} (${c.size} nodes${c.anomaly ? ' ⚠️' : ''})`;
+      sel.appendChild(opt);
+    });
+
+    // Show/hide clean/ring buttons
+    const hasShift = spectralData.shift != null;
+    document.getElementById('btnPlayClean').style.display = hasShift ? '' : 'none';
+    document.getElementById('btnPlayRing').style.display = hasShift ? '' : 'none';
+
+    // Build community chips
+    const list = document.getElementById('communityList');
+    list.innerHTML = '';
+    spectralData.communities.forEach((c, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'community-chip' + (c.anomaly ? ' anomaly' : '');
+      chip.innerHTML = `
+        <div class="label">Community ${c.id} ${c.anomaly ? '⚠️' : ''}</div>
+        <div class="meta">${c.size} nodes · RQ: ${c.rayleigh.toFixed(4)}</div>
+      `;
+      chip.addEventListener('click', () => {
+        sel.value = i;
+        playCommunity(i);
+      });
+      list.appendChild(chip);
+    });
+
+    resizeCanvas();
+    drawSpectrum(spectralData.communities[0].eigenvalues, spectralData.communities[0].sed, 'Community 0');
+  }
+
+  // ── Tone.js playback ──
+  function eigenToFreq(eigenvalue, fMin = 200, fMax = 4000, lMax = 2) {
+    const t = Math.min(Math.max(eigenvalue / lMax, 0), 1);
+    return fMin * Math.pow(fMax / fMin, t);
+  }
+
+  function stopAll() {
+    synths.forEach(s => { try { s.dispose(); } catch(e){} });
+    synths = [];
+    isPlaying = false;
+    document.getElementById('status').textContent = 'Stopped';
+    document.getElementById('status').className = 'status';
+    if (animFrame) cancelAnimationFrame(animFrame);
+  }
+
+  async function playSpectrum(eigenvalues, sed, label) {
+    stopAll();
+    await Tone.start();
+    isPlaying = true;
+    currentSED = sed;
+    currentEigenvalues = eigenvalues;
+    currentLabel = label;
+
+    document.getElementById('status').textContent = '🔊 Playing: ' + label;
+    document.getElementById('status').className = 'status playing';
+
+    const now = Tone.now();
+    eigenvalues.forEach((ev, i) => {
+      const energy = sed[i] || 0;
+      if (energy < 0.005) return;
+      const freq = eigenToFreq(ev);
+      const vol = Math.max(-40, 20 * Math.log10(energy) - 10);
+      const synth = new Tone.Oscillator({ frequency: freq, type: 'sine', volume: vol }).toDestination();
+      synth.start(now + 0.05);
+      synth.stop(now + 3.5);
+      synths.push(synth);
+    });
+
+    drawSpectrum(eigenvalues, sed, label);
+    animateSpectrum();
+
+    setTimeout(stopAll, 4000);
+  }
+
+  function playCommunity(idx) {
+    const c = spectralData.communities[idx];
+    updateInfo(c);
+    playSpectrum(c.eigenvalues, c.sed, `Community ${c.id}${c.anomaly ? ' (anomalous)' : ''}`);
+  }
+
+  function updateInfo(c) {
+    const grid = document.getElementById('infoGrid');
+    grid.innerHTML = `
+      <dt>Size</dt><dd>${c.size} nodes</dd>
+      <dt>Rayleigh Quotient</dt><dd>${c.rayleigh.toFixed(6)}</dd>
+      <dt>Anomaly Detected</dt><dd>${c.anomaly ? '⚠️ Yes' : '✅ No'}</dd>
+      <dt>Eigenvalue Range</dt><dd>[${Math.min(...c.eigenvalues).toFixed(3)}, ${Math.max(...c.eigenvalues).toFixed(3)}]</dd>
+    `;
+  }
+
+  // ── Canvas visualization ──
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  }
+
+  function drawSpectrum(eigenvalues, sed, label) {
+    const w = canvas.width / window.devicePixelRatio;
+    const h = canvas.height / window.devicePixelRatio;
+    ctx.clearRect(0, 0, w, h);
+
+    const maxE = Math.max(...sed, 0.01);
+    const n = eigenvalues.length;
+    const barW = Math.max(2, (w - 40) / n - 1);
+
+    // Background gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, 'rgba(0,0,0,0.1)');
+    bgGrad.addColorStop(1, 'rgba(0,0,0,0.4)');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    eigenvalues.forEach((ev, i) => {
+      const energy = sed[i] || 0;
+      const x = 20 + i * ((w - 40) / n);
+      const barH = (energy / maxE) * (h - 40);
+
+      // Color: green for low freq, red for high
+      const t = ev / 2;
+      const r = Math.round(16 + t * 223);
+      const g = Math.round(185 - t * 117);
+      const b = Math.round(129 - t * 61);
+
+      const grad = ctx.createLinearGradient(x, h - 20, x, h - 20 - barH);
+      grad.addColorStop(0, `rgba(${r},${g},${b},0.8)`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0.3)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, h - 20 - barH, barW, barH);
+
+      // Glow
+      ctx.shadowColor = `rgba(${r},${g},${b},0.5)`;
+      ctx.shadowBlur = 6;
+      ctx.fillRect(x, h - 20 - barH, barW, 2);
+      ctx.shadowBlur = 0;
+    });
+
+    // Label
+    ctx.fillStyle = 'rgba(241,245,249,0.7)';
+    ctx.font = '12px Inter, sans-serif';
+    ctx.fillText(label, 20, 20);
+    ctx.fillText('Low freq ←', 20, h - 4);
+    ctx.fillText('→ High freq', w - 100, h - 4);
+  }
+
+  function animateSpectrum() {
+    if (!isPlaying || !currentSED) return;
+    // Slight shimmer effect
+    const jittered = currentSED.map(e => e * (0.9 + Math.random() * 0.2));
+    drawSpectrum(currentEigenvalues, jittered, currentLabel);
+    animFrame = requestAnimationFrame(animateSpectrum);
+  }
+
+  // ── Button handlers ──
+  document.getElementById('btnPlaySelected').addEventListener('click', () => {
+    const idx = parseInt(document.getElementById('communitySelect').value);
+    playCommunity(idx);
+  });
+
+  document.getElementById('btnPlayClean').addEventListener('click', () => {
+    if (!spectralData?.shift) return;
+    // Use the community with lowest Rayleigh as "clean"
+    const sorted = [...spectralData.communities].sort((a, b) => a.rayleigh - b.rayleigh);
+    const c = sorted[0];
+    updateInfo(c);
+    playSpectrum(c.eigenvalues, c.sed, 'Clean Community');
+  });
+
+  document.getElementById('btnPlayRing').addEventListener('click', () => {
+    if (!spectralData?.shift) return;
+    const sorted = [...spectralData.communities].sort((a, b) => b.rayleigh - a.rayleigh);
+    const c = sorted[0];
+    updateInfo(c);
+    playSpectrum(c.eigenvalues, c.sed, 'Ring Community ⚠️');
+  });
+
+  document.getElementById('btnStop').addEventListener('click', stopAll);
+
+  window.addEventListener('resize', () => { resizeCanvas(); if (currentSED) drawSpectrum(currentEigenvalues, currentSED, currentLabel); });
+})();
+</script>
+</body>
+</html>
