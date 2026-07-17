@@ -217,11 +217,22 @@ def _trace_origin(
     - Beyond the last seizure index (toward both ends), walk until the first
       node whose cumulative step-distance > gap_km.
     - Prefer the end that first hits a major hub (terminus logic).
+
+    Requires seizures at >=2 DISTINCT corridor nodes. The whole method reads
+    direction from the shape of a cluster: a cluster that ends before a gap
+    implies the notes entered beyond that gap. A single node has no shape and
+    no upstream — walking both ways from it just returns whichever corridor end
+    happens to be further, which is corridor geometry, not evidence. Returning
+    None here is the honest answer; the caller degrades to "no trail" rather
+    than naming a city on a coin-flip.
     """
     if not snaps:
         return None
 
     indices = sorted(s.node_index for s in snaps)
+    if len(set(indices)) < 2:
+        return None
+
     lo, hi = indices[0], indices[-1]
     nodes = corridor.nodes
 
@@ -290,8 +301,15 @@ def _score(
     # Seizure score: 1 = 0.2, 2 = 0.45, 3 = 0.65, 4+ = 0.85+
     seizure_score = min(0.2 + (n_seizures - 1) * 0.2, 0.85)
 
-    # Tightness: radius < 20km = tight (1.0), > 150km = loose (0.0)
-    tightness = max(0.0, 1.0 - cluster_radius / 150.0) if cluster_radius > 0 else 1.0
+    # Tightness: radius < 20km = tight (1.0), > 150km = loose (0.0).
+    # A single seizure has radius 0, but that is NOT a tight cluster — it is no
+    # cluster. Scoring it 1.0 rewarded absent evidence and pushed lone seizures
+    # into the "high" band. Agreement between independent points is what
+    # tightness measures, so one point earns nothing.
+    if n_seizures < 2:
+        tightness = 0.0
+    else:
+        tightness = max(0.0, 1.0 - cluster_radius / 150.0) if cluster_radius > 0 else 1.0
 
     # FIR score: 0 = 0, 1 = 0.5, 2+ = 1.0
     fir_score = min(fir_hits * 0.5, 1.0)
@@ -600,13 +618,30 @@ def compute_trail(
                 ),
             }
         else:
-            # Fallback: use the corridor's terminal node
+            # Fallback: the corridor terminus. This is a PLACEHOLDER, not an
+            # inference — the contract requires the field, but nothing here was
+            # traced. Distinguish the two reasons we land here, because "one
+            # seizure" and "a cluster with no clean gap" are not the same claim.
             terminal = corridor.nodes[-1]
+            distinct_nodes = len({s.node_index for s in corridor_snaps})
+            if distinct_nodes < 2:
+                why = (
+                    f"NOT INFERRED — {len(corridor_snaps)} seizure(s) at a single "
+                    f"corridor node. Direction is read from the shape of a seizure "
+                    f"cluster; one point has none. '{terminal.name}' is only this "
+                    f"corridor's terminus, shown as a placeholder. Treat as unknown."
+                )
+            else:
+                why = (
+                    "NOT INFERRED — seizures span the corridor with no clean gap, "
+                    f"so no injection zone stands out. '{terminal.name}' is only this "
+                    "corridor's terminus, shown as a placeholder. Treat as unknown."
+                )
             origin_out = {
                 "name": terminal.name,
                 "lat": terminal.lat,
                 "lon": terminal.lon,
-                "reasoning": "No clear gap in seizures — corridor terminus used as default. Confidence reduced.",
+                "reasoning": why,
             }
 
         best_trail = {

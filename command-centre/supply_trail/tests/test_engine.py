@@ -103,8 +103,9 @@ class TestTrailComputation:
         assert trail["inferred_origin"]["lat"] != 0
 
     def test_trail_has_required_schema_fields(self):
-        """Output must match every required field in the contract schema."""
-        trail = compute_trail([JAMTARA], mode_filter="rail")
+        """Output must match every required field in the contract schema.
+        Uses a real cluster so the fully-populated path is what gets checked."""
+        trail = compute_trail([JAMTARA, DEOGHAR, DHANBAD], mode_filter="rail")
         assert trail is not None
         required = [
             "schema_version", "trail_id", "generated_at", "commodity", "mode",
@@ -121,13 +122,33 @@ class TestTrailComputation:
         """A seizure with no lat/lon should be silently skipped."""
         assert compute_trail([{"event_id": "x", "district": "Unknown"}]) is None
 
-    def test_single_seizure_still_produces_trail(self):
-        """Even a single seizure should yield a trail — confidence depends on FIR corroboration."""
+    def test_single_seizure_produces_trail_but_infers_no_origin(self):
+        """A lone seizure still yields a trail — the corridor snap and the seizure
+        are real facts. But it must NOT claim an inferred origin: direction comes
+        from the shape of a cluster, and one point has no shape. Walking both ways
+        from a single node just returns whichever corridor end is further away,
+        which is geometry, not evidence.
+
+        Regression: this previously reported a named origin at 0.615 / "high",
+        because a lone seizure has cluster_radius 0 and was scored as a perfectly
+        tight cluster. Absent evidence must never score as strong evidence.
+        """
         trail = compute_trail([JAMTARA])
         assert trail is not None
-        assert trail["confidence_band"] in ("low", "medium", "high")
-        # Single seizure should never achieve the theoretical maximum (capped at 0.85)
-        assert trail["confidence"] <= 0.85
+        # The field exists (contract requires it) but must disclaim itself.
+        assert "NOT INFERRED" in trail["inferred_origin"]["reasoning"]
+        # One seizure can never reach the "high" band.
+        assert trail["confidence_band"] == "low"
+        assert trail["confidence"] < 0.35
+
+    def test_lone_seizure_scores_below_a_real_cluster(self):
+        """The ordering that matters: a single point must never outrank a
+        multi-seizure cluster that genuinely pins down a direction."""
+        lone = compute_trail([JAMTARA])
+        cluster = compute_trail([JAMTARA, DEOGHAR, DHANBAD])
+        assert lone is not None and cluster is not None
+        assert lone["confidence"] < cluster["confidence"]
+        assert "NOT INFERRED" not in cluster["inferred_origin"]["reasoning"]
 
     def test_confidence_increases_with_more_seizures(self):
         """More seizures → higher confidence score."""
