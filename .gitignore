@@ -45,6 +45,10 @@ dist/
 */output/captures/
 # Fusion runtime artifacts (LLM-generated eval text, per-run reports) — regenerated on demand.
 command-centre/fusion/output/
+# Sonification audio from `fraud-graph spectral --sonify` — ~350KB each, regenerated on demand.
+# The sonifier HTML reads output/spectral_data.json, which IS committed.
+fraud-graph-ml/output/*.wav
+fraud-graph-ml/output/arms_race*.png
 
 # --- Personal learning notes & work log (local only, never commit) ---
 learning.md
