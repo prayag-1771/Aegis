@@ -376,3 +376,56 @@ export async function fetchSupplyTrail(
   if (!r.ok) throw new Error(`supply-trail failed: ${r.status}`);
   return r.json();
 }
+
+// ── Entry routes: how notes physically REACHED a city ────────────────────────
+
+export interface RouteLeg {
+  mode: string;
+  from: string;
+  to: string;
+  from_lat: number;
+  from_lon: number;
+  to_lat: number;
+  to_lon: number;
+  distance_km: number;
+  /** "haul" = long-distance leg, "access" = last mile, "transfer" = mode change */
+  kind: string;
+}
+
+export interface EntryRoute {
+  modes: string[];
+  total_km: number;
+  /** Hypothesis score in [0, 0.9] — never a probability of guilt. */
+  plausibility: number;
+  passes_fir: string[];
+  legs: RouteLeg[];
+  /** District of the FIR-documented printing press this route starts from. */
+  source: string;
+  source_ref: string;
+  source_evidence: string;
+}
+
+export interface EntryRoutesResponse {
+  district: string;
+  seizures_in_district: number;
+  sources_considered: { district: string; ref: string; evidence: string }[];
+  routes: EntryRoute[];
+  narrative: { summary: string; recommended_actions: string[] };
+  narrator: string;
+  disclaimer: string;
+}
+
+/** Rank the transport channels by which fake notes could have entered a city.
+ *  Unlike fetchSupplyTrail (which reads direction from cluster shape and needs
+ *  several seizures), this works from a single seizure — a city's entry
+ *  channels exist regardless of how many notes were found there.
+ *  Throws on 404 when the district has no located seizures. */
+export async function fetchEntryRoutes(
+  district: string,
+  k = 3,
+): Promise<EntryRoutesResponse> {
+  const qs = new URLSearchParams({ district, k: String(k) });
+  const r = await fetch(`${API_BASE}/supply-trail/routes?${qs}`);
+  if (!r.ok) throw new Error(`entry-routes failed: ${r.status}`);
+  return r.json();
+}

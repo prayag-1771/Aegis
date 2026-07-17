@@ -360,6 +360,49 @@ body {
   50% { transform: scale(1.15); opacity: 0.5; }
 }
 
+/* ---------- entry route (where notes came INTO a city) ----------
+   Violet, to separate it from the orange corridor trail: that one is a
+   direction along a corridor, this one is a suspected source and channel.
+   Two different claims should not share a colour. */
+.entry-source-pin {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: rgb(168 85 247 / 0.9);
+  border: 2px solid #e9d5ff;
+  box-shadow: 0 0 12px 2px rgb(168 85 247 / 0.55);
+  animation: entry-source-pulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes entry-source-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 12px 2px rgb(168 85 247 / 0.55); }
+  50% { transform: scale(1.18); box-shadow: 0 0 18px 5px rgb(168 85 247 / 0.3); }
+}
+/* transfer point — where the channel changes mode; a place to actually check */
+.entry-transfer {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: #f0abfc;
+  border: 1.5px solid rgb(240 171 252 / 0.5);
+  box-shadow: 0 0 7px 1px rgb(217 70 239 / 0.5);
+  pointer-events: none;
+}
+.entry-tag {
+  white-space: nowrap;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 2px 8px;
+  color: #e9d5ff;
+  background: rgb(24 24 27 / 0.88);
+  border: 1px solid rgb(168 85 247 / 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
 /* Darkened OSM fallback: when the dark/satellite CDNs are blocked (ad-blocker,
    firewall, region) we fall back to OpenStreetMap and invert the tile canvas so
    it still reads as a dark map. Only the WebGL tile canvas is filtered —

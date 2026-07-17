@@ -8,10 +8,11 @@ import type {
   HealthResponse,
   HotspotsResponse,
   Ring,
+  EntryRoutesResponse,
   SupplyTrail,
   SupplyTrailResponse,
 } from "@/lib/api";
-import { fetchSupplyTrail, injectDemoRing } from "@/lib/api";
+import { fetchEntryRoutes, fetchSupplyTrail, injectDemoRing } from "@/lib/api";
 import { usePolling } from "@/lib/usePolling";
 import AlertChips from "@/components/AlertChips";
 import AlertsDrawer from "@/components/AlertsDrawer";
@@ -98,6 +99,9 @@ export default function Page() {
   // Provenance for the searched city: where its fake notes most likely entered.
   // `origin` is null when the evidence cannot support naming one — the panel
   // says so rather than showing the engine's placeholder as a real answer.
+  // Highest-plausibility entry route for the searched city, highlighted on the
+  // map. Answers "how did notes get here?" — works from a single seizure.
+  const [entryRoutes, setEntryRoutes] = useState<EntryRoutesResponse | null>(null);
   const [cityOrigin, setCityOrigin] = useState<{
     loading: boolean;
     /** True when this city's own seizures could not trace a direction and the
@@ -270,6 +274,18 @@ export default function Page() {
         alerts: [...relatedScams, ...relatedFakes, ...relatedRings],
       });
 
+      // Where did THIS city's notes physically enter from? Unlike the corridor
+      // trail below, this works from a single seizure, so it is the question
+      // that actually gets answered for most districts. Highlights the channel
+      // on the map from the source press to here.
+      if (relatedFakes.length > 0) {
+        fetchEntryRoutes(districtKey)
+          .then((r) => setEntryRoutes(r))
+          .catch(() => setEntryRoutes(null)); // 404 = no seizures here; stay silent
+      } else {
+        setEntryRoutes(null);
+      }
+
       // Ask Supply Trail where THIS city's fake notes came from. Only meaningful
       // where notes were actually seized, so skip the call otherwise.
       if (relatedFakes.length > 0) {
@@ -324,6 +340,8 @@ export default function Page() {
       setTimeout(() => {
         setCityAlerts(null);
         setCityOrigin(null);
+        setEntryRoutes(null);
+        setActiveTrail(null);
       }, 10000);
       return;
     }
@@ -335,6 +353,11 @@ export default function Page() {
       const coords = await geocodePlace(q);
       if (coords) {
         locate(coords);
+        // A city we have no seizures for: clear any previous highlight rather
+        // than leaving a stale route drawn over an unrelated place.
+        setEntryRoutes(null);
+        setActiveTrail(null);
+        setCityOrigin(null);
         setCityAlerts({ district: coords.label, alerts: [] });
         setTimeout(() => setCityAlerts(null), 10000);
       } else {
@@ -353,7 +376,11 @@ export default function Page() {
         points={hotspots?.points ?? []}
         hubs={hotspots?.hubs ?? []}
         focus={focus}
-        trail={activeTrail}
+        // An entry route and a corridor trail both frame the map and would
+        // fight over it. The entry route is the more specific claim (this
+        // city's source), so it wins while it is showing.
+        trail={entryRoutes ? null : activeTrail}
+        entryRoute={entryRoutes?.routes?.[0] ?? null}
       />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-zinc-950/80 to-transparent" />
@@ -379,6 +406,7 @@ export default function Page() {
               onClick={() => {
                 setCityAlerts(null);
                 setCityOrigin(null);
+                setEntryRoutes(null);
               }}
               className="text-zinc-400 hover:text-zinc-100"
             >
@@ -404,9 +432,81 @@ export default function Page() {
             )}
           </div>
 
-          {/* Provenance: where this city's fake notes most likely entered.
-              Only shown when notes were actually seized here. */}
-          {cityOrigin && (
+          {/* Entry channels: how notes physically reached this city. Ranked by
+              the engine; the top one is highlighted on the map. */}
+          {entryRoutes && entryRoutes.routes.length > 0 && (
+            <div className="border-t border-zinc-800 bg-zinc-950/60 px-3 py-2.5">
+              <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-widest text-violet-400/70">
+                <span className="h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_6px_rgba(168,85,247,0.9)]" />
+                Probable entry channel
+              </div>
+
+              {entryRoutes.routes.map((r, i) => {
+                const haul = r.legs.find((l) => l.kind === "haul");
+                return (
+                  <div
+                    key={i}
+                    className={`mb-1.5 rounded-lg border px-2 py-1.5 ${
+                      i === 0
+                        ? "border-violet-500/30 bg-violet-500/10"
+                        : "border-zinc-800/60 bg-zinc-800/20"
+                    }`}
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span
+                        className={`text-[11px] font-medium ${
+                          i === 0 ? "text-violet-200" : "text-zinc-400"
+                        }`}
+                      >
+                        {r.source} → {r.modes.join(" + ")}
+                      </span>
+                      <span
+                        className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold ${
+                          i === 0
+                            ? "bg-violet-500/25 text-violet-200"
+                            : "bg-zinc-700/40 text-zinc-500"
+                        }`}
+                      >
+                        {Math.round(r.plausibility * 100)}%
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-[9px] text-zinc-500">
+                      {Math.round(r.total_km)} km
+                      {haul ? ` · via ${haul.to}` : ""}
+                      {r.passes_fir.length > 0
+                        ? ` · ${r.passes_fir.length} FIR${r.passes_fir.length > 1 ? "s" : ""} on route`
+                        : " · no FIRs on route"}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <p className="mt-1.5 text-[10px] leading-relaxed text-zinc-400">
+                {entryRoutes.narrative.summary}
+              </p>
+
+              {entryRoutes.narrative.recommended_actions.length > 0 && (
+                <ul className="mt-1.5 space-y-0.5">
+                  {entryRoutes.narrative.recommended_actions.slice(0, 3).map((a, i) => (
+                    <li key={i} className="flex gap-1.5 text-[9px] leading-relaxed text-zinc-500">
+                      <span className="text-violet-500/60">▸</span>
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <p className="mt-1.5 text-[9px] italic leading-relaxed text-zinc-600">
+                Sources are printing presses on police/press record. Plausibility is a
+                hypothesis score — a banknote carries no origin label.
+              </p>
+            </div>
+          )}
+
+          {/* Corridor direction — the older, coarser answer. Only worth showing
+              when entry channels could not be computed; otherwise it repeats
+              the section above with less detail. */}
+          {cityOrigin && !entryRoutes && (
             <div className="border-t border-zinc-800 bg-zinc-950/60 px-3 py-2.5">
               <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-widest text-zinc-500">
                 <span>🚂</span>

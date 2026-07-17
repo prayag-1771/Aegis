@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Hub, MapPoint, SupplyTrail } from "@/lib/api";
+import type { EntryRoute, Hub, MapPoint, SupplyTrail } from "@/lib/api";
 import { titleCase } from "@/lib/format";
 import { Layers } from "./Icons";
 
@@ -54,11 +54,15 @@ export default function CrimeMap({
   hubs,
   focus,
   trail,
+  entryRoute,
 }: {
   points: MapPoint[];
   hubs: Hub[];
   focus: { lat: number; lon: number } | null;
   trail?: SupplyTrail | null;
+  /** Highest-plausibility route by which notes could have entered the searched
+   *  city. Drawn from the source press to the seizure district. */
+  entryRoute?: EntryRoute | null;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -69,6 +73,8 @@ export default function CrimeMap({
   const blockedRef = useRef({ dark: false, sat: false });
   const trailAnimRef = useRef<number | null>(null);   // rAF handle for trail dash animation
   const trailMarkersRef = useRef<any[]>([]);          // DOM markers owned by the trail (arrows, labels)
+  const entryAnimRef = useRef<number | null>(null);   // rAF handle for entry-route flow animation
+  const entryMarkersRef = useRef<any[]>([]);          // DOM markers owned by the entry route
   const [ready, setReady] = useState(false);
   const [satellite, setSatellite] = useState(false);
 
@@ -506,6 +512,145 @@ export default function CrimeMap({
       trailMarkersRef.current = [];
     };
   }, [trail, ready]);
+
+  // ── Entry route: how notes reached the searched city ────────────────────
+  // Separate from the trail above. That one answers "which direction along a
+  // corridor?" from cluster shape; this one answers "which channel got them
+  // here?" and works from a single seizure. Different question, own layers.
+  useEffect(() => {
+    const map = mapRef.current;
+    const lib = libRef.current;
+    if (!map || !lib || !ready) return;
+
+    const cleanup = () => {
+      if (entryAnimRef.current !== null) {
+        cancelAnimationFrame(entryAnimRef.current);
+        entryAnimRef.current = null;
+      }
+      ["entry-glow", "entry-line", "entry-flow"].forEach((id) => {
+        if (map.getLayer(id)) map.removeLayer(id);
+      });
+      if (map.getSource("entry-src")) map.removeSource("entry-src");
+      entryMarkersRef.current.forEach((m) => {
+        try {
+          m.remove();
+        } catch {
+          /* map already gone */
+        }
+      });
+      entryMarkersRef.current = [];
+    };
+
+    cleanup();
+    if (!entryRoute || !entryRoute.legs?.length) return;
+
+    const legs = entryRoute.legs;
+    const coords: [number, number][] = [
+      [legs[0].from_lon, legs[0].from_lat],
+      ...legs.map((l) => [l.to_lon, l.to_lat] as [number, number]),
+    ];
+
+    map.addSource("entry-src", {
+      type: "geojson",
+      data: {
+        type: "Feature",
+        properties: {},
+        geometry: { type: "LineString", coordinates: coords },
+      },
+    });
+
+    // Violet distinguishes this from the orange corridor trail — a different
+    // claim deserves a different colour, not a second orange line.
+    map.addLayer({
+      id: "entry-glow",
+      type: "line",
+      source: "entry-src",
+      paint: { "line-color": "#a855f7", "line-width": 16, "line-opacity": 0.14, "line-blur": 7 },
+    });
+    map.addLayer({
+      id: "entry-line",
+      type: "line",
+      source: "entry-src",
+      paint: { "line-color": "#a855f7", "line-width": 3, "line-opacity": 0.6 },
+    });
+    map.addLayer({
+      id: "entry-flow",
+      type: "line",
+      source: "entry-src",
+      paint: {
+        "line-color": "#d8b4fe",
+        "line-width": 3,
+        "line-dasharray": [0, 4, 3],
+        "line-opacity": 0.95,
+      },
+    });
+
+    // Dashes march source -> city: the direction notes are believed to travel.
+    let step = 0;
+    const seq: number[][] = [
+      [0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5],
+      [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0], [3.5, 3.5, 0],
+    ];
+    const animate = () => {
+      try {
+        if (mapRef.current !== map || !map.getLayer("entry-flow")) return;
+        step = (step + 1) % seq.length;
+        map.setPaintProperty("entry-flow", "line-dasharray", seq[step]);
+      } catch {
+        return;
+      }
+      entryAnimRef.current = requestAnimationFrame(() =>
+        setTimeout(() => {
+          entryAnimRef.current = requestAnimationFrame(animate);
+        }, 55),
+      );
+    };
+    animate();
+
+    // Source: the FIR-documented printing press the notes may have come from.
+    const src = legs[0];
+    const srcEl = document.createElement("div");
+    srcEl.className = "entry-source-pin";
+    srcEl.title = `${entryRoute.source} — printing press on record (${entryRoute.source_ref})`;
+    entryMarkersRef.current.push(
+      new lib.Marker({ element: srcEl }).setLngLat([src.from_lon, src.from_lat]).addTo(map),
+    );
+
+    const tag = document.createElement("div");
+    tag.className = "entry-tag";
+    tag.textContent = `SOURCE · ${entryRoute.source.toUpperCase()} · ${Math.round(
+      entryRoute.plausibility * 100,
+    )}%`;
+    entryMarkersRef.current.push(
+      new lib.Marker({ element: tag, anchor: "bottom", offset: [0, -20] })
+        .setLngLat([src.from_lon, src.from_lat])
+        .addTo(map),
+    );
+
+    // Transfer points — where the channel changes mode (rail -> road etc).
+    // These are the concrete places an officer can actually go and check.
+    legs.forEach((lg, i) => {
+      if (i === 0 || lg.kind !== "access") return;
+      const el = document.createElement("div");
+      el.className = "entry-transfer";
+      el.title = `${lg.from} → ${lg.to}: ${lg.distance_km} km by ${lg.mode}`;
+      entryMarkersRef.current.push(
+        new lib.Marker({ element: el }).setLngLat([lg.from_lon, lg.from_lat]).addTo(map),
+      );
+    });
+
+    const lons = coords.map((c) => c[0]);
+    const lats = coords.map((c) => c[1]);
+    map.fitBounds(
+      [
+        [Math.min(...lons) - 0.4, Math.min(...lats) - 0.4],
+        [Math.max(...lons) + 0.4, Math.max(...lats) + 0.4],
+      ],
+      { padding: 90, duration: 1600 },
+    );
+
+    return cleanup;
+  }, [entryRoute, ready]);
 
   return (
     <div className="absolute inset-0">
