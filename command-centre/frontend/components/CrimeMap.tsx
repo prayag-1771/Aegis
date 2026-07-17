@@ -40,7 +40,8 @@ function probeTile(url: string, timeout = 3500): Promise<boolean> {
   });
 }
 
-const JAMTARA: [number, number] = [86.803, 23.795];
+// Map's default centre: Jamtara town. 23.795 fell ~19 km south, on Maithon reservoir.
+const JAMTARA: [number, number] = [86.804, 23.963];
 
 /* Markers scale with zoom so each keeps a fixed ground footprint.
    Mercator pixels-per-meter double per zoom level, hence 2^(zoom - ref). */
