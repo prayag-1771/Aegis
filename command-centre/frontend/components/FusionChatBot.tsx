@@ -69,12 +69,15 @@ export default function FusionChatBot({
   }
 
   return (
-    <div className="fixed bottom-6 right-16 z-50 pointer-events-none flex flex-col items-end">
+    // Positioned by the caller's button row, not self-positioned: the row keeps
+    // this and Supply Trail spaced without either knowing the other's width.
+    <div className="relative z-50 pointer-events-none flex flex-col items-end">
       {/* Expanded Chat Window — pointer-events only when actually open, so the
           collapsed (scale-0/opacity-0) panel's still-present layout box can't
-          eat clicks over the alerts drawer / "view all alerts" behind it. */}
+          eat clicks over the alerts drawer / "view all alerts" behind it.
+          Absolute so its 24rem width never widens the button row. */}
       <div
-        className={`mb-4 w-96 rounded-2xl border border-white/10 bg-zinc-950/90 backdrop-blur-xl shadow-2xl transition-all duration-500 origin-bottom-right ${
+        className={`absolute bottom-full right-0 mb-4 w-96 rounded-2xl border border-white/10 bg-zinc-950/90 backdrop-blur-xl shadow-2xl transition-all duration-500 origin-bottom-right ${
           isOpen ? "scale-100 opacity-100 pointer-events-auto" : "scale-50 opacity-0 pointer-events-none"
         }`}
       >

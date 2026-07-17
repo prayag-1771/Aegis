@@ -874,33 +874,42 @@ export default function Page() {
       )}
 
 
-      <FusionChatBot
-        fusion={lastFusion}
-        events={events}
-        onFused={handleFused}
-        onError={(msg) => pushToast(msg, "error")}
-      />
+      {/* ── Bottom-right action row ──
+          One flex row so the buttons space themselves. They used to be two
+          independently-fixed elements (right-16 and right-56) whose gap was a
+          magic number that had to be kept in sync by hand — and Fusion's label
+          changes width at runtime ("Run Fusion" → "Correlating…"), so the gap
+          silently closed. right-16 clears the map's zoom controls, which own
+          the actual corner. */}
+      <div className="pointer-events-none fixed bottom-6 right-16 z-50 flex items-center gap-3">
+        {/* Hidden while its own panel is open: the row sits above that panel's
+            z-index, and "open Supply Trail" is meaningless when it already is. */}
+        {activeTab === "map" && !supplyTrailOpen && (
+          <button
+            onClick={handleOpenSupplyTrail}
+            className={`pointer-events-auto flex items-center gap-2 rounded-full border px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide shadow-xl backdrop-blur-sm transition-all duration-300 ${
+              activeTrail
+                ? "border-orange-500/60 bg-orange-500/20 text-orange-300 hover:bg-orange-500/30"
+                : "border-white/10 bg-zinc-900/80 text-zinc-400 hover:border-white/20 hover:text-zinc-200"
+            }`}
+            title="Open Supply Trail — counterfeit note provenance"
+          >
+            {activeTrail && (
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-pulse" />
+            )}
+            🚂 Supply Trail
+          </button>
+        )}
+        <FusionChatBot
+          fusion={lastFusion}
+          events={events}
+          onFused={handleFused}
+          onError={(msg) => pushToast(msg, "error")}
+        />
+      </div>
 
       {consoleOpen && (
         <FraudConsole onClose={() => setConsoleOpen(false)} onCommitted={handleConsoleCommitted} />
-      )}
-
-      {/* ── Supply Trail floating button (map view only) ── */}
-      {activeTab === "map" && (
-        <button
-          onClick={handleOpenSupplyTrail}
-          className={`pointer-events-auto absolute bottom-6 right-56 z-20 flex items-center gap-2 rounded-full border px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide shadow-xl backdrop-blur-sm transition-all duration-300 ${
-            activeTrail
-              ? "border-orange-500/60 bg-orange-500/20 text-orange-300 hover:bg-orange-500/30"
-              : "border-white/10 bg-zinc-900/80 text-zinc-400 hover:border-white/20 hover:text-zinc-200"
-          }`}
-          title="Open Supply Trail — counterfeit note provenance"
-        >
-          {activeTrail && (
-            <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-pulse" />
-          )}
-          🚂 Supply Trail
-        </button>
       )}
 
       {/* ── Supply Trail slide-in panel (right side, over map) ── */}
