@@ -355,12 +355,22 @@ export interface SupplyTrailResponse {
   best_trail: SupplyTrail | null;
   all_trails: SupplyTrail[];
   seizures_used: number;
+  /** Echo of the district filter, null for the store-wide trail. */
+  district: string | null;
   disclaimer: string;
 }
 
-export async function fetchSupplyTrail(mode?: string): Promise<SupplyTrailResponse> {
-  const url = mode
-    ? `${API_BASE}/supply-trail?mode=${mode}`
+/** Fetch a provenance trail. `district` scopes it to one city ("where are
+ *  Jamtara's notes coming from?"); omit it for the store-wide question. */
+export async function fetchSupplyTrail(
+  mode?: string,
+  district?: string,
+): Promise<SupplyTrailResponse> {
+  const qs = new URLSearchParams();
+  if (mode) qs.set("mode", mode);
+  if (district) qs.set("district", district);
+  const url = qs.toString()
+    ? `${API_BASE}/supply-trail?${qs}`
     : `${API_BASE}/supply-trail`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`supply-trail failed: ${r.status}`);

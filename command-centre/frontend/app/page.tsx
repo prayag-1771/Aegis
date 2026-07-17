@@ -95,6 +95,14 @@ export default function Page() {
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [cityAlerts, setCityAlerts] = useState<{district: string; alerts: any[]} | null>(null);
+  // Provenance for the searched city: where its fake notes most likely entered.
+  // `origin` is null when the evidence cannot support naming one — the panel
+  // says so rather than showing the engine's placeholder as a real answer.
+  const [cityOrigin, setCityOrigin] = useState<{
+    loading: boolean;
+    origin: { name: string; confidence: number; band: string; mode: string; reasoning: string } | null;
+    note: string | null;
+  } | null>(null);
   const [selectedModule, setSelectedModule] = useState<"scam" | "counterfeit" | null>(null);
 
   // Supply Trail state
@@ -257,7 +265,44 @@ export default function Page() {
         district: districtKey,
         alerts: [...relatedScams, ...relatedFakes, ...relatedRings],
       });
-      setTimeout(() => setCityAlerts(null), 10000);
+
+      // Ask Supply Trail where THIS city's fake notes came from. Only meaningful
+      // where notes were actually seized, so skip the call otherwise.
+      if (relatedFakes.length > 0) {
+        setCityOrigin({ loading: true, origin: null, note: null });
+        fetchSupplyTrail(undefined, districtKey)
+          .then((res) => {
+            const t = res.best_trail;
+            const o = t?.inferred_origin;
+            // The engine emits a terminus placeholder when it cannot trace a
+            // direction, and marks it NOT INFERRED. Never render that as a
+            // finding — a named city implies evidence that does not exist.
+            const traced = o && !o.reasoning.includes("NOT INFERRED");
+            setCityOrigin({
+              loading: false,
+              origin: traced
+                ? {
+                    name: o.name,
+                    confidence: t!.confidence,
+                    band: t!.confidence_band,
+                    mode: t!.mode,
+                    reasoning: o.reasoning,
+                  }
+                : null,
+              note: traced
+                ? null
+                : `${relatedFakes.length} seizure(s) here — too few to trace a direction. Provenance needs a cluster that spans distance.`,
+            });
+          })
+          .catch(() => setCityOrigin(null));
+      } else {
+        setCityOrigin(null);
+      }
+
+      setTimeout(() => {
+        setCityAlerts(null);
+        setCityOrigin(null);
+      }, 10000);
       return;
     }
 
@@ -308,7 +353,15 @@ export default function Page() {
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
               {cityAlerts.district} Alerts
             </h3>
-            <button onClick={() => setCityAlerts(null)} className="text-zinc-400 hover:text-zinc-100">&times;</button>
+            <button
+              onClick={() => {
+                setCityAlerts(null);
+                setCityOrigin(null);
+              }}
+              className="text-zinc-400 hover:text-zinc-100"
+            >
+              &times;
+            </button>
           </div>
           <div className="max-h-64 overflow-y-auto p-2">
             {cityAlerts.alerts.length === 0 ? (
@@ -328,6 +381,50 @@ export default function Page() {
               ))
             )}
           </div>
+
+          {/* Provenance: where this city's fake notes most likely entered.
+              Only shown when notes were actually seized here. */}
+          {cityOrigin && (
+            <div className="border-t border-zinc-800 bg-zinc-950/60 px-3 py-2.5">
+              <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-widest text-zinc-500">
+                <span>🚂</span> Probable source
+              </div>
+
+              {cityOrigin.loading ? (
+                <p className="py-1 text-[10px] text-zinc-500">Tracing corridors…</p>
+              ) : cityOrigin.origin ? (
+                <>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm font-medium text-orange-300">
+                      {cityOrigin.origin.name}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase ${
+                        cityOrigin.origin.band === "high"
+                          ? "bg-orange-500/20 text-orange-300"
+                          : cityOrigin.origin.band === "medium"
+                          ? "bg-amber-500/20 text-amber-300"
+                          : "bg-zinc-700/40 text-zinc-400"
+                      }`}
+                    >
+                      {Math.round(cityOrigin.origin.confidence * 100)}% · {cityOrigin.origin.band}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-zinc-500">
+                    via {cityOrigin.origin.mode}
+                  </div>
+                  <p className="mt-1.5 text-[10px] leading-relaxed text-zinc-500">
+                    {cityOrigin.origin.reasoning}
+                  </p>
+                  <p className="mt-1.5 text-[9px] italic leading-relaxed text-zinc-600">
+                    Investigative hypothesis, not forensic proof — a note carries no origin label.
+                  </p>
+                </>
+              ) : (
+                <p className="text-[10px] leading-relaxed text-zinc-500">{cityOrigin.note}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
