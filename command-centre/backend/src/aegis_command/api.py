@@ -136,6 +136,117 @@ async def analyze_counterfeit(body: dict) -> dict:
     return event
 
 
+# ── Citizen Fraud Shield: multilingual + multi-channel (chat / call) ──────────
+async def _fraud_shield_analyze(text: str) -> dict:
+    """Run one message through Fraud Shield (:8001/analyze)."""
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post(
+                f"{MODULES['fraud-shield']}/analyze", json={"text": text, "source": "citizen_i18n"}
+            )
+            r.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"fraud-shield service unreachable: {exc}") from exc
+    return r.json()
+
+
+async def _citizen_pipeline(text: str, language: str | None) -> dict:
+    """Translate → classify → translate-back. The classifier is language-agnostic
+    because the text is normalised to English first; the advisory returns in the
+    citizen's language. Translation fails safe (English passthrough)."""
+    from .multilingual import LANGUAGES, build_advisory, translate
+
+    english, detected, t_ok = translate(text, "en-IN", "auto")
+    result = await _fraud_shield_analyze(english)
+    verdict = result.get("verdict", "legit")
+    risk = float(result.get("risk_score", 0.0))
+    scam_type = result.get("scam_type")
+    advisory_en = build_advisory(verdict, scam_type, risk)
+
+    target = language or detected or "en-IN"
+    advisory_local, _src, back_ok = translate(advisory_en, target, "en-IN")
+
+    return {
+        "verdict": verdict,
+        "risk_score": risk,
+        "scam_type": scam_type,
+        "markers": result.get("markers", []),
+        "explanation": result.get("explanation"),
+        "detected_language": detected,
+        "target_language": target,
+        "language_name": LANGUAGES.get(target, target),
+        "advisory_en": advisory_en,
+        "advisory": advisory_local,
+        "translated": bool(t_ok or back_ok),
+        "engine": "sarvam-translate + fraud-shield" if (t_ok or back_ok) else "fraud-shield (translation unavailable)",
+    }
+
+
+@app.get("/citizen/languages")
+def citizen_languages() -> dict:
+    from .multilingual import LANGUAGES, sarvam_key
+
+    return {"languages": LANGUAGES, "translation_available": bool(sarvam_key())}
+
+
+@app.post("/citizen/analyze")
+async def citizen_analyze(body: dict) -> dict:
+    """Citizen message check in any of 12 languages. Verdict + safety advisory
+    returned in the citizen's language."""
+    if not (body or {}).get("text"):
+        raise HTTPException(422, "body must contain 'text'")
+    return await _citizen_pipeline(body["text"], body.get("language"))
+
+
+@app.post("/citizen/call/analyze")
+async def citizen_call_analyze(body: dict) -> dict:
+    """Real-time call monitoring: pass the transcript accumulated SO FAR (string,
+    or a list of turns) and get the running verdict. Called repeatedly as the call
+    unfolds, it flags an active scam mid-call — before any transfer. This is the
+    genuinely predictive, point-of-contact path."""
+    tr = (body or {}).get("transcript")
+    if isinstance(tr, list):
+        parts = [(t.get("text") if isinstance(t, dict) else str(t)) for t in tr]
+        text = " ".join(p for p in parts if p)
+    else:
+        text = str(tr or "")
+    if not text.strip():
+        raise HTTPException(422, "body must contain 'transcript'")
+    res = await _citizen_pipeline(text, body.get("language"))
+    # Mid-call intercept: an active scam still in progress — advise the citizen
+    # and (via the Disrupt layer) hold the transfer before money moves.
+    res["intercept"] = res["verdict"] == "scam"
+    res["stage"] = (
+        "scam_detected" if res["verdict"] == "scam"
+        else "warning" if res["verdict"] == "suspicious"
+        else "monitoring"
+    )
+    return res
+
+
+@app.post("/citizen/whatsapp")
+async def citizen_whatsapp(body: dict) -> dict:
+    """WhatsApp transport adapter. Accepts a WhatsApp-shaped message and returns a
+    reply in the sender's language. A thin adapter over the same pipeline — it
+    demonstrates the multi-channel pattern without a live Meta/Twilio webhook."""
+    text = (body or {}).get("text") or (body or {}).get("body")
+    if not text:
+        raise HTTPException(422, "body must contain 'text'")
+    res = await _citizen_pipeline(text, body.get("language"))
+    return {
+        "channel": "whatsapp",
+        "to": (body or {}).get("from"),
+        "reply": res["advisory"],
+        "verdict": res["verdict"],
+        "risk_score": res["risk_score"],
+        "language": res["target_language"],
+        "note": (
+            "Transport-adapter demo — not a live Meta/Twilio webhook. Same Fraud Shield "
+            "+ Sarvam translation pipeline behind it."
+        ),
+    }
+
+
 @app.post("/refresh/fraud-graph")
 async def refresh_fraud_graph() -> dict:
     """Pull the latest ring detection from the fraud-graph service."""
