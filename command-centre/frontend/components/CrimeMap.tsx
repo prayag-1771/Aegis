@@ -411,29 +411,32 @@ export default function CrimeMap({
       },
     });
 
-    // Animate dash offset to simulate movement along the corridor
-    let offset = 0;
-    const dashPatterns: [number, number][] = [
-      [0, 4, 4], [0.5, 4, 4], [1, 4, 4], [1.5, 4, 4], [2, 4, 4],
-      [2.5, 4, 4], [3, 4, 4], [3.5, 4, 4],
-    ].map((a) => [a[1], a[2]] as [number, number]);
-    void dashPatterns; // suppress unused warning — we use rAF approach instead
-
     // Dash march direction follows the PROVEN flow when timestamps gave us one
     // (temporal analysis) — otherwise default to node order. The animation
     // itself becomes truthful instead of decorative.
     const nodes = trail.corridor.node_path;
     const flowReverse = trail.flow != null && trail.flow.direction_toward === nodes[0]?.name;
-    const dashStep = flowReverse ? 0.15 : -0.15;
 
+    // The dash head is QUANTIZED to a fixed cycle of exact values. The old
+    // version marched a continuous float (offset ± 0.15, mod 8, abs), so every
+    // frame produced a dasharray MapLibre had never seen — and each distinct
+    // dasharray becomes a new row in its fixed-size LineAtlas texture. ~60 new
+    // rows/second filled the atlas within minutes; getDash then returns null
+    // and the RENDERER crashes reading '.y' in setConstantDashPositions,
+    // killing the whole frame — the WebGL routes vanish while DOM markers
+    // survive. A fixed cycle computed from an integer index reuses the same
+    // handful of atlas rows forever. (The entry-flow loop below was always
+    // bounded — 8 literal patterns — which is why it never poisoned the atlas.)
+    const TRAIL_DASH_STEPS = 24;
+    let stepIdx = 0;
     const animateDashes = () => {
-      offset = (offset + dashStep) % 8; // marches dashes in the flow direction
       // A queued frame can land after the map is removed (unmount, StrictMode
       // remount), so re-check the map is still alive — not just the layer.
       try {
         if (mapRef.current === map && map.getLayer("trail-dashes")) {
+          stepIdx = (stepIdx + (flowReverse ? 1 : TRAIL_DASH_STEPS - 1)) % TRAIL_DASH_STEPS;
           map.setPaintProperty("trail-dashes", "line-dasharray", [
-            Math.abs(offset % 4),
+            (stepIdx / TRAIL_DASH_STEPS) * 4, // exact repeat every cycle — same atlas key
             4,
           ]);
         } else {
