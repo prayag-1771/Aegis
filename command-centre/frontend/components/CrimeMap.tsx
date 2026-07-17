@@ -243,11 +243,14 @@ export default function CrimeMap({
     return () => map.off("zoom", applyScale);
   }, [points, hubs, ready]);
 
-  // fly to a located alert / fusion hotspot
+  // fly to a located alert / fusion hotspot.
+  // A trail frames its whole corridor via fitBounds below; zooming to a single
+  // city would fight that and strand the view mid-corridor. The trail is the
+  // wider story, so it wins — don't rely on the fetch landing second.
   useEffect(() => {
-    if (!mapRef.current || !ready || !focus) return;
+    if (!mapRef.current || !ready || !focus || trail) return;
     mapRef.current.flyTo({ center: [focus.lon, focus.lat], zoom: 12.2, duration: 2200 });
-  }, [focus, ready]);
+  }, [focus, ready, trail]);
 
   // ── Supply Trail rendering ──────────────────────────────────────────────
   useEffect(() => {

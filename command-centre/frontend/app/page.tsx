@@ -100,6 +100,10 @@ export default function Page() {
   // says so rather than showing the engine's placeholder as a real answer.
   const [cityOrigin, setCityOrigin] = useState<{
     loading: boolean;
+    /** True when this city's own seizures could not trace a direction and the
+     *  shown trail is the wider regional one. Must be surfaced, not hidden. */
+    regional?: boolean;
+    seizuresUsed?: number;
     origin: { name: string; confidence: number; band: string; mode: string; reasoning: string } | null;
     note: string | null;
   } | null>(null);
@@ -270,8 +274,20 @@ export default function Page() {
       // where notes were actually seized, so skip the call otherwise.
       if (relatedFakes.length > 0) {
         setCityOrigin({ loading: true, origin: null, note: null });
+        // Ask this district first. If its own seizures cannot trace a direction,
+        // fall back to the regional trail — which IS traced, from the full
+        // seizure cluster — and label it as regional. Never loosen the engine
+        // to manufacture a city-specific line that the evidence cannot support.
         fetchSupplyTrail(undefined, districtKey)
-          .then((res) => {
+          .then(async (res) => {
+            const districtTrail = res.best_trail;
+            const dO = districtTrail?.inferred_origin;
+            const districtTraced = dO && !dO.reasoning.includes("NOT INFERRED");
+            if (districtTraced) return { res, regional: false };
+            const wide = await fetchSupplyTrail();
+            return { res: wide, regional: true };
+          })
+          .then(({ res, regional }) => {
             const t = res.best_trail;
             const o = t?.inferred_origin;
             // The engine emits a terminus placeholder when it cannot trace a
@@ -280,6 +296,8 @@ export default function Page() {
             const traced = o && !o.reasoning.includes("NOT INFERRED");
             setCityOrigin({
               loading: false,
+              regional: traced ? regional : false,
+              seizuresUsed: res.seizures_used,
               origin: traced
                 ? {
                     name: o.name,
@@ -291,8 +309,12 @@ export default function Page() {
                 : null,
               note: traced
                 ? null
-                : `${relatedFakes.length} seizure(s) here — too few to trace a direction. Provenance needs a cluster that spans distance.`,
+                : `${relatedFakes.length} seizure(s) here — too few to trace a direction, and no regional trail either.`,
             });
+            // Draw the corridor only when a direction was actually traced. The
+            // marching dashes read as "notes move this way", so animating an
+            // untraced trail would assert movement the evidence never showed.
+            setActiveTrail(traced ? t : null);
           })
           .catch(() => setCityOrigin(null));
       } else {
@@ -387,7 +409,8 @@ export default function Page() {
           {cityOrigin && (
             <div className="border-t border-zinc-800 bg-zinc-950/60 px-3 py-2.5">
               <div className="mb-1.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-widest text-zinc-500">
-                <span>🚂</span> Probable source
+                <span>🚂</span>
+                {cityOrigin.regional ? "Probable source · regional" : "Probable source"}
               </div>
 
               {cityOrigin.loading ? (
@@ -413,6 +436,14 @@ export default function Page() {
                   <div className="mt-0.5 text-[10px] text-zinc-500">
                     via {cityOrigin.origin.mode}
                   </div>
+                  {cityOrigin.regional && (
+                    <p className="mt-1.5 rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1 text-[9px] leading-relaxed text-amber-200/70">
+                      {cityAlerts.district}&rsquo;s own seizures cannot trace a direction.
+                      This is the regional trail across all {cityOrigin.seizuresUsed} seizures —
+                      it shows how notes move through the corridor, not into this city
+                      specifically.
+                    </p>
+                  )}
                   <p className="mt-1.5 text-[10px] leading-relaxed text-zinc-500">
                     {cityOrigin.origin.reasoning}
                   </p>
