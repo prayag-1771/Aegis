@@ -453,59 +453,51 @@ export default function CrimeMap({
     };
     trailAnimRef.current = requestAnimationFrame(animateDashes);
 
-    // 4 — Seizure points (red circles)
-    map.addSource("trail-seizures-src", {
-      type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features: trail.seizures.map((s) => ({
-          type: "Feature",
-          properties: { district: s.district, denomination: s.denomination },
-          geometry: { type: "Point", coordinates: [s.lon, s.lat] },
-        })),
-      },
-    });
-    map.addLayer({
-      id: "trail-seizures",
-      type: "circle",
-      source: "trail-seizures-src",
-      paint: {
-        "circle-radius": 8,
-        "circle-color": "#ef4444",
-        "circle-opacity": 0.85,
-        "circle-stroke-width": 2,
-        "circle-stroke-color": "#fca5a5",
-      },
+    // 4 — Seizure points (red circles) as DOM markers
+    const lib = libRef.current;
+    trail.seizures.forEach((s) => {
+      const el = document.createElement("div");
+      el.style.width = "16px";
+      el.style.height = "16px";
+      el.style.backgroundColor = "#ef4444";
+      el.style.border = "2px solid #fca5a5";
+      el.style.borderRadius = "50%";
+      el.style.opacity = "0.85";
+      el.style.cursor = "pointer";
+      el.style.setProperty("z-index", "9998", "important");
+      
+      const popup = new lib.Popup({ offset: 8, closeButton: false }).setHTML(
+        `<strong>Seizure</strong><br/>${s.district ?? "Unknown"}<br/><span style="color:#a1a1aa">${s.denomination ?? "Unknown"} note</span>`
+      );
+
+      trailMarkersRef.current.push(
+        new lib.Marker({ element: el }).setLngLat([s.lon, s.lat]).setPopup(popup).addTo(map)
+      );
     });
 
-    // 5 — Inferred origin (glowing orange pin)
-    map.addSource("trail-origin-src", {
-      type: "geojson",
-      data: {
-        type: "Feature",
-        properties: { name: trail.inferred_origin.name },
-        geometry: {
-          type: "Point",
-          coordinates: [trail.inferred_origin.lon, trail.inferred_origin.lat],
-        },
-      },
-    });
-    map.addLayer({
-      id: "trail-origin",
-      type: "circle",
-      source: "trail-origin-src",
-      paint: {
-        "circle-radius": 14,
-        "circle-color": "#f97316",
-        "circle-opacity": 0.9,
-        "circle-stroke-width": 3,
-        "circle-stroke-color": "#fed7aa",
-        "circle-blur": 0.3,
-      },
-    });
+    // 5 — Inferred origin (glowing orange pin) as DOM marker
+    {
+      const el = document.createElement("div");
+      el.style.width = "28px";
+      el.style.height = "28px";
+      el.style.backgroundColor = "#f97316";
+      el.style.border = "3px solid #fed7aa";
+      el.style.borderRadius = "50%";
+      el.style.opacity = "0.9";
+      el.style.boxShadow = "0 0 12px #f97316";
+      el.style.cursor = "pointer";
+      el.style.setProperty("z-index", "9999", "important");
+      
+      const popup = new lib.Popup({ offset: 14, closeButton: false }).setHTML(
+        `<strong>Likely Origin</strong><br/>${trail.inferred_origin.name ?? "Unknown"}`
+      );
+
+      trailMarkersRef.current.push(
+        new lib.Marker({ element: el }).setLngLat([trail.inferred_origin.lon, trail.inferred_origin.lat]).setPopup(popup).addTo(map)
+      );
+    }
 
     // 6 — Origin label (the origin pin alone doesn't explain itself)
-    const lib = libRef.current;
     {
       const el = document.createElement("div");
       el.className = "trail-tag trail-tag-origin";

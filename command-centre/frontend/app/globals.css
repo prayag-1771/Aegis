@@ -190,7 +190,7 @@ body {
   position: relative;
   width: 48px;
   height: 48px;
-  cursor: pointer;
+  pointer-events: none;
 }
 /* smaller cloud (larger insets shrink the visible dot; same soft look) */
 .sig-core {
@@ -199,6 +199,8 @@ body {
   border-radius: 9999px;
   background: radial-gradient(circle, var(--sig) 0%, transparent 70%);
   opacity: 0.9;
+  pointer-events: auto;
+  cursor: pointer;
 }
 .sig-ring {
   position: absolute;
