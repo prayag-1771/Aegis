@@ -1104,7 +1104,7 @@ export default function Page() {
 
       {/* Full screen blur overlay for Fraud Rings — side-by-side layout */}
       {activeTab === "fraud-rings" && (
-        <div className="absolute inset-0 z-50 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 pointer-events-auto">
+        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 pointer-events-auto">
           <div className="w-full max-w-[95vw] text-left mb-2 text-xs text-zinc-500">
             Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit
           </div>
