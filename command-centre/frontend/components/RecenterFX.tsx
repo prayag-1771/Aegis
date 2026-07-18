@@ -23,10 +23,12 @@ export default function RecenterFX({ signal }: { signal: number }) {
 
       const rings = gsap.utils.toArray<HTMLElement>(".recenter-ring", root);
       const grid = root.querySelector(".recenter-grid");
+      const owl = root.querySelector(".recenter-owl");
 
       // GSAP owns the transform (self-centering + scale) so it never fights a
       // CSS translate on the same element.
       gsap.set(rings, { xPercent: -50, yPercent: -50, scale: 0, opacity: 0.9 });
+      if (owl) gsap.set(owl, { xPercent: -50, yPercent: -50, scale: 0.5, opacity: 0.85 });
 
       const tl = gsap.timeline();
       tl.to(
@@ -40,6 +42,10 @@ export default function RecenterFX({ signal }: { signal: number }) {
         },
         0,
       );
+      // The owl blooms out of the centre and fades with the rings.
+      if (owl) {
+        tl.to(owl, { scale: 2.4, opacity: 0, duration: 1.3, ease: "power2.out" }, 0);
+      }
       if (grid) {
         tl.fromTo(
           grid,
@@ -86,6 +92,14 @@ export default function RecenterFX({ signal }: { signal: number }) {
         style={{ borderColor: "#22d3ee", boxShadow: "0 0 40px 4px rgba(34,211,238,0.4)" }}
       />
       <span className={`${ringBase} border`} style={{ borderColor: "rgba(167,139,250,0.6)" }} />
+      {/* the owl blooms out of the radar centre and fades */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo-mark.png"
+        alt=""
+        className="recenter-owl absolute left-1/2 top-1/2 h-[22vmin] w-[22vmin] object-contain opacity-0"
+        style={{ filter: "drop-shadow(0 0 26px rgba(167,139,250,0.75))" }}
+      />
     </div>
   );
 }
