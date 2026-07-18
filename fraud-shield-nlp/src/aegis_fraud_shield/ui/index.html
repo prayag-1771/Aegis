@@ -63,6 +63,11 @@
   header .logo { font-size: 22px; }
   header h1 { font-size: 17px; font-weight: 600; }
   header .sub { color: var(--muted); font-size: 12.5px; }
+  .tabs { display: flex; gap: 6px; margin-left: 18px; }
+  .tabs a { font-size: 12.5px; padding: 5px 12px; border-radius: 999px; color: var(--muted);
+            text-decoration: none; border: 1px solid transparent; }
+  .tabs a:hover { color: var(--text); }
+  .tabs a.active { background: var(--panel-2); border-color: var(--line); color: var(--text); }
   #status {
     margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px;
     background: var(--panel-2); color: var(--muted); border: 1px solid var(--line);
@@ -270,6 +275,11 @@
     <h1>Aegis Fraud Shield</h1>
     <div class="sub">Paste or read out any message / call script — watch it get checked live</div>
   </div>
+  <nav class="tabs">
+    <a class="active" href="/">💬 Message check</a>
+    <a href="/live-call">📞 Live call</a>
+    <a href="/whatsapp">🟢 WhatsApp</a>
+  </nav>
   <span id="status">connecting…</span>
 </header>
 

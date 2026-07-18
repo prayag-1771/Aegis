@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aegis Fraud Shield — WhatsApp check</title>
+<style>
+  :root {
+    --bg: #0b1020; --panel: #131a2e; --panel-2: #1a2340; --text: #e8ecf6;
+    --muted: #93a0bd; --line: #26304f; --accent: #5b8cff;
+    /* WhatsApp dark palette */
+    --wa-bg: #0b141a; --wa-header: #202c33; --wa-in: #202c33; --wa-out: #005c4b;
+    --wa-text: #e9edef; --wa-muted: #8696a0; --wa-green: #00a884; --wa-tick: #53bdeb;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header .logo { font-size: 22px; }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 12.5px; }
+  .tabs { display: flex; gap: 6px; margin-left: 18px; }
+  .tabs a { font-size: 12.5px; padding: 5px 12px; border-radius: 999px; color: var(--muted);
+            text-decoration: none; border: 1px solid transparent; }
+  .tabs a:hover { color: var(--text); }
+  .tabs a.active { background: var(--panel-2); border-color: var(--line); color: var(--text); }
+  #status {
+    margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); white-space: nowrap;
+  }
+  #status.ok { color: var(--legit, #2fbf71); border-color: #2fbf71; }
+
+  #stage { flex: 1; display: flex; align-items: stretch; justify-content: center; padding: 18px; min-height: 0; }
+  #phone { width: 100%; max-width: 460px; display: flex; flex-direction: column; border-radius: 18px;
+           overflow: hidden; border: 1px solid var(--line); background: var(--wa-bg);
+           box-shadow: 0 10px 40px rgba(0,0,0,.45); }
+  #wahead { display: flex; align-items: center; gap: 11px; padding: 10px 14px; background: var(--wa-header); }
+  #wahead .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--wa-green);
+                    display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  #wahead .name { color: var(--wa-text); font-weight: 600; font-size: 15px; }
+  #wahead .name .check { color: var(--wa-tick); font-size: 13px; }
+  #wahead .presence { color: var(--wa-muted); font-size: 12px; }
+  #banner { background: rgba(0,168,132,.12); color: var(--wa-muted); font-size: 12px;
+            text-align: center; padding: 6px 12px; border-bottom: 1px solid rgba(0,168,132,.2); }
+  #chat { flex: 1; overflow-y: auto; padding: 16px 12px; display: flex; flex-direction: column; gap: 8px;
+          background:
+            radial-gradient(circle at 25% 15%, rgba(255,255,255,.02) 0 2px, transparent 2px),
+            radial-gradient(circle at 70% 60%, rgba(255,255,255,.015) 0 2px, transparent 2px),
+            var(--wa-bg);
+          background-size: 90px 90px, 130px 130px, auto; }
+  .wamsg { max-width: 85%; padding: 7px 10px 5px; border-radius: 9px; color: var(--wa-text);
+           font-size: 14px; white-space: pre-wrap; word-wrap: break-word; position: relative; }
+  .wamsg.out { align-self: flex-end; background: var(--wa-out); border-top-right-radius: 2px; }
+  .wamsg.in { align-self: flex-start; background: var(--wa-in); border-top-left-radius: 2px; }
+  .wamsg .time { display: block; text-align: right; font-size: 10.5px; color: var(--wa-muted); margin-top: 3px; }
+  .wamsg.out .time::after { content: " ✓✓"; color: var(--wa-tick); }
+  .wamsg b { font-weight: 700; }
+  .typing { align-self: flex-start; background: var(--wa-in); border-radius: 9px; padding: 11px 14px; display: flex; gap: 4px; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--wa-muted); animation: blink 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; }
+  .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,70%,100% { opacity: .25; } 35% { opacity: 1; } }
+
+  #samples { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; background: var(--wa-header); }
+  #samples button { font-size: 11.5px; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+                    background: rgba(255,255,255,.06); color: var(--wa-muted); border: 1px solid rgba(255,255,255,.12); }
+  #samples button:hover { color: var(--wa-text); border-color: var(--wa-green); }
+  #warow { display: flex; gap: 8px; padding: 8px 10px 12px; background: var(--wa-header); align-items: flex-end; }
+  #watext { flex: 1; background: #2a3942; color: var(--wa-text); border: none; border-radius: 20px;
+            padding: 10px 16px; font: inherit; font-size: 14px; resize: none; height: 42px; outline: none; }
+  #wasend { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--wa-green);
+            color: #fff; font-size: 17px; cursor: pointer; flex-shrink: 0; }
+  #wasend:disabled { opacity: .5; cursor: wait; }
+  #simnote { text-align: center; font-size: 11.5px; color: var(--muted); padding: 0 16px 12px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🛡️</span>
+  <div>
+    <h1>WhatsApp Scam Check</h1>
+    <div class="sub">Forward any suspicious message to the Aegis Shield bot — verdict in seconds</div>
+  </div>
+  <nav class="tabs">
+    <a href="/">💬 Message check</a>
+    <a href="/live-call">📞 Live call</a>
+    <a class="active" href="/whatsapp">🟢 WhatsApp</a>
+  </nav>
+  <span id="status">connecting…</span>
+</header>
+
+<div id="stage">
+  <div id="phone">
+    <div id="wahead">
+      <div class="avatar">🛡️</div>
+      <div>
+        <div class="name">Aegis Shield <span class="check">✔</span></div>
+        <div class="presence">online</div>
+      </div>
+    </div>
+    <div id="banner">🔒 Forward any suspicious message here. Aegis checks it and replies instantly.</div>
+    <div id="chat"></div>
+    <div id="samples"></div>
+    <div id="warow">
+      <textarea id="watext" placeholder="Paste the forwarded message…"></textarea>
+      <button id="wasend" title="Send">➤</button>
+    </div>
+  </div>
+</div>
+<div id="simnote">Simulator preview — the reply below is the exact template the Twilio WhatsApp webhook will send from the real bot number.</div>
+
+<script>
+const SAMPLES = [
+  ["🏦 'Account blocked'", "Dear Customer, Your SBI account is blocked due to suspicious activity. Click below to reactivate immediately: bit.ly/sbi-reactivate"],
+  ["📱 KYC scam", "Dear customer your SBI account KYC has expired. Account will be blocked within 24 hours. Update immediately at bit.ly/kyc-upd8 to avoid suspension."],
+  ["🎰 Lottery bait", "Congratulations! Your mobile number has won Rs 25,00,000 in the KBC Lucky Draw. To claim your prize deposit the processing fee of Rs 12,500 and share your bank details."],
+  ["✅ Genuine OTP", "482913 is your OTP for HDFC net banking login. Valid for 10 minutes. Do not share this OTP with anyone."],
+  ["💬 Normal chat", "Hey, are we still meeting for lunch tomorrow at 1pm? Let me know if you want to move it."],
+];
+
+const chat = document.getElementById("chat");
+const input = document.getElementById("watext");
+const sendBtn = document.getElementById("wasend");
+const statusEl = document.getElementById("status");
+
+const esc = s => s.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+fetch("/health").then(r => r.json()).then(h => {
+  statusEl.textContent = h.model_trained ? "model ready" : "model NOT trained";
+  if (h.model_trained) statusEl.classList.add("ok");
+}).catch(() => { statusEl.textContent = "api offline"; });
+
+for (const [label, text] of SAMPLES) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.onclick = () => { input.value = text; input.focus(); };
+  document.getElementById("samples").appendChild(b);
+}
+
+function waBubble(cls, html) {
+  const d = document.createElement("div");
+  d.className = "wamsg " + cls;
+  d.innerHTML = html + `<span class="time">${now()}</span>`;
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+  return d;
+}
+
+// WhatsApp *bold* → <b>, after escaping. Same markup WhatsApp itself renders,
+// so the simulated reply and the real Twilio reply read identically.
+const waFormat = s => esc(s).replace(/\*([^*\n]+)\*/g, "<b>$1</b>");
+
+// ---------------------------------------------------------------------------
+// THE reply template. When the Twilio webhook lands (POST /webhook/whatsapp),
+// it must build its TwiML message body with this exact same logic — keep the
+// two in sync (server side will live in api.py).
+// ---------------------------------------------------------------------------
+const TYPE_LABEL = {
+  digital_arrest: "digital arrest", phishing: "phishing", lottery: "lottery",
+  loan: "loan", kyc: "KYC", other: "", none: "",
+};
+function buildReply(r) {
+  const pct = Math.round(r.risk_score * 100);
+  const markers = r.markers.map(m => m.replace(/_/g, " ")).join(", ");
+  const type = TYPE_LABEL[r.scam_type] || "";
+  if (r.verdict === "scam") {
+    return `🚨 *HIGH RISK — ${pct}%*\n` +
+      `This message matches a *${type ? type + " " : ""}scam*.\n` +
+      (markers ? `Detected: ${markers}\n` : "") +
+      `\n⛔ Do NOT click any link\n⛔ Do NOT share OTP or bank details\n🚫 Block the sender · report at 1930`;
+  }
+  if (r.verdict === "suspicious") {
+    return `⚠️ *SUSPICIOUS — ${pct}%*\n` +
+      `This message shows warning signs${markers ? ` (${markers})` : ""}.\n` +
+      `\n🔍 Verify with the organisation on their official app or number before acting. Do not use links or numbers from the message itself.`;
+  }
+  return `✅ *Looks safe — risk ${pct}%*\n` +
+    `No scam patterns detected.\n` +
+    `\n🙏 Stay alert: never share OTPs, and check unexpected payment requests by calling the person directly.`;
+}
+
+async function send() {
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  sendBtn.disabled = true;
+  waBubble("out", esc(text));
+  const typing = document.createElement("div");
+  typing.className = "typing";
+  typing.innerHTML = "<i></i><i></i><i></i>";
+  chat.appendChild(typing);
+  chat.scrollTop = chat.scrollHeight;
+  try {
+    const [resp] = await Promise.all([
+      fetch("/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, source: "whatsapp" }),
+      }),
+      sleep(900),   // a beat of "typing…" so the reply lands like a real bot
+    ]);
+    if (!resp.ok) throw new Error((await resp.json()).detail || resp.statusText);
+    const r = await resp.json();
+    typing.remove();
+    waBubble("in", waFormat(buildReply(r)));
+  } catch (e) {
+    typing.remove();
+    waBubble("in", "⚠️ " + esc("Could not check this message right now (" + (e.message || e) + "). Try again."));
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+sendBtn.onclick = send;
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+});
+</script>
+</body>
+</html>

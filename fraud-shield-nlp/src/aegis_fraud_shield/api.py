@@ -6,6 +6,9 @@ Run from `fraud-shield-nlp/`:
 
 Endpoints:
     GET  /            demo chat UI (the "watch it catch a scam" moment)
+    GET  /live-call   Live Call Shield — scripted replay + live-mic call scoring
+    GET  /whatsapp    WhatsApp bot simulator (same reply template the Twilio
+                      webhook will send once /webhook/whatsapp lands)
     GET  /health      model status + thresholds
     POST /analyze     {text, source?, phone_number?, location_hint?}
                       -> contract-valid scam_detection JSON
@@ -27,7 +30,8 @@ from pydantic import BaseModel, Field
 from .analyze import analyze
 from .model import MODEL_FILE, ScamClassifier
 
-UI_FILE = Path(__file__).parent / "ui" / "index.html"
+UI_DIR = Path(__file__).parent / "ui"
+UI_FILE = UI_DIR / "index.html"
 
 app = FastAPI(title="Aegis Fraud Shield", version="0.1.0")
 app.add_middleware(
@@ -95,4 +99,14 @@ def ui() -> FileResponse:
 
 @app.get("/favicon.png")
 def favicon() -> FileResponse:
-    return FileResponse(Path(__file__).parent / "ui" / "favicon.png", media_type="image/png")
+    return FileResponse(UI_DIR / "favicon.png", media_type="image/png")
+
+
+@app.get("/live-call")
+def live_call_ui() -> FileResponse:
+    return FileResponse(UI_DIR / "live-call.html", media_type="text/html")
+
+
+@app.get("/whatsapp")
+def whatsapp_ui() -> FileResponse:
+    return FileResponse(UI_DIR / "whatsapp.html", media_type="text/html")

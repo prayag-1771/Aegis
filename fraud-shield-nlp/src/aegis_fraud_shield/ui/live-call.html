@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aegis Fraud Shield — Live Call Shield</title>
+<style>
+  :root {
+    --bg: #0b1020; --panel: #131a2e; --panel-2: #1a2340; --text: #e8ecf6;
+    --muted: #93a0bd; --line: #26304f;
+    --scam: #ff5964; --suspicious: #ffb020; --legit: #2fbf71; --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header .logo { font-size: 22px; }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 12.5px; }
+  .tabs { display: flex; gap: 6px; margin-left: 18px; }
+  .tabs a { font-size: 12.5px; padding: 5px 12px; border-radius: 999px; color: var(--muted);
+            text-decoration: none; border: 1px solid transparent; }
+  .tabs a:hover { color: var(--text); }
+  .tabs a.active { background: var(--panel-2); border-color: var(--line); color: var(--text); }
+  #status {
+    margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); white-space: nowrap;
+  }
+  #status.ok { color: var(--legit); border-color: var(--legit); }
+
+  main { flex: 1; display: flex; min-height: 0; }
+  #callpane { flex: 1; display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--line); }
+  #feed { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .bubble { max-width: 620px; padding: 11px 15px; border-radius: 14px; border-bottom-left-radius: 4px;
+            background: var(--panel); border: 1px solid var(--line); align-self: flex-start; white-space: pre-wrap; }
+  .bubble .who { font-size: 11px; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 3px; }
+  .bubble.interim { color: var(--muted); font-style: italic; border-style: dashed; }
+  .callnote { align-self: center; font-size: 12px; color: var(--muted);
+              background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 14px; }
+
+  #riskpane { width: 330px; flex-shrink: 0; display: flex; flex-direction: column; padding: 20px; gap: 14px; overflow-y: auto; }
+  .paneltitle { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  #gauge { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; text-align: center; }
+  #riskpct { font-size: 52px; font-weight: 700; line-height: 1.1; transition: color .4s; }
+  #verdict { display: inline-block; font-weight: 700; font-size: 13px; letter-spacing: .06em;
+             text-transform: uppercase; padding: 3px 12px; border-radius: 6px; margin-top: 6px;
+             background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+  #verdict.scam { background: rgba(255,89,100,.15); color: var(--scam); border-color: var(--scam); }
+  #verdict.suspicious { background: rgba(255,176,32,.12); color: var(--suspicious); border-color: var(--suspicious); }
+  #verdict.legit { background: rgba(47,191,113,.12); color: var(--legit); border-color: var(--legit); }
+  #scamtype { font-size: 12.5px; color: var(--muted); margin-top: 8px; min-height: 18px; }
+  .riskbar { height: 10px; border-radius: 5px; background: var(--panel-2); margin-top: 14px; overflow: hidden; }
+  .riskbar > div { height: 100%; width: 0; border-radius: 5px; background: var(--legit); transition: width .7s ease, background .4s; }
+
+  #events { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .event { font-size: 13px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--suspicious);
+           border-radius: 8px; padding: 8px 12px; animation: slidein .35s ease; }
+  .event .pct { float: right; color: var(--muted); font-size: 12px; }
+  @keyframes slidein { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+
+  footer { padding: 14px 20px 18px; background: var(--panel); border-top: 1px solid var(--line);
+           display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .btn { font: inherit; font-size: 14px; font-weight: 600; padding: 10px 18px; border-radius: 10px; cursor: pointer;
+         background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.danger { background: rgba(255,89,100,.15); border-color: var(--scam); color: var(--scam); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .toggle { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); margin-left: auto; }
+
+  #overlay { position: fixed; inset: 0; background: rgba(120, 5, 15, .55); backdrop-filter: blur(3px);
+             display: flex; align-items: center; justify-content: center; z-index: 50; }
+  #overlay[hidden] { display: none; }
+  #overlaycard { background: var(--panel); border: 2px solid var(--scam); border-radius: 18px; max-width: 520px;
+                 width: calc(100% - 40px); padding: 30px 34px; text-align: center;
+                 animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,89,100,.55); } 50% { box-shadow: 0 0 0 18px rgba(255,89,100,0); } }
+  #overlaycard .big { font-size: 44px; }
+  #overlaycard h2 { color: var(--scam); letter-spacing: .12em; margin: 6px 0 10px; }
+  #overlaycard p { font-size: 14.5px; margin-bottom: 8px; }
+  #overlaycard .reasons { font-size: 13px; color: var(--muted); margin: 10px 0 16px; }
+  #overlaycard .advice { text-align: left; display: inline-block; font-size: 14px; margin-bottom: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🛡️</span>
+  <div>
+    <h1>Live Call Shield</h1>
+    <div class="sub">Risk scored continuously while the call is still going — warned before the money ask</div>
+  </div>
+  <nav class="tabs">
+    <a href="/">💬 Message check</a>
+    <a class="active" href="/live-call">📞 Live call</a>
+    <a href="/whatsapp">🟢 WhatsApp</a>
+  </nav>
+  <span id="status">connecting…</span>
+</header>
+
+<main>
+  <div id="callpane">
+    <div id="feed"><div class="callnote">▶ Play the scripted scam call, or start the live microphone and read a scam script aloud</div></div>
+  </div>
+  <div id="riskpane">
+    <div class="paneltitle">Call risk — updates live</div>
+    <div id="gauge">
+      <div id="riskpct">0%</div>
+      <span id="verdict">waiting</span>
+      <div id="scamtype"></div>
+      <div class="riskbar"><div id="riskfill"></div></div>
+    </div>
+    <div class="paneltitle">Detected markers</div>
+    <div id="events"></div>
+  </div>
+</main>
+
+<footer>
+  <button class="btn primary" id="play">▶ Play scripted call</button>
+  <button class="btn" id="mic">🎙 Start live mic</button>
+  <button class="btn danger" id="stop" disabled>⏹ End call</button>
+  <label class="toggle"><input type="checkbox" id="voice" checked> 🔊 voice warning</label>
+</footer>
+
+<div id="overlay" hidden>
+  <div id="overlaycard">
+    <div class="big">⚠️</div>
+    <h2>CALL INTERCEPTED</h2>
+    <p id="overlaymsg">This call matches a <b>digital arrest</b> scam.</p>
+    <div class="reasons" id="overlayreasons"></div>
+    <div class="advice">
+      ⛔ Do <b>not</b> transfer money or share OTP / bank details<br>
+      📵 Hang up now — police never arrest over a call<br>
+      📞 Report at <b>1930</b> (national cybercrime helpline)
+    </div><br>
+    <button class="btn danger" id="dismiss">Continue watching the call</button>
+  </div>
+</div>
+
+<script>
+// Demo script tuned against the trained model: cumulative scores walk
+// 12% legit → 46% suspicious → 94% SCAM (intercept) → 99% → 100%,
+// so the intercept fires two lines BEFORE the payment ask.
+const SCRIPT = [
+  "Hello, good morning. Am I speaking with the account holder? I am calling regarding a courier parcel booked in your name from Mumbai.",
+  "Sir, I am Inspector Sharma calling from the CBI cyber cell. This is an official verification call.",
+  "Your parcel has been seized. A complaint has been registered against your Aadhaar number, this is a serious matter.",
+  "An FIR is filed in a money laundering case. You are under digital arrest. Stay on this video call and do not inform anyone.",
+  "To verify your innocence, transfer the security deposit amount of two lakh rupees in USDT immediately, or an arrest warrant will be issued today.",
+];
+const LINE_GAP_MS = 2600;
+
+const MARKER_META = {
+  authority_impersonation: ["🚔", "authority impersonation"],
+  fake_fir_or_case: ["📄", "fake FIR / case threat"],
+  urgency_pressure: ["⏰", "urgency pressure"],
+  crypto_or_giftcard_demand: ["🪙", "crypto / gift-card demand"],
+  video_call_isolation: ["📹", "video-call isolation"],
+  personal_data_request: ["🪪", "personal data request"],
+  suspicious_link: ["🔗", "suspicious link"],
+  spoofed_number: ["☎️", "spoofed number"],
+};
+const TYPE_LABEL = {
+  digital_arrest: "digital arrest", phishing: "phishing", lottery: "lottery",
+  loan: "loan scam", kyc: "KYC scam", other: "scam", none: "",
+};
+
+const feed = document.getElementById("feed");
+const events = document.getElementById("events");
+const riskpct = document.getElementById("riskpct");
+const riskfill = document.getElementById("riskfill");
+const verdictEl = document.getElementById("verdict");
+const scamtypeEl = document.getElementById("scamtype");
+const statusEl = document.getElementById("status");
+const playBtn = document.getElementById("play");
+const micBtn = document.getElementById("mic");
+const stopBtn = document.getElementById("stop");
+const voiceChk = document.getElementById("voice");
+const overlay = document.getElementById("overlay");
+
+let active = false;          // a call (either mode) is running
+let mode = null;             // "replay" | "mic"
+let transcript = "";         // cumulative caller text — the model scores ALL of it
+let prevMarkers = [];
+let intercepted = false;
+let recognition = null;
+let interimBubble = null;
+let scoring = false, pendingText = null, lastScoreAt = 0;
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => s.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+fetch("/health").then(r => r.json()).then(h => {
+  statusEl.textContent = h.model_trained ? "model ready" : "model NOT trained";
+  if (h.model_trained) statusEl.classList.add("ok");
+}).catch(() => { statusEl.textContent = "api offline"; });
+
+function note(text) {
+  const d = document.createElement("div");
+  d.className = "callnote";
+  d.textContent = text;
+  feed.appendChild(d);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function callerBubble(text, interim = false) {
+  const d = document.createElement("div");
+  d.className = "bubble" + (interim ? " interim" : "");
+  d.innerHTML = `<div class="who">${interim ? "caller (speaking…)" : "caller"}</div>${esc(text)}`;
+  feed.appendChild(d);
+  feed.scrollTop = feed.scrollHeight;
+  return d;
+}
+
+// ---- shared scoring loop --------------------------------------------------
+// One in-flight request at a time; the newest pending text always wins, so a
+// fast talker can never queue up stale rescores.
+async function score(text) {
+  if (!text.trim()) return;
+  if (scoring) { pendingText = text; return; }
+  scoring = true;
+  try {
+    const resp = await fetch("/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, source: "call_transcript" }),
+    });
+    if (resp.ok) render(await resp.json());
+  } catch { /* api hiccup — next utterance rescores everything anyway */ }
+  scoring = false;
+  if (pendingText) { const t = pendingText; pendingText = null; score(t); }
+}
+
+function throttledScore(text) {
+  const now = Date.now();
+  if (now - lastScoreAt < 900) return;
+  lastScoreAt = now;
+  score(text);
+}
+
+function render(r) {
+  const pct = Math.round(r.risk_score * 100);
+  const color = r.verdict === "scam" ? "var(--scam)" : r.verdict === "suspicious" ? "var(--suspicious)" : "var(--legit)";
+  riskpct.textContent = pct + "%";
+  riskpct.style.color = color;
+  riskfill.style.width = pct + "%";
+  riskfill.style.background = color;
+  verdictEl.textContent = r.verdict;
+  verdictEl.className = r.verdict;
+  scamtypeEl.textContent = r.scam_type !== "none" ? "pattern: " + (TYPE_LABEL[r.scam_type] || r.scam_type) : "";
+
+  for (const m of r.markers) {
+    if (!prevMarkers.includes(m)) {
+      const [icon, label] = MARKER_META[m] || ["🚩", m.replace(/_/g, " ")];
+      const e = document.createElement("div");
+      e.className = "event";
+      e.innerHTML = `${icon} ${esc(label)} <span class="pct">${pct}%</span>`;
+      events.appendChild(e);
+    }
+  }
+  prevMarkers = r.markers;
+
+  if (r.verdict === "scam" && !intercepted) intercept(r, pct);
+}
+
+// ---- the intercept moment -------------------------------------------------
+function intercept(r, pct) {
+  intercepted = true;
+  const type = TYPE_LABEL[r.scam_type] || "scam";
+  document.getElementById("overlaymsg").innerHTML =
+    `This call matches a <b>${esc(type)}</b> pattern — risk ${pct}%, flagged <b>before any payment was made</b>.`;
+  document.getElementById("overlayreasons").textContent =
+    "Evidence: " + r.markers.map(m => (MARKER_META[m] || ["", m.replace(/_/g, " ")])[1]).join(" · ");
+  overlay.hidden = false;
+  if (voiceChk.checked && "speechSynthesis" in window) {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(
+      "Warning. This call matches a " + type + " scam. Do not transfer money. Hang up immediately.");
+    u.lang = "en-IN";
+    speechSynthesis.speak(u);
+  }
+}
+document.getElementById("dismiss").onclick = () => { overlay.hidden = true; };
+
+// ---- call lifecycle -------------------------------------------------------
+function resetCall(label) {
+  feed.innerHTML = ""; events.innerHTML = "";
+  transcript = ""; prevMarkers = []; intercepted = false;
+  pendingText = null; lastScoreAt = 0; interimBubble = null;
+  riskpct.textContent = "0%"; riskpct.style.color = "var(--text)";
+  riskfill.style.width = "0"; verdictEl.textContent = "listening"; verdictEl.className = "";
+  scamtypeEl.textContent = ""; overlay.hidden = true;
+  note("📞 call started — " + label);
+  active = true;
+  playBtn.disabled = true; micBtn.disabled = true; stopBtn.disabled = false;
+}
+
+function endCall(reason) {
+  if (!active) return;
+  active = false;
+  if (recognition) { const r = recognition; recognition = null; try { r.stop(); } catch {} }
+  if (interimBubble) { interimBubble.remove(); interimBubble = null; }
+  note("📴 call ended — " + reason + " · final risk " + riskpct.textContent);
+  playBtn.disabled = false; micBtn.disabled = false; stopBtn.disabled = true;
+  mode = null;
+}
+
+// ---- mode B: scripted replay ----------------------------------------------
+async function playScript() {
+  resetCall("scripted digital-arrest replay");
+  mode = "replay";
+  for (const line of SCRIPT) {
+    if (!active || mode !== "replay") return;
+    callerBubble(line);
+    transcript += (transcript ? " " : "") + line;
+    score(transcript);
+    await sleep(LINE_GAP_MS);
+  }
+  if (active && mode === "replay") endCall("script finished");
+}
+
+// ---- mode A: live microphone ----------------------------------------------
+function startMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    alert("Live mic needs Chrome or Edge (browser SpeechRecognition API). Use ▶ Play scripted call instead.");
+    return;
+  }
+  resetCall("live microphone (speak the scam script aloud)");
+  mode = "mic";
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "en-IN";
+
+  recognition.onresult = (ev) => {
+    let interim = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const res = ev.results[i];
+      if (res.isFinal) {
+        const line = res[0].transcript.trim();
+        if (line) {
+          if (interimBubble) { interimBubble.remove(); interimBubble = null; }
+          callerBubble(line);
+          transcript += (transcript ? " " : "") + line;
+          score(transcript);
+        }
+      } else {
+        interim += res[0].transcript;
+      }
+    }
+    if (interim) {
+      if (!interimBubble) interimBubble = callerBubble(interim, true);
+      else interimBubble.innerHTML = `<div class="who">caller (speaking…)</div>${esc(interim)}`;
+      feed.scrollTop = feed.scrollHeight;
+      throttledScore(transcript + " " + interim);   // score mid-sentence too
+    }
+  };
+  // Chrome stops after a few seconds of silence — keep the call alive.
+  recognition.onend = () => { if (active && mode === "mic" && recognition) try { recognition.start(); } catch {} };
+  recognition.onerror = (ev) => {
+    if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+      endCall("microphone permission denied");
+    }
+  };
+  recognition.start();
+}
+
+playBtn.onclick = playScript;
+micBtn.onclick = startMic;
+stopBtn.onclick = () => endCall("ended by user");
+</script>
+</body>
+</html>
