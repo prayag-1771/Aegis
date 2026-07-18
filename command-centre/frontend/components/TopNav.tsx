@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import type { HealthResponse } from "@/lib/api";
 import type { TabKey } from "./types";
-import { Bell, Search, Shield, Wifi, X } from "./Icons";
+import { Bell, Search, Shield, Wifi, X, ChevronLeft, ChevronRight } from "./Icons";
 import Clock from "./Clock";
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -25,6 +25,7 @@ export default function TopNav({
   onBell,
   onSearch,
   onSearchClear,
+  isRightPanelOpen,
 }: {
   health: HealthResponse | null;
   alertCount: number;
@@ -34,6 +35,7 @@ export default function TopNav({
   onSearch?: (query: string) => void;
   /** Search dismissed — clear anything it drew on the map. */
   onSearchClear?: () => void;
+  isRightPanelOpen?: boolean;
 }) {
   const backendUp = health?.status === "ok";
   const [searchQuery, setSearchQuery] = useState("");
@@ -103,6 +105,38 @@ export default function TopNav({
     });
   }, { scope: container, dependencies: [activeTab] });
 
+  const handlePrevTab = () => {
+    const currentIndex = TABS.findIndex((t) => t.key === activeTab);
+    const prevIndex = currentIndex > 0 ? currentIndex - 1 : TABS.length - 1;
+    onTabChange(TABS[prevIndex].key);
+  };
+
+  const handleNextTab = () => {
+    const currentIndex = TABS.findIndex((t) => t.key === activeTab);
+    const nextIndex = currentIndex < TABS.length - 1 ? currentIndex + 1 : 0;
+    onTabChange(TABS[nextIndex].key);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === "INPUT") return;
+      
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        e.stopPropagation();
+        handlePrevTab();
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        e.stopPropagation();
+        handleNextTab();
+      }
+    };
+    // Use capture phase so we intercept the event BEFORE Mapbox processes it
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
+  }, [activeTab, onTabChange]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim() && onSearch) {
@@ -113,7 +147,8 @@ export default function TopNav({
   };
 
   return (
-    <header ref={container} className="pointer-events-auto absolute inset-x-0 top-0 z-40 flex items-center gap-5 px-5 py-3">
+    <>
+      <header ref={container} className="pointer-events-auto absolute inset-x-0 top-0 z-40 flex items-center gap-5 px-5 py-3">
       {/* Animated Shield Logo */}
       <div className="glass flex h-10 w-10 items-center justify-center !rounded-xl transition-transform duration-500 hover:rotate-12 hover:scale-110 shadow-[0_0_15px_rgba(139,92,246,0.3)]">
         <Shield className="h-5 w-5 text-zinc-100 animate-pulse" />
@@ -129,21 +164,45 @@ export default function TopNav({
           className="pointer-events-none absolute left-0 top-1 bottom-1 -z-10 rounded-full bg-zinc-100 shadow"
           style={{ width: 0 }}
         />
-        {TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            data-tab={key}
-            onClick={() => onTabChange(key)}
-            aria-current={activeTab === key ? "page" : undefined}
-            className={`focus-visible:outline-none rounded-full px-4 py-1.5 text-sm transition-colors duration-200 ${
-              activeTab === key
-                ? "font-medium text-zinc-900"
-                : "font-normal text-zinc-400 hover:text-zinc-100"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+        {TABS.map(({ key, label }) => {
+          const isActive = activeTab === key;
+          return (
+            <Fragment key={key}>
+              {isActive && (
+                <button
+                  onClick={handlePrevTab}
+                  className="rounded-full p-1 text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-100 transition-colors focus-visible:outline-none"
+                  title="Previous tab"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+              )}
+              
+              <button
+                data-tab={key}
+                onClick={() => onTabChange(key)}
+                aria-current={isActive ? "page" : undefined}
+                className={`focus-visible:outline-none rounded-full px-4 py-1.5 text-sm transition-colors duration-200 ${
+                  isActive
+                    ? "font-medium text-zinc-900"
+                    : "font-normal text-zinc-400 hover:text-zinc-100"
+                }`}
+              >
+                {label}
+              </button>
+
+              {isActive && (
+                <button
+                  onClick={handleNextTab}
+                  className="rounded-full p-1 text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-100 transition-colors focus-visible:outline-none"
+                  title="Next tab"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </Fragment>
+          );
+        })}
       </nav>
 
       <div className="ml-auto flex items-center gap-4">
@@ -248,5 +307,25 @@ export default function TopNav({
         </div>
       </div>
     </header>
+
+      {/* Floating Global Tab Navigation Arrows */}
+      <button
+        onClick={handlePrevTab}
+        className="pointer-events-auto fixed left-2 top-1/2 z-[100] -translate-y-1/2 p-1 text-zinc-400 transition-all hover:scale-125 hover:text-zinc-100 focus-visible:outline-none"
+        title="Previous tab"
+      >
+        <ChevronLeft className="h-8 w-8 drop-shadow-md" />
+      </button>
+
+      <button
+        onClick={handleNextTab}
+        className={`pointer-events-auto fixed top-1/2 z-[100] -translate-y-1/2 p-1 text-zinc-400 transition-all duration-300 ease-in-out hover:scale-125 hover:text-zinc-100 focus-visible:outline-none ${
+          isRightPanelOpen ? "right-0" : "right-2"
+        }`}
+        title="Next tab"
+      >
+        <ChevronRight className="h-8 w-8 drop-shadow-md" />
+      </button>
+    </>
   );
 }

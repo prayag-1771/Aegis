@@ -107,7 +107,7 @@ export default function SupplyTrailPanel({
         </div>
         <button
           onClick={close}
-          className="p-1.5 text-zinc-500 transition hover:bg-white/10 hover:text-zinc-200"
+          className="group relative p-1.5 text-zinc-500 transition hover:bg-white/10 hover:text-zinc-200"
           aria-label="Close"
         >
           <svg
@@ -120,15 +120,45 @@ export default function SupplyTrailPanel({
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
+          <span className="pointer-events-none absolute right-full top-1/2 mr-2 -translate-y-1/2 whitespace-nowrap rounded border border-white/10 bg-zinc-800/90 px-2 py-1 text-[10px] text-zinc-300 opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover:opacity-100">
+            Close (Esc)
+          </span>
         </button>
       </div>
 
       {/* ── Body ── */}
       <div className="gsap-panel flex-1 overflow-y-auto px-5 py-4 space-y-4">
         {loading && (
-          <div className="flex flex-col items-center gap-3 py-10">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
-            <p className="text-xs text-zinc-500">Computing trail…</p>
+          <div className="flex flex-col gap-4 animate-pulse px-1 pt-4">
+            <div className="flex gap-2 mb-2">
+              <div className="h-6 w-16 bg-white/10 rounded-full"></div>
+              <div className="h-6 w-16 bg-white/10 rounded-full"></div>
+            </div>
+            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+              <div className="h-full w-1/3 bg-white/10"></div>
+            </div>
+            
+            <div className="flex justify-center my-4">
+              <div className="h-3 w-24 bg-white/10 rounded"></div>
+            </div>
+            
+            <div className="space-y-4 relative">
+              <div className="absolute left-2.5 top-6 bottom-6 w-px border-l border-dashed border-white/10 z-0"></div>
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="relative z-10 flex gap-4">
+                  <div className="mt-4 h-5 w-5 rounded-full bg-zinc-800 shrink-0 border border-white/10 flex items-center justify-center">
+                     <div className="h-2 w-2 rounded-full bg-white/10"></div>
+                  </div>
+                  <div className="flex-1 bg-white/5 border border-white/5 rounded-lg p-4 flex justify-between items-center">
+                    <div className="space-y-2 flex-1">
+                      <div className="h-4 w-32 bg-white/10 rounded"></div>
+                      <div className="h-3 w-48 bg-white/5 rounded"></div>
+                    </div>
+                    <div className="h-6 w-6 rounded-full bg-white/5 shrink-0"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

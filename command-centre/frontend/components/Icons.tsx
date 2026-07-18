@@ -142,3 +142,15 @@ export const Play = ({ className }: { className?: string }) => (
     <polygon points="5 3 19 12 5 21 5 3" />
   </I>
 );
+
+export const ChevronLeft = ({ className }: { className?: string }) => (
+  <I className={className}>
+    <path d="m15 18-6-6 6-6" />
+  </I>
+);
+
+export const ChevronRight = ({ className }: { className?: string }) => (
+  <I className={className}>
+    <path d="m9 18 6-6-6-6" />
+  </I>
+);

@@ -16,25 +16,74 @@ import { fetchEntryRoutes, fetchSupplyTrail, injectDemoRing } from "@/lib/api";
 import { gsap, playPanelExit, prefersReducedMotion, useGSAP, usePanelEntrance } from "@/lib/gsap";
 import { usePolling } from "@/lib/usePolling";
 import AlertChips from "@/components/AlertChips";
-import AlertsDrawer from "@/components/AlertsDrawer";
+import { Shield } from "@/components/Icons";
 
+import { AlertsSkeleton, DisruptSkeleton, MetricsSkeleton, ResearchSkeleton } from "@/components/Skeletons";
+
+const MapSkeleton = () => (
+  <div className="absolute inset-0 z-0 bg-zinc-950 flex flex-col items-center justify-center pointer-events-none">
+    <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-700 via-zinc-950 to-zinc-950"></div>
+    <Shield className="h-12 w-12 text-zinc-800 animate-pulse relative z-10 mb-4" />
+    <div className="h-3 w-24 bg-zinc-800 rounded animate-pulse relative z-10"></div>
+  </div>
+);
+
+const LeftCardSkeleton = () => (
+  <>
+    {/* Left Side */}
+    <div className="fixed left-6 top-20 bottom-6 z-[9999] w-72 bg-zinc-900/80 backdrop-blur-md border border-white/10 p-5 flex flex-col animate-pulse pointer-events-none rounded-2xl shadow-2xl">
+      <div className="flex justify-between items-center mb-6">
+        <div className="h-4 w-1/3 bg-white/10 rounded"></div>
+        <div className="h-4 w-6 bg-white/10 rounded"></div>
+      </div>
+      
+      <div className="h-24 w-full bg-white/5 rounded-xl border border-white/5 mb-3"></div>
+      <div className="h-24 w-full bg-white/5 rounded-xl border border-white/5 mb-3"></div>
+      <div className="h-24 w-full bg-white/5 rounded-xl border border-white/5 mb-3"></div>
+      
+      <div className="mt-4 mb-2 h-4 w-1/4 bg-white/10 rounded"></div>
+      <div className="h-32 w-full bg-white/5 rounded-xl border border-white/5"></div>
+    </div>
+
+    {/* Right Side Synchronized Overlay */}
+    <div className="fixed left-[380px] top-20 bottom-6 right-10 z-[9999] bg-zinc-900/95 backdrop-blur-md border border-white/10 p-6 flex flex-col animate-pulse pointer-events-none rounded shadow-2xl">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="h-10 w-10 bg-white/10 rounded"></div>
+        <div className="space-y-2">
+          <div className="h-4 w-48 bg-white/10 rounded"></div>
+          <div className="h-3 w-32 bg-white/5 rounded"></div>
+        </div>
+      </div>
+      <div className="h-32 w-full bg-white/5 border border-white/10 rounded-lg mb-6"></div>
+      <div className="flex-1 bg-white/5 border border-white/10 rounded-lg p-5 flex flex-col gap-4">
+        <div className="h-4 w-1/4 bg-white/10 rounded mb-2"></div>
+        <div className="h-3 w-full bg-white/5 rounded"></div>
+        <div className="h-3 w-5/6 bg-white/5 rounded"></div>
+        <div className="h-3 w-4/5 bg-white/5 rounded"></div>
+      </div>
+    </div>
+  </>
+);
+
+const AlertsDrawer = dynamic(() => import("@/components/AlertsDrawer"), { ssr: false, loading: AlertsSkeleton });
 import FusionChatBot from "@/components/FusionChatBot";
 import Drawer from "@/components/Drawer";
 import FraudConsole from "@/components/FraudConsole";
-import FraudRingsDrawer from "@/components/FraudRingsDrawer";
 import type { TabKey } from "@/components/types";
-import ModulesDrawer from "@/components/ModulesDrawer";
-import ResearchPanel from "@/components/ResearchPanel";
 import RingViewer from "@/components/RingViewer";
-import DisruptPanel from "@/components/DisruptPanel";
 import BankPartnerPanel from "@/components/BankPartnerPanel";
-import ModelCardPanel from "@/components/ModelCardPanel";
+
+const FraudRingsDrawer = dynamic(() => import("@/components/FraudRingsDrawer"), { ssr: false, loading: LeftCardSkeleton });
+const ModulesDrawer = dynamic(() => import("@/components/ModulesDrawer"), { ssr: false, loading: LeftCardSkeleton });
+const ResearchPanel = dynamic(() => import("@/components/ResearchPanel"), { ssr: false, loading: ResearchSkeleton });
+const DisruptPanel = dynamic(() => import("@/components/DisruptPanel"), { ssr: false, loading: DisruptSkeleton });
+const ModelCardPanel = dynamic(() => import("@/components/ModelCardPanel"), { ssr: false, loading: MetricsSkeleton });
 import ToastContainer, { type Toast } from "@/components/ToastContainer";
 import TopNav from "@/components/TopNav";
 import InfoPanel from "@/components/InfoPanel";
 import SupplyTrailPanel from "@/components/SupplyTrailPanel";
 
-const CrimeMap = dynamic(() => import("@/components/CrimeMap"), { ssr: false });
+const CrimeMap = dynamic(() => import("@/components/CrimeMap"), { ssr: false, loading: MapSkeleton });
 
 export type RingAlert = {
   id: string;
@@ -157,7 +206,7 @@ export default function Page() {
     try {
       const data = await fetchSupplyTrail();
       setSupplyTrailData(data);
-      setActiveTrail(data.best_trail);
+      setActiveTrail(data.all_trails.find((t: any) => t.mode === "rail") || data.best_trail);
       setTrailSource("panel"); // the trail is the subject here — let it frame itself
     } catch (e) {
       pushToast("Supply Trail fetch failed — is the backend running?", "error");
@@ -518,10 +567,26 @@ export default function Page() {
         }
 
         // Do not close background tabs if a modal overlay is handling the escape key
-        if (bankPartnerOpen || consoleOpen || supplyTrailOpen) return;
+        if (bankPartnerOpen || consoleOpen) return;
 
-        if (activeTab === "modules" && !selectedModule) closeModules();
-        else if (activeTab === "fraud-rings" && !viewRing) closeRings();
+        if (activeTab === "modules") {
+          if (selectedModule) setSelectedModule(null);
+          else closeModules();
+          return;
+        }
+
+        if (activeTab === "fraud-rings") {
+          if (viewRing) setViewRing(null);
+          else closeRings();
+          return;
+        }
+
+        if (activeTab === "map" && supplyTrailOpen) {
+          setSupplyTrailOpen(false);
+          setActiveTrail(null);
+          setTrailSource(null);
+          return;
+        }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -534,6 +599,7 @@ export default function Page() {
   const changeTab = (t: typeof activeTab) => {
     const next = activeTab === t && t !== "map" ? "map" : t;
     if (next === activeTab) return;
+
     if (activeTab === "alerts" && drawerScope.current) {
       playPanelExit(drawerScope, () => setActiveTab(next));
       return;
@@ -570,6 +636,7 @@ export default function Page() {
         onBell={() => setActiveTab("alerts")}
         onSearch={handleSearch}
         onSearchClear={clearSearch}
+        isRightPanelOpen={(supplyTrailOpen && activeTab === "map") || activeTab === "alerts"}
       />
 
       {/* Localized alerts panel (from search). Centred until dragged, then it
