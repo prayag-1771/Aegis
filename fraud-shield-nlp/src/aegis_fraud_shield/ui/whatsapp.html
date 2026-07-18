@@ -113,7 +113,7 @@
     </div>
   </div>
 </div>
-<div id="simnote">Simulator preview — the reply below is the exact template the Twilio WhatsApp webhook will send from the real bot number.</div>
+<div id="simnote">Simulator preview — the reply below is the exact template the Twilio WhatsApp webhook (<code>/webhook/whatsapp</code>) sends from the real bot number.</div>
 
 <script>
 const SAMPLES = [
@@ -159,9 +159,8 @@ function waBubble(cls, html) {
 const waFormat = s => esc(s).replace(/\*([^*\n]+)\*/g, "<b>$1</b>");
 
 // ---------------------------------------------------------------------------
-// THE reply template. When the Twilio webhook lands (POST /webhook/whatsapp),
-// it must build its TwiML message body with this exact same logic — keep the
-// two in sync (server side will live in api.py).
+// THE reply template — mirrors build_whatsapp_reply() in api.py, which the
+// live Twilio webhook (POST /webhook/whatsapp) sends. Keep the two in sync.
 // ---------------------------------------------------------------------------
 const TYPE_LABEL = {
   digital_arrest: "digital arrest", phishing: "phishing", lottery: "lottery",
