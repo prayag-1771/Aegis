@@ -92,3 +92,7 @@ def analyze_endpoint(req: AnalyzeRequest) -> dict:
 @app.get("/")
 def ui() -> FileResponse:
     return FileResponse(UI_FILE, media_type="text/html")
+
+@app.get("/favicon.png")
+def favicon() -> FileResponse:
+    return FileResponse(Path(__file__).parent / "ui" / "favicon.png", media_type="image/png")

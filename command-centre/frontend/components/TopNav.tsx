@@ -149,7 +149,7 @@ export default function TopNav({
       <div className="ml-auto flex items-center gap-4">
         {/* Search */}
         <div className="relative flex items-center gsap-nav-item">
-          <div className={`grid items-center transition-[width] duration-300 ease-out overflow-hidden ${searchOpen ? "w-48" : "w-[115px]"}`}>
+          <div className={`grid items-center transition-[width] duration-300 ease-out overflow-hidden ${searchOpen ? "w-48" : "w-[130px]"}`}>
             
             {/* Open Form State */}
             <form 
@@ -198,13 +198,13 @@ export default function TopNav({
 
             <button
               onClick={() => setSearchOpen(true)}
-              className={`col-start-1 row-start-1 flex items-center gap-2 rounded-full px-2 py-1 w-[115px] text-xs text-zinc-500 transition-all duration-300 hover:text-zinc-100 ${
+              className={`col-start-1 row-start-1 flex items-center gap-2 rounded-full px-2 py-1 w-[130px] text-xs text-zinc-500 transition-all duration-300 hover:text-zinc-100 ${
                 searchOpen ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"
               }`}
             >
               <Search className="h-3.5 w-3.5 shrink-0" />
               <span>Search</span>
-              <kbd className="ml-1.5 hidden md:inline-flex h-3.5 items-center justify-center rounded border border-zinc-700/60 bg-zinc-800/40 px-1.5 font-sans text-[8px] font-medium text-zinc-500 shrink-0">
+              <kbd className="ml-1.5 hidden md:inline-flex h-3.5 items-center justify-center rounded border border-zinc-700/60 bg-zinc-800/40 px-1.5 font-sans text-[8px] font-medium text-zinc-500 shrink-0 whitespace-nowrap">
                 Ctrl K
               </kbd>
             </button>
