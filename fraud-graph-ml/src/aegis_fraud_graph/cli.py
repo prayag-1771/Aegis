@@ -85,7 +85,12 @@ def ghost_ring(
     from .ghost_ring import run_ghost_ring
 
     report = run_ghost_ring(source=source, n_banks=n_banks)
-    typer.echo(json.dumps(report.to_dict(), indent=2))
+    
+    out_path = OUTPUT_DIR / "ghost_ring.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(report.to_dict(), indent=2), encoding="utf-8")
+    
+    typer.echo(f"Written: {out_path}")
     typer.echo(f"\n{'='*50}")
     typer.echo(f"RECALL GAP (fused - per-bank): {report.recall_gap:+.4f}")
     typer.echo(f"Matching precision: {report.matching_precision:.4f}")

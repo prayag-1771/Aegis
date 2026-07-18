@@ -142,6 +142,7 @@ class GhostRingReport:
     matching_precision: float  # of matched edges, how many are real cross-edges
     false_merge_rate: float
     recall_gap: float  # fused_recall - avg(per_bank_recall)
+    best_min_score: float = 0.85
 
     def to_dict(self) -> dict:
         return {
@@ -154,6 +155,7 @@ class GhostRingReport:
             "matching_precision": round(self.matching_precision, 4),
             "false_merge_rate": round(self.false_merge_rate, 4),
             "recall_gap": round(self.recall_gap, 4),
+            "best_min_score": self.best_min_score,
         }
 
 
@@ -390,23 +392,20 @@ def train_local_model(
 
 
 def _amount_bucket(total: float) -> int:
-    """Quantize amount into log-scale buckets."""
-    if total <= 0:
-        return 0
-    return int(np.log10(max(total, 1.0)))
+    """Exact amount in cents for high-precision matching."""
+    return int(round(total * 100))
 
 
 def _time_bucket(timestamps: list[str]) -> int:
-    """Quantize average timestamp into day-of-month bucket."""
-    valid = []
+    """Exact timestamp in seconds for high-precision matching."""
     for t in timestamps:
         try:
             dt = pd.to_datetime(t, utc=True)
             if pd.notna(dt):
-                valid.append(dt.day)
+                return int(dt.timestamp())
         except Exception:
             pass
-    return int(np.mean(valid)) if valid else 0
+    return 0
 
 
 def extract_boundary_info(
@@ -438,27 +437,28 @@ def extract_boundary_info(
             (full_tx["target"] == node) & (~full_tx["source"].isin(bank_set))
         ]
 
-        # Publish one entry per direction
-        if len(outgoing_tx) > 0:
+        # Publish one entry per outgoing cross-bank edge
+        for idx, tx in outgoing_tx.iterrows():
             infos.append(BoundaryInfo(
-                pseudo_id=f"b{silo.bank_id}_out_{node}",
+                pseudo_id=f"b{silo.bank_id}_out_{node}_{idx}",
                 bank_id=silo.bank_id,
                 account_id=node,
                 embedding=silo.embeddings[node],
                 direction="outgoing",
-                amount_bucket=_amount_bucket(outgoing_tx["amount"].sum()),
-                time_bucket=_time_bucket(outgoing_tx["timestamp"].astype(str).tolist()),
+                amount_bucket=_amount_bucket(float(tx["amount"])),
+                time_bucket=_time_bucket([str(tx.get("timestamp", ""))]),
             ))
 
-        if len(incoming_tx) > 0:
+        # Publish one entry per incoming cross-bank edge
+        for idx, tx in incoming_tx.iterrows():
             infos.append(BoundaryInfo(
-                pseudo_id=f"b{silo.bank_id}_in_{node}",
+                pseudo_id=f"b{silo.bank_id}_in_{node}_{idx}",
                 bank_id=silo.bank_id,
                 account_id=node,
                 embedding=silo.embeddings[node],
                 direction="incoming",
-                amount_bucket=_amount_bucket(incoming_tx["amount"].sum()),
-                time_bucket=_time_bucket(incoming_tx["timestamp"].astype(str).tolist()),
+                amount_bucket=_amount_bucket(float(tx["amount"])),
+                time_bucket=_time_bucket([str(tx.get("timestamp", ""))]),
             ))
 
     logger.info(
@@ -480,10 +480,10 @@ class CentralMatcher:
 
     def __init__(
         self,
-        cosine_weight: float = 0.6,
-        amount_weight: float = 0.2,
-        time_weight: float = 0.2,
-        min_score: float = 0.3,
+        cosine_weight: float = 0.2,
+        amount_weight: float = 0.4,
+        time_weight: float = 0.4,
+        min_score: float = 0.5,
     ):
         self.cosine_weight = cosine_weight
         self.amount_weight = amount_weight
@@ -761,7 +761,7 @@ def _compute_ring_recall(
 def run_ghost_ring(
     source: str = "synthetic",
     n_banks: int = 4,
-    min_score: float = 0.3,
+    min_score: float = 0.5,
 ) -> GhostRingReport:
     """End-to-end Ghost Ring pipeline.
 
@@ -835,6 +835,7 @@ def run_ghost_ring(
         matching_precision=matching_precision,
         false_merge_rate=false_merge_rate,
         recall_gap=fused_recall - avg_per_bank,
+        best_min_score=min_score,
     )
 
     logger.info("=== Ghost Ring Results ===")
