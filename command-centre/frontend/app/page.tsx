@@ -17,14 +17,14 @@ import { fetchEntryRoutes, fetchSupplyTrail, injectDemoRing, fetchDashboardSumma
 import { gsap, playPanelExit, prefersReducedMotion, useGSAP, usePanelEntrance } from "@/lib/gsap";
 import { usePolling } from "@/lib/usePolling";
 import AlertChips from "@/components/AlertChips";
-import { Shield } from "@/components/Icons";
 
 import { AlertsSkeleton, DisruptSkeleton, MetricsSkeleton, ResearchSkeleton } from "@/components/Skeletons";
 
 const MapSkeleton = () => (
   <div className="absolute inset-0 z-0 bg-zinc-950 flex flex-col items-center justify-center pointer-events-none">
     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-700 via-zinc-950 to-zinc-950"></div>
-    <Shield className="h-12 w-12 text-zinc-800 animate-pulse relative z-10 mb-4" />
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img src="/logo-mark.png" alt="Aegis" className="h-12 w-12 opacity-20 animate-pulse relative z-10 mb-4" />
     <div className="h-3 w-24 bg-zinc-800 rounded animate-pulse relative z-10"></div>
   </div>
 );
