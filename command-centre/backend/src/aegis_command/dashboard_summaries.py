@@ -25,7 +25,10 @@ def _parse_json_reply(text: str) -> dict:
 
 def _claude(data: dict) -> dict:
     import anthropic
-    client = anthropic.Anthropic()
+    # Explicit timeout: this endpoint is auto-fetched by the dashboard on every
+    # data change — the SDK's default (10 min) would freeze the panel instead
+    # of falling through the chain.
+    client = anthropic.Anthropic(timeout=15.0)
     r = client.messages.create(
         model="claude-opus-4-8",
         max_tokens=500,
@@ -93,8 +96,19 @@ def generate_summaries(data: dict) -> dict:
             print(f"Fallback failed for {name}: {e}")
             continue
 
+    # Deterministic floor: counts only — never invent methodology or findings
+    # the data does not contain.
+    scams, fakes, rings = data.get("scams", 0), data.get("counterfeits", 0), data.get("rings", 0)
     return {
-        "modules_overview": f"The Fraud Shield module has flagged {data.get('scams', 0)} potential scams, while the Counterfeit Vision module has detected {data.get('counterfeits', 0)} fake notes.",
-        "rings_summary": f"The Graph ML engine is actively monitoring {data.get('rings', 0)} fraud rings across multiple districts. The detection model uses spectral clustering combined with temporal velocity analysis to identify suspicious circular money flows.",
+        "modules_overview": (
+            f"The Fraud Shield module has flagged {scams} potential scam{'' if scams == 1 else 's'}, "
+            f"while the Counterfeit Vision module has detected {fakes} fake note{'' if fakes == 1 else 's'}. "
+            "No AI provider is reachable — this overview is generated directly from current system counts."
+        ),
+        "rings_summary": (
+            f"The Graph ML engine is currently tracking {rings} fraud ring{'' if rings == 1 else 's'} "
+            "across the monitored districts. Figures update as new detections stream in; "
+            "AI narrative synthesis resumes when a provider is reachable."
+        ),
         "engine": "template-fallback"
     }

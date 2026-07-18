@@ -152,13 +152,35 @@ export default function Page() {
 
   const [aiSummaries, setAiSummaries] = useState<DashboardSummariesResponse | null>(null);
 
-  // Fetch AI summaries whenever underlying threat counts meaningfully change
+  // Fetch AI summaries whenever underlying threat counts meaningfully change.
+  // Stale-while-revalidate: the previous summary stays visible during the
+  // refetch (first load shows the skeleton), and the cleanup flag stops a slow
+  // older response from overwriting a newer one.
   useEffect(() => {
     if (!events && !hotspots) return;
-    setAiSummaries(null); // Clear old summaries to show the skeleton while loading new insights
+    let stale = false;
     fetchDashboardSummaries()
-      .then((res) => setAiSummaries(res))
-      .catch((err) => console.error("Failed to fetch dashboard summaries:", err));
+      .then((res) => {
+        if (!stale) setAiSummaries(res);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch dashboard summaries:", err);
+        if (stale) return;
+        // Offline floor: the panel must never stick on a skeleton. Derive a
+        // deterministic overview from the same event stream the tiles use, so
+        // the text keeps tracking the data even with the summariser down.
+        const scams = events?.scams?.filter((s) => s.verdict !== "legit").length ?? 0;
+        const fakes = events?.counterfeits?.filter((c) => c.verdict === "fake").length ?? 0;
+        const rings = events?.fraud_graph?.rings?.length ?? 0;
+        setAiSummaries({
+          modules_overview: `Fraud Shield has flagged ${scams} scam signal${scams === 1 ? "" : "s"} and Counterfeit Vision has confirmed ${fakes} fake note${fakes === 1 ? "" : "s"}. AI synthesis is unreachable right now — this overview is computed directly from the live event stream.`,
+          rings_summary: `The graph engine is tracking ${rings} fraud ring${rings === 1 ? "" : "s"} in the current snapshot. AI synthesis is unreachable right now — figures update as detections stream in.`,
+          engine: "offline-fallback",
+        });
+      });
+    return () => {
+      stale = true;
+    };
   }, [events?.scams?.length, events?.counterfeits?.length, events?.fraud_graph?.rings?.length]);
 
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -1049,7 +1071,7 @@ export default function Page() {
                   <div className="bg-white/5 border border-white/10 p-5 flex-1 relative overflow-hidden">
                     <div className="text-xs font-medium text-zinc-300 mb-3 flex justify-between items-center">
                       AI Intelligence Overview
-                      {aiSummaries && <span className="text-[9px] uppercase tracking-wider text-emerald-400 border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 rounded shadow-[0_0_8px_rgba(52,211,153,0.3)]">{aiSummaries.engine.split("/")[0]}</span>}
+                      {aiSummaries && <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${aiSummaries.engine.includes("fallback") ? "text-amber-400 border-amber-400/30 bg-amber-400/10" : "text-emerald-400 border-emerald-400/30 bg-emerald-400/10 shadow-[0_0_8px_rgba(52,211,153,0.3)]"}`}>{aiSummaries.engine.split("/")[0]}</span>}
                     </div>
                     {aiSummaries ? (
                       <div className="text-[12px] leading-relaxed text-zinc-400 space-y-3">
@@ -1160,7 +1182,7 @@ export default function Page() {
                   <div className="bg-white/5 border border-white/10 p-5 flex-1 relative overflow-hidden">
                     <div className="text-xs font-medium text-zinc-300 mb-3 flex justify-between items-center">
                       Consolidated AI Summary
-                      {aiSummaries && <span className="text-[9px] uppercase tracking-wider text-emerald-400 border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 rounded shadow-[0_0_8px_rgba(52,211,153,0.3)]">{aiSummaries.engine.split("/")[0]}</span>}
+                      {aiSummaries && <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${aiSummaries.engine.includes("fallback") ? "text-amber-400 border-amber-400/30 bg-amber-400/10" : "text-emerald-400 border-emerald-400/30 bg-emerald-400/10 shadow-[0_0_8px_rgba(52,211,153,0.3)]"}`}>{aiSummaries.engine.split("/")[0]}</span>}
                     </div>
                     {aiSummaries ? (
                       <div className="text-[12px] leading-relaxed text-zinc-400 space-y-3">
