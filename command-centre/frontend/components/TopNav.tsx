@@ -152,7 +152,7 @@ export default function TopNav({
       {/* Aegis owl logo */}
       <div className="glass flex h-12 w-12 items-center justify-center !rounded-xl transition-transform duration-500 hover:rotate-12 hover:scale-110 shadow-[0_0_15px_rgba(139,92,246,0.3)]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-mark.png" alt="Aegis" className="h-8 w-8 object-contain" />
+        <img src="/logo-mark.png" alt="Aegis" className="h-11 w-11 object-contain" />
       </div>
 
       <nav
