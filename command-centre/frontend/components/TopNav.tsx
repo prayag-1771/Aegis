@@ -190,7 +190,7 @@ export default function TopNav({
         className="pointer-events-auto glass flex h-[clamp(2.5rem,3.4vw,3rem)] w-[clamp(2.5rem,3.4vw,3rem)] shrink-0 cursor-pointer items-center justify-center !rounded-xl transition-transform duration-500 hover:rotate-12 hover:scale-110 shadow-[0_0_22px_rgba(139,92,246,0.55)] focus-visible:outline-none"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img ref={logoRef} src="/logo-owl-shield.svg" alt="Aegis" className="h-[82%] w-[82%] object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]" />
+        <img ref={logoRef} src="/logo-owl-shield.png" alt="Aegis" className="h-full w-full rounded-[10px] object-cover" />
       </button>
 
       <nav
