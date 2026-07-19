@@ -163,14 +163,14 @@ export default function TopNav({
 
   return (
     <>
-      <header ref={container} className="pointer-events-auto absolute inset-x-0 top-0 z-50 flex items-center gap-5 px-5 py-3">
+      <header ref={container} className="pointer-events-none absolute inset-x-0 top-0 z-50 flex items-center gap-5 px-5 py-3">
       {/* Aegis owl logo — click to hard-reset the map to the India overview */}
       <button
         type="button"
         onClick={handleLogoClick}
         aria-label="Reset map to India view"
         title="Reset to India view"
-        className="glass flex h-12 w-12 cursor-pointer items-center justify-center !rounded-xl transition-transform duration-500 hover:rotate-12 hover:scale-110 shadow-[0_0_22px_rgba(139,92,246,0.55)] focus-visible:outline-none"
+        className="pointer-events-auto glass flex h-12 w-12 cursor-pointer items-center justify-center !rounded-xl transition-transform duration-500 hover:rotate-12 hover:scale-110 shadow-[0_0_22px_rgba(139,92,246,0.55)] focus-visible:outline-none"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img ref={logoRef} src="/logo-mark.png" alt="Aegis" className="h-11 w-11 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]" />
@@ -178,7 +178,7 @@ export default function TopNav({
 
       <nav
         ref={navRef as React.RefObject<HTMLElement>}
-        className="glass gsap-nav-item relative flex items-center gap-1 !rounded-full !border-white/6 p-1"
+        className="pointer-events-auto glass gsap-nav-item relative flex items-center gap-1 !rounded-full !border-white/6 p-1"
       >
         {/* single pill that slides between tabs, positioned via GSAP above */}
         <span
@@ -227,7 +227,7 @@ export default function TopNav({
         })}
       </nav>
 
-      <div className="ml-auto flex items-center gap-4">
+      <div className="pointer-events-auto ml-auto flex items-center gap-4">
         {/* Search */}
         <div className="relative flex items-center gsap-nav-item">
           <div className={`grid items-center transition-[width] duration-300 ease-out overflow-hidden ${searchOpen ? "w-48" : "w-[130px]"}`}>
