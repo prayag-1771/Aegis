@@ -133,35 +133,66 @@ function GhostRingCard({ ring }: { ring: ResearchResponse["ghost_ring"] }) {
             );
           })()}
 
-          <div className="mt-3 bg-white/5 p-2.5 text-[10px]">
-            <div className="flex justify-between text-zinc-400">
-              <span>Recall gap (fused − avg bank)</span>
-              <span className={ring.recall_gap > 0 ? "text-emerald-400" : "text-zinc-500"}>
-                {ring.recall_gap >= 0 ? "+" : ""}
-                {pct(ring.recall_gap)}
-              </span>
-            </div>
-            {ring.best_min_score != null && (
-              <div className="mt-1 flex justify-between text-zinc-500">
-                <span>Match threshold used</span>
-                <span>{ring.best_min_score.toFixed(2)}</span>
-              </div>
-            )}
-          </div>
+          {(() => {
+            const bestBank = Math.max(...Object.values(ring.per_bank_ring_recall));
+            const fusionWins = ring.fused_ring_recall > bestBank;
+            return (
+              <>
+                <div className="mt-3 bg-white/5 p-2.5 text-[10px]">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Fused vs best single bank</span>
+                    <span className={fusionWins ? "font-semibold text-emerald-400" : "font-semibold text-red-400"}>
+                      {pct(ring.fused_ring_recall)} vs {pct(bestBank)}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex justify-between text-zinc-500">
+                    <span>Recall gap (fused − avg bank)</span>
+                    <span>
+                      {ring.recall_gap >= 0 ? "+" : ""}
+                      {pct(ring.recall_gap)}
+                    </span>
+                  </div>
+                  {ring.best_min_score != null && (
+                    <div className="mt-1 flex justify-between text-zinc-500">
+                      <span>Match threshold used</span>
+                      <span>{ring.best_min_score.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
 
-          {/* The caveat the whole method turns on — shown, not hidden. */}
-          <div
-            className={`mt-2 border p-2.5 text-[10px] leading-relaxed ${
-              ring.false_merge_rate > 0.5
-                ? "border-red-500/25 bg-red-500/5 text-red-200/80"
-                : "border-amber-500/20 bg-amber-500/5 text-amber-200/70"
-            }`}
-          >
-            <span className="font-semibold">False-merge rate {pct(ring.false_merge_rate)}.</span>{" "}
-            {ring.false_merge_rate > 0.5
-              ? "Most matched links are wrong, so the recovered rings are largely invented. Federated matching is possible in principle; precision is the unsolved hard part on this data."
-              : "Share of matched links that are spurious. Read this together with the recall gap — either number alone misleads."}
-          </div>
+                {/* The verdict the whole method turns on — shown, not hidden.
+                    The honest headline moved: matching precision is solved on
+                    this data (0% false merges), so the card must not reassure
+                    while fusion loses to a single bank's own view. */}
+                <div
+                  className={`mt-2 border p-2.5 text-[10px] leading-relaxed ${
+                    fusionWins
+                      ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-200/70"
+                      : "border-red-500/25 bg-red-500/5 text-red-200/80"
+                  }`}
+                >
+                  {fusionWins ? (
+                    <>
+                      <span className="font-semibold">Fusion beats every single bank on this run.</span>{" "}
+                      Read together with the false-merge rate ({pct(ring.false_merge_rate)}) — either
+                      number alone misleads.
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold">
+                        Fusion did not beat the best single bank ({pct(ring.fused_ring_recall)} vs{" "}
+                        {pct(bestBank)}) — reported as a genuine negative.
+                      </span>{" "}
+                      The privacy mechanism itself held: no raw data left any bank and{" "}
+                      {pct(1 - ring.false_merge_rate)} of matched links were real cross-bank edges.
+                      The loss is in the fusion/detection step — turning this positive is research,
+                      not tuning.
+                    </>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </>
       )}
     </Card>
@@ -174,7 +205,7 @@ function ArmsRaceCard({ arms }: { arms: ResearchResponse["arms_race"] }) {
   return (
     <Card
       title="Criminal Trains the Cop"
-      subtitle="Criminal strategies evolve to evade the detector; the detector retrains. Both should climb — that is the arms race."
+      subtitle="Criminal strategies evolve to evade the detector; the detector retrains. The card reports whatever the run actually shows — a healthy loop is a see-saw."
     >
       {!arms || arms.generation.length < 2 ? (
         <Empty what="Arms-race history" />
@@ -199,6 +230,35 @@ function ArmsRaceCard({ arms }: { arms: ResearchResponse["arms_race"] }) {
               <span className="h-3 w-px bg-violet-400" /> retrain
             </span>
           </div>
+
+          {/* Verdict computed from the series — the caption must never claim
+              a see-saw the chart does not show. */}
+          {(() => {
+            const escape = arms.escape_rate;
+            const recall = arms.detector_recall;
+            const finalRecall = recall[recall.length - 1] ?? 0;
+            const saturated =
+              escape.filter((v) => v >= 0.95).length >= Math.ceil(escape.length * 0.8);
+            const collapsed = finalRecall < 0.3;
+            if (saturated && collapsed) {
+              return (
+                <div className="mt-2 border border-amber-500/25 bg-amber-500/5 p-2.5 text-[10px] leading-relaxed text-amber-200/80">
+                  <span className="font-semibold">Mis-calibrated run — no arms race yet.</span>{" "}
+                  The criminal escapes ~100% from the start and the detector ends at{" "}
+                  {pct(finalRecall)} recall, with {arms.retrained_generations.length} retrain(s) in{" "}
+                  {arms.generation.length} generations. The loop needs a tighter evasion budget and
+                  more frequent retraining before this chart shows a genuine see-saw.
+                </div>
+              );
+            }
+            return (
+              <div className="mt-2 border border-emerald-500/20 bg-emerald-500/5 p-2.5 text-[10px] leading-relaxed text-emerald-200/70">
+                Final generation: escape {pct(escape[escape.length - 1] ?? 0)}, detector recall{" "}
+                {pct(finalRecall)}, after {arms.retrained_generations.length} retrain(s).
+              </div>
+            );
+          })()}
+
           <p className="mt-2 text-[10px] leading-relaxed text-zinc-600">
             The criminal can only invent tricks the simulator can express — the arms race is real
             but bounded by what the generator models.
@@ -259,6 +319,13 @@ function SpectralCard({ spectral }: { spectral: ResearchResponse["spectral"] }) 
   }
 
   const shiftHolds = spectral.shift.shift_magnitude > 0;
+  // Rank of the ring community by Rayleigh across ALL communities: rank 1 means
+  // a "rank by Rayleigh, investigate top-k" detector finds the ring first —
+  // the strongest claim this data supports today.
+  const ringRank =
+    1 +
+    spectral.communities.filter((c) => c.rayleigh > spectral.shift.ring_rayleigh).length;
+  const nCommunities = spectral.communities.length;
 
   return (
     <Card
@@ -283,11 +350,19 @@ function SpectralCard({ spectral }: { spectral: ResearchResponse["spectral"] }) 
             {spectral.shift.shift_magnitude.toFixed(3)}
           </span>
         </div>
+        <div className="mt-1 flex justify-between border-t border-white/5 pt-1 text-zinc-400">
+          <span>Rank by Rayleigh (all communities)</span>
+          <span className={ringRank === 1 ? "font-semibold text-emerald-400" : "text-zinc-300"}>
+            #{ringRank} of {nCommunities}
+          </span>
+        </div>
       </div>
 
       <p className="mt-2 text-[10px] leading-relaxed text-zinc-600">
         {shiftHolds
-          ? "The ring community sits higher-frequency than a matched clean one — the validated result. Turning this into an automatic per-community detector is harder and is the BWGNN follow-up, not this threshold."
+          ? ringRank === 1
+            ? "The ring carries the highest Rayleigh of every community on the graph — a rank-by-Rayleigh, investigate-top-k detector finds it first, today. An absolute per-community threshold is the genuinely hard BWGNN follow-up."
+            : "The ring community sits higher-frequency than a matched clean one — the validated result. Turning this into an automatic per-community detector is harder and is the BWGNN follow-up, not this threshold."
           : "The shift did not hold on this run."}
       </p>
     </Card>
