@@ -17,6 +17,12 @@ dependencies = [
     "uvicorn>=0.32",
     "python-multipart>=0.0.9",
     "jsonschema>=4.23",
+    # Optional durable serial registry (Atlas). dnspython is declared explicitly
+    # because pymongo 4.x dropped the [srv] extra, and mongodb+srv:// connection
+    # strings need DNS SRV resolution. Both are unused when MONGODB_URI is unset
+    # — the registry falls back to its JSON file.
+    "pymongo>=4.9",
+    "dnspython>=2.6",
 ]
 
 [project.optional-dependencies]

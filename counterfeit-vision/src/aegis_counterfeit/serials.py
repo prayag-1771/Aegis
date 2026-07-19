@@ -28,6 +28,7 @@ either way.
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -35,6 +36,83 @@ from threading import Lock
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 REGISTRY_FILE = DATA_DIR / "serial_registry.json"
+
+# ── Durable registry (optional) ──────────────────────────────────────────────
+# The registry is the one part of this system whose whole value is memory ACROSS
+# TIME: "this serial was already seen last week in Jamtara" only means something
+# if it survives a restart. On an ephemeral container the JSON file is wiped on
+# every deploy, which silently guts the feature.
+#
+# So: when MONGODB_URI is set we persist sightings in MongoDB; otherwise we keep
+# the JSON file exactly as before (local dev and tests change nothing). Every
+# Mongo path FAILS OPEN — any connection/query error falls back to the file, so
+# a database hiccup can never break a note scan.
+MONGO_DB = os.environ.get("MONGO_DB", "aegis")
+MONGO_COLLECTION = os.environ.get("MONGO_COLLECTION", "serial_sightings")
+# Short timeouts: a scan must not hang waiting on a database.
+_MONGO_TIMEOUT_MS = 2500
+
+_mongo_client = None  # cached across SerialRegistry instances (one per scan)
+_mongo_unavailable = False
+_env_loaded = False
+
+
+def _load_env() -> None:
+    """Read counterfeit-vision/.env (and the shared fusion one) so MONGODB_URI
+    works without exporting it by hand. Mirrors prescreen's loader; `setdefault`
+    means a real environment variable always wins over the file."""
+    global _env_loaded
+    if _env_loaded:
+        return
+    _env_loaded = True
+    module_root = Path(__file__).resolve().parents[2]  # counterfeit-vision/
+    for env_file in (
+        module_root / ".env",
+        module_root.parent / "command-centre" / "fusion" / ".env",
+    ):
+        try:
+            if not env_file.exists():
+                continue
+            for line in env_file.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    os.environ.setdefault(
+                        key.strip(), value.strip().strip('"').strip("'")
+                    )
+        except OSError:
+            continue
+
+
+def _mongo_collection(uri: str | None):
+    """Cached collection handle, or None to use the JSON file.
+
+    Cached at module level because `inspect_serial` builds a fresh
+    SerialRegistry per scan — a client per call would open a connection storm.
+    """
+    global _mongo_client, _mongo_unavailable
+    if not uri or _mongo_unavailable:
+        return None
+    if _mongo_client is None:
+        try:
+            from pymongo import MongoClient
+
+            _mongo_client = MongoClient(
+                uri,
+                serverSelectionTimeoutMS=_MONGO_TIMEOUT_MS,
+                connectTimeoutMS=_MONGO_TIMEOUT_MS,
+            )
+        except Exception:
+            # pymongo missing or URI unparseable — degrade to the file for good.
+            _mongo_unavailable = True
+            return None
+    try:
+        collection = _mongo_client[MONGO_DB][MONGO_COLLECTION]
+        # Idempotent; makes the duplicate lookup an index hit rather than a scan.
+        collection.create_index("serial")
+        return collection
+    except Exception:
+        return None
 
 _FORMAT = re.compile(r"^\d[A-Z]{2}\d{6}$")
 _FORBIDDEN_PREFIX_LETTERS = set("IO")
@@ -66,11 +144,28 @@ def validate(serial: str) -> tuple[str, str]:
 
 
 class SerialRegistry:
-    """JSON-file sighting store: serial -> [{event_id, timestamp, district}]."""
+    """Sighting store: serial -> [{event_id, timestamp, district}].
 
-    def __init__(self, path: Path = REGISTRY_FILE) -> None:
+    MongoDB when MONGODB_URI is set (survives restarts, which is the whole point
+    of a sighting registry); the local JSON file otherwise. Any Mongo error
+    falls back to the file rather than failing the scan.
+    """
+
+    def __init__(self, path: Path = REGISTRY_FILE, mongo_uri: str | None = None) -> None:
         self.path = path
         self._lock = Lock()
+        # An explicit argument wins (tests pin it); else the environment decides.
+        if mongo_uri is not None:
+            self._mongo_uri = mongo_uri
+        else:
+            _load_env()
+            self._mongo_uri = os.environ.get("MONGODB_URI")
+
+    @property
+    def backend(self) -> str:
+        """Which store is actually serving. Surfaced so nothing claims durable
+        national memory while it is really writing a throwaway file."""
+        return "mongodb" if _mongo_collection(self._mongo_uri) is not None else "file"
 
     def _load(self) -> dict:
         try:
@@ -83,18 +178,39 @@ class SerialRegistry:
     ) -> list[dict]:
         """Record this sighting; return PRIOR sightings of the same serial."""
         s = normalize(serial)
+        sighting = {
+            "event_id": event_id,
+            "timestamp": datetime.now(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z"),
+            "district": district,
+        }
+        collection = _mongo_collection(self._mongo_uri)
+        if collection is not None:
+            try:
+                # One document per sighting: no unbounded array growth, and the
+                # duplicate lookup is a plain indexed query.
+                prior = [
+                    {
+                        "event_id": d.get("event_id"),
+                        "timestamp": d.get("timestamp"),
+                        "district": d.get("district"),
+                    }
+                    for d in collection.find(
+                        {"serial": s}, {"_id": 0, "serial": 0}
+                    ).sort("timestamp", 1)
+                ]
+                collection.insert_one({"serial": s, **sighting})
+                return prior
+            except Exception:
+                pass  # fail open — a DB hiccup must never break a scan
+        return self._register_in_file(s, sighting)
+
+    def _register_in_file(self, s: str, sighting: dict) -> list[dict]:
         with self._lock:
             data = self._load()
             prior = list(data.get(s, []))
-            data.setdefault(s, []).append(
-                {
-                    "event_id": event_id,
-                    "timestamp": datetime.now(timezone.utc)
-                    .isoformat(timespec="seconds")
-                    .replace("+00:00", "Z"),
-                    "district": district,
-                }
-            )
+            data.setdefault(s, []).append(sighting)
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.path.write_text(json.dumps(data, indent=1), encoding="utf-8")
         return prior

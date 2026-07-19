@@ -22,14 +22,21 @@ from aegis_counterfeit.vision_agent import cap_verdict_for_vision, vision_review
 
 @pytest.fixture(autouse=True)
 def _hermetic(monkeypatch, tmp_path):
-    """No LLM keys, no shared registry file — every test gets its own store."""
-    for key in ("ANTHROPIC_API_KEY", "GROQ_API_KEY", "GEMINI_API_KEY"):
+    """No LLM keys, no shared registry file — every test gets its own store.
+
+    MONGODB_URI is cleared too: with it set, the registry would talk to the real
+    Atlas cluster and these dedup assertions would see production sightings (and
+    write test serials into it)."""
+    for key in ("ANTHROPIC_API_KEY", "GROQ_API_KEY", "GEMINI_API_KEY", "MONGODB_URI"):
         monkeypatch.delenv(key, raising=False)
     import aegis_counterfeit.prescreen as prescreen_mod
     import aegis_counterfeit.serials as serials_mod
 
     monkeypatch.setattr(prescreen_mod, "_load_env_keys", lambda: None)
     monkeypatch.setattr(serials_mod, "REGISTRY_FILE", tmp_path / "registry.json")
+    # Neutralise the .env loader too — otherwise it would re-populate the
+    # MONGODB_URI we just cleared and the suite would talk to the real cluster.
+    monkeypatch.setattr(serials_mod, "_load_env", lambda: None)
 
 
 # ── format validation ───────────────────────────────────────────────────────
@@ -62,6 +69,76 @@ def test_duplicate_serial_detected(tmp_path):
     assert second["status"] == "duplicate"
     assert [p["event_id"] for p in second["prior_sightings"]] == ["note_a"]
     assert "printing run" in second["detail"]
+
+
+# ── durable registry (MongoDB) — mocked, no network ─────────────────────────
+
+class _FakeCursor:
+    def __init__(self, docs):
+        self._docs = docs
+
+    def sort(self, key, direction=1):
+        return iter(sorted(self._docs, key=lambda d: d.get(key) or ""))
+
+
+class _FakeCollection:
+    """Minimal stand-in for a pymongo collection (find/sort + insert_one)."""
+
+    def __init__(self, fail: bool = False):
+        self.docs: list[dict] = []
+        self.fail = fail
+
+    def find(self, flt, projection=None):
+        if self.fail:
+            raise RuntimeError("mongo unreachable")
+        return _FakeCursor([d for d in self.docs if d["serial"] == flt["serial"]])
+
+    def insert_one(self, doc):
+        if self.fail:
+            raise RuntimeError("mongo unreachable")
+        self.docs.append(dict(doc))
+
+
+def test_registry_uses_mongo_when_uri_set(tmp_path, monkeypatch):
+    """With a URI, sightings live in Mongo — and the JSON file stays untouched."""
+    import aegis_counterfeit.serials as serials_mod
+
+    fake = _FakeCollection()
+    monkeypatch.setattr(serials_mod, "_mongo_collection", lambda uri: fake)
+
+    path = tmp_path / "reg.json"
+    reg = SerialRegistry(path, mongo_uri="mongodb://stub")
+    assert reg.backend == "mongodb"
+
+    first = inspect_serial("4CB738291", "note_a", "Jamtara", reg)
+    second = inspect_serial("4cb 738291", "note_b", "Alwar", reg)
+
+    assert first["prior_sightings"] == []
+    assert second["status"] == "duplicate"
+    assert [p["event_id"] for p in second["prior_sightings"]] == ["note_a"]
+    assert len(fake.docs) == 2 and fake.docs[0]["serial"] == "4CB738291"
+    assert not path.exists()  # nothing fell through to the file
+
+
+def test_mongo_failure_falls_back_to_file(tmp_path, monkeypatch):
+    """A DB hiccup must never break a scan — dedup still works via the file."""
+    import aegis_counterfeit.serials as serials_mod
+
+    monkeypatch.setattr(
+        serials_mod, "_mongo_collection", lambda uri: _FakeCollection(fail=True)
+    )
+
+    path = tmp_path / "reg.json"
+    reg = SerialRegistry(path, mongo_uri="mongodb://stub")
+    inspect_serial("4CB738291", "note_a", "Jamtara", reg)
+    second = inspect_serial("4CB738291", "note_b", "Alwar", reg)
+
+    assert second["status"] == "duplicate"  # degraded, not broken
+    assert path.exists()  # the file took over
+
+
+def test_backend_is_file_without_uri(tmp_path):
+    assert SerialRegistry(tmp_path / "reg.json").backend == "file"
 
 
 def test_nonsense_serial_never_registered(tmp_path):
