@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aegis Fraud Shield — live scam check</title>
 <link rel="icon" type="image/png" href="/favicon.png">
+<script src="/config.js"></script>
 <style>
   :root {
     --bg: #09090b;
@@ -323,7 +324,7 @@ const gpsDistrict = document.getElementById("gpsDistrict");
 const statusEl = document.getElementById("status");
 
 // Command centre to auto-ingest detections into (dashboard + fusion).
-const COMMAND_CENTRE = "http://127.0.0.1:8000";
+const COMMAND_CENTRE = window.AEGIS_COMMAND_CENTRE || "http://127.0.0.1:8000";
 // Demo geography shared with fraud-graph + fusion (see fusion/correlator.py).
 const DISTRICT_COORDS = {
   // Jamtara town centre. 23.79 fell ~19 km south, on Maithon reservoir.

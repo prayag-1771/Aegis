@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aegis Counterfeit Vision — Live Note Scan</title>
 <link rel="icon" type="image/png" href="/favicon.png">
+<script src="/config.js"></script>
 <meta name="description" content="AI-powered Indian currency counterfeit detection with Grad-CAM heatmap explanations.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -443,7 +444,7 @@ const gpsLat       = document.getElementById("gpsLat");
 const gpsLon       = document.getElementById("gpsLon");
 const gpsDistrict  = document.getElementById("gpsDistrict");
 
-const COMMAND_CENTRE = "http://127.0.0.1:8000";
+const COMMAND_CENTRE = window.AEGIS_COMMAND_CENTRE || "http://127.0.0.1:8000";
 const DISTRICT_COORDS = {
   // Jamtara town centre. 23.79 fell ~19 km south, on Maithon reservoir.
   "Jamtara":[23.963,86.804],"Deoghar":[24.48,86.70],"Alwar":[27.55,76.63],

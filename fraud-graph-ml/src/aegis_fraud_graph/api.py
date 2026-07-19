@@ -14,6 +14,7 @@ Endpoints:
 from __future__ import annotations
 
 import json
+import os
 from contextlib import asynccontextmanager
 from threading import Lock
 
@@ -81,7 +82,11 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     # Local-origin browsers only (command centre + demo UIs).
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    # Local dev + deployed frontends (Vercel) and sibling services (Render).
+    allow_origin_regex=os.environ.get(
+        "ALLOWED_ORIGIN_REGEX",
+        r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://[A-Za-z0-9-]+\.(vercel\.app|onrender\.com)",
+    ),
     allow_methods=["*"],
     allow_headers=["*"],
 )

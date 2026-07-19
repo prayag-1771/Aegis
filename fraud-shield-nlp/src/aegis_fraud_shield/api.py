@@ -64,7 +64,11 @@ app = FastAPI(title="Aegis Fraud Shield", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     # Local-origin browsers only (command centre + demo UIs).
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    # Local dev + deployed frontends (Vercel) and sibling services (Render).
+    allow_origin_regex=os.environ.get(
+        "ALLOWED_ORIGIN_REGEX",
+        r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://[A-Za-z0-9-]+\.(vercel\.app|onrender\.com)",
+    ),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -127,6 +131,16 @@ def ui() -> FileResponse:
 @app.get("/favicon.png")
 def favicon() -> FileResponse:
     return FileResponse(UI_DIR / "favicon.png", media_type="image/png")
+
+
+@app.get("/config.js")
+def config_js() -> Response:
+    """Runtime config for the static citizen pages: where the command centre
+    lives. Env-driven so the same HTML works locally and on Render."""
+    cc = os.environ.get("COMMAND_CENTRE_URL", "http://127.0.0.1:8000")
+    return Response(
+        f'window.AEGIS_COMMAND_CENTRE = "{cc}";', media_type="application/javascript"
+    )
 
 
 @app.get("/live-call")

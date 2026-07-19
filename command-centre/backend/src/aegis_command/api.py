@@ -15,6 +15,7 @@ Endpoints:
 from __future__ import annotations
 
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -26,10 +27,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import __version__
 from .store import store
 
+# Sibling service URLs — env-overridable so the same code deploys to Render
+# (each module gets its own hostname) and still defaults to local dev ports.
 MODULES = {
-    "fraud-shield": "http://127.0.0.1:8001",
-    "counterfeit-vision": "http://127.0.0.1:8002",
-    "fraud-graph": "http://127.0.0.1:8003",
+    "fraud-shield": os.environ.get("FRAUD_SHIELD_URL", "http://127.0.0.1:8001"),
+    "counterfeit-vision": os.environ.get("COUNTERFEIT_URL", "http://127.0.0.1:8002"),
+    "fraud-graph": os.environ.get("FRAUD_GRAPH_URL", "http://127.0.0.1:8003"),
 }
 
 CONTRACTS = Path(__file__).resolve().parents[3].parent / "contracts"
@@ -64,7 +67,12 @@ app.add_middleware(
     CORSMiddleware,
     # Local-origin browsers only (the dashboard). Real security would need
     # auth — CORS just stops random LAN pages from calling us.
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    # Local dev + deployed frontends (Vercel) and sibling services (Render).
+    # Override with ALLOWED_ORIGIN_REGEX for any other domain.
+    allow_origin_regex=os.environ.get(
+        "ALLOWED_ORIGIN_REGEX",
+        r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://[A-Za-z0-9-]+\.(vercel\.app|onrender\.com)",
+    ),
     allow_methods=["*"],
     allow_headers=["*"],
 )
