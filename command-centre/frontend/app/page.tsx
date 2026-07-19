@@ -214,6 +214,23 @@ export default function Page() {
 
   const [aiSummaries, setAiSummaries] = useState<DashboardSummariesResponse | null>(null);
 
+  /** Fingerprint of everything the briefing is derived from.
+   *
+   *  Keying the refetch on the three ARRAY LENGTHS missed any change that keeps
+   *  the counts steady — a verdict flipping scam->legit, a note being re-scored
+   *  fake, a ring gaining accounts or moving district. The briefing then went
+   *  stale against data it was supposedly describing. This tracks identity and
+   *  the fields the summary actually cites, so a real change re-runs it and a
+   *  poll returning identical data does not. */
+  const summarySignature = useMemo(() => {
+    if (!events) return "";
+    return JSON.stringify([
+      events.scams?.map((s) => [s.event_id, s.verdict, s.scam_type, s.location_hint?.district]),
+      events.counterfeits?.map((c) => [c.event_id, c.verdict, c.denomination, c.location_hint?.district]),
+      events.fraud_graph?.rings?.map((r) => [r.ring_id, r.size, r.district, r.label]),
+    ]);
+  }, [events]);
+
   // Fetch AI summaries whenever underlying threat counts meaningfully change.
   // Stale-while-revalidate: the previous summary stays visible during the
   // refetch (first load shows the skeleton), and the cleanup flag stops a slow
@@ -243,7 +260,7 @@ export default function Page() {
     return () => {
       stale = true;
     };
-  }, [events?.scams?.length, events?.counterfeits?.length, events?.fraud_graph?.rings?.length]);
+  }, [summarySignature]);
 
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [cityAlerts, setCityAlerts] = useState<{district: string; alerts: any[]} | null>(null);
@@ -1210,18 +1227,19 @@ export default function Page() {
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 p-5 flex-1 relative overflow-hidden">
+                  <div className="bg-white/5 border border-white/10 p-5 flex-1 relative min-h-[220px] overflow-y-auto scroll-thin">
                     <div className="text-xs font-medium text-zinc-300 mb-3 flex justify-between items-center">
                       AI Intelligence Overview
                       {aiSummaries && <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${aiSummaries.engine.includes("fallback") ? "text-amber-400 border-amber-400/30 bg-amber-400/10" : "text-emerald-400 border-emerald-400/30 bg-emerald-400/10 shadow-[0_0_8px_rgba(52,211,153,0.3)]"}`}>{aiSummaries.engine.split("/")[0]}</span>}
                     </div>
                     {aiSummaries ? (
-                      <div className="text-[12px] leading-relaxed text-zinc-400 space-y-3">
+                      // Only the generated text lives in this block. A hardcoded
+                      // "Recommendation:" paragraph used to sit here, reading as
+                      // model output while being fixed UI copy — and the model
+                      // now closes with its own next step, so it also duplicated
+                      // it. The navigation hint below the card still covers it.
+                      <div className="text-[13px] leading-relaxed text-zinc-300 space-y-3">
                         <p>{aiSummaries.modules_overview}</p>
-                        <p>
-                          <strong className="text-zinc-200">Recommendation:</strong> Click on either the Scam Call or Note Scan card on the left 
-                          to view detailed reports, individual verdicts, and a consolidated AI summary of the latest detections.
-                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3 mt-4 animate-pulse">
@@ -1323,17 +1341,20 @@ export default function Page() {
                     </div>
                   </div>
 
-                  <div className="bg-white/5 border border-white/10 p-5 flex-1 relative overflow-hidden">
+                  <div className="bg-white/5 border border-white/10 p-5 flex-1 relative min-h-[220px] overflow-y-auto scroll-thin">
                     <div className="text-xs font-medium text-zinc-300 mb-3 flex justify-between items-center">
                       Consolidated AI Summary
                       {aiSummaries && <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${aiSummaries.engine.includes("fallback") ? "text-amber-400 border-amber-400/30 bg-amber-400/10" : "text-emerald-400 border-emerald-400/30 bg-emerald-400/10 shadow-[0_0_8px_rgba(52,211,153,0.3)]"}`}>{aiSummaries.engine.split("/")[0]}</span>}
                     </div>
                     {aiSummaries ? (
-                      <div className="text-[12px] leading-relaxed text-zinc-400 space-y-3">
+                      <div className="text-[13px] leading-relaxed text-zinc-300 space-y-3">
                         <p>{aiSummaries.rings_summary}</p>
-                        <p>
-                          <strong className="text-zinc-200">Recommendation:</strong> Click any ring on the left panel to visualize its money flow topology, 
-                          run the simulation, and inspect per-account evidence. Use the "Inject ring" feature to stress-test detection on synthetic fraud scenarios.
+                        {/* Fixed UI guidance, not model output — kept visually
+                            distinct so it cannot be mistaken for analysis. */}
+                        <p className="border-t border-white/10 pt-3 text-[11px] text-zinc-500">
+                          Click any ring on the left to visualise its money-flow topology, run the
+                          simulation, and inspect per-account evidence. &ldquo;Inject ring&rdquo; stress-tests
+                          detection against a synthetic fraud scenario.
                         </p>
                       </div>
                     ) : (

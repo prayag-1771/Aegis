@@ -348,14 +348,12 @@ def ring_spectral(ring_id: str) -> dict:
 @app.get("/dashboard-summaries")
 def dashboard_summaries() -> dict:
     from .store import store
-    from .dashboard_summaries import generate_summaries
-    
-    data = {
-        "scams": len(store.scams),
-        "counterfeits": len(store.counterfeits),
-        "rings": len(store.fraud_graph.get("rings", []))
-    }
-    return generate_summaries(data)
+    from .dashboard_summaries import build_context, generate_summaries
+
+    # Pass the real snapshot, not three integers: the briefing can only be as
+    # specific as its input, and counts alone forced it to restate the tiles.
+    scams, counterfeits, fraud_graph = store.snapshot()
+    return generate_summaries(build_context(scams, counterfeits, fraud_graph))
 
 
 @app.get("/events")
