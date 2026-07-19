@@ -109,6 +109,23 @@ export default function TopNav({
     });
   }, { scope: container, dependencies: [activeTab] });
 
+  // Sizes are viewport-relative (clamp), so tab widths change on resize —
+  // snap the pill back under the active tab or it drifts off-target.
+  useEffect(() => {
+    const measure = () => {
+      const nav = navRef.current;
+      const pill = pillRef.current;
+      if (!nav || !pill) return;
+      const active = nav.querySelector<HTMLElement>(`[data-tab="${activeTab}"]`);
+      if (!active) return;
+      const navBox = nav.getBoundingClientRect();
+      const btnBox = active.getBoundingClientRect();
+      gsap.set(pill, { x: btnBox.left - navBox.left, width: btnBox.width });
+    };
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [activeTab]);
+
   const handlePrevTab = () => {
     const currentIndex = TABS.findIndex((t) => t.key === activeTab);
     const prevIndex = currentIndex > 0 ? currentIndex - 1 : TABS.length - 1;
@@ -163,17 +180,17 @@ export default function TopNav({
 
   return (
     <>
-      <header ref={container} className="pointer-events-none absolute inset-x-0 top-0 z-50 flex items-center gap-5 px-5 py-3">
+      <header ref={container} className="pointer-events-none absolute inset-x-0 top-0 z-50 flex items-center gap-[clamp(0.5rem,1.4vw,1.25rem)] px-[clamp(0.6rem,1.4vw,1.25rem)] py-3">
       {/* Aegis owl logo — click to hard-reset the map to the India overview */}
       <button
         type="button"
         onClick={handleLogoClick}
         aria-label="Reset map to India view"
         title="Reset to India view"
-        className="pointer-events-auto glass flex h-12 w-12 cursor-pointer items-center justify-center !rounded-xl transition-transform duration-500 hover:rotate-12 hover:scale-110 shadow-[0_0_22px_rgba(139,92,246,0.55)] focus-visible:outline-none"
+        className="pointer-events-auto glass flex h-[clamp(2.5rem,3.4vw,3rem)] w-[clamp(2.5rem,3.4vw,3rem)] shrink-0 cursor-pointer items-center justify-center !rounded-xl transition-transform duration-500 hover:rotate-12 hover:scale-110 shadow-[0_0_22px_rgba(139,92,246,0.55)] focus-visible:outline-none"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img ref={logoRef} src="/logo-mark.png" alt="Aegis" className="h-11 w-11 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]" />
+        <img ref={logoRef} src="/logo-mark.png" alt="Aegis" className="h-[88%] w-[88%] object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]" />
       </button>
 
       <nav
@@ -204,7 +221,7 @@ export default function TopNav({
                 data-tab={key}
                 onClick={() => onTabChange(key)}
                 aria-current={isActive ? "page" : undefined}
-                className={`focus-visible:outline-none rounded-full px-4 py-1.5 text-sm transition-colors duration-200 ${
+                className={`focus-visible:outline-none whitespace-nowrap rounded-full px-[clamp(0.55rem,1.05vw,1rem)] py-1.5 text-[clamp(0.72rem,0.92vw,0.875rem)] transition-colors duration-200 ${
                   isActive
                     ? "font-medium text-zinc-900"
                     : "font-normal text-zinc-400 hover:text-zinc-100"
@@ -227,15 +244,15 @@ export default function TopNav({
         })}
       </nav>
 
-      <div className="pointer-events-auto ml-auto flex items-center gap-4">
+      <div className="pointer-events-auto ml-auto flex shrink-0 items-center gap-[clamp(0.5rem,1.1vw,1rem)]">
         {/* Search */}
         <div className="relative flex items-center gsap-nav-item">
-          <div className={`grid items-center transition-[width] duration-300 ease-out overflow-hidden ${searchOpen ? "w-48" : "w-[130px]"}`}>
+          <div className={`grid items-center transition-[width] duration-300 ease-out overflow-hidden ${searchOpen ? "w-[clamp(10rem,16vw,12rem)]" : "w-[clamp(2.25rem,9vw,8.25rem)]"}`}>
             
             {/* Open Form State */}
             <form 
               onSubmit={handleSearch} 
-              className={`col-start-1 row-start-1 glass !rounded-full flex items-center pl-3 pr-1 py-1 w-48 transition-all duration-300 ${
+              className={`col-start-1 row-start-1 glass !rounded-full flex items-center pl-3 pr-1 py-1 w-[clamp(10rem,16vw,12rem)] transition-all duration-300 ${
                 searchOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
               }`}
             >
@@ -279,21 +296,23 @@ export default function TopNav({
 
             <button
               onClick={() => setSearchOpen(true)}
-              className={`col-start-1 row-start-1 flex items-center gap-2 rounded-full px-2 py-1 w-[130px] text-xs text-zinc-500 transition-all duration-300 hover:text-zinc-100 ${
+              className={`col-start-1 row-start-1 flex items-center gap-2 rounded-full px-2 py-1 w-auto min-w-0 text-xs text-zinc-500 transition-all duration-300 hover:text-zinc-100 ${
                 searchOpen ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"
               }`}
             >
               <Search className="h-3.5 w-3.5 shrink-0" />
-              <span>Search</span>
-              <kbd className="ml-1.5 hidden md:inline-flex h-3.5 items-center justify-center rounded border border-zinc-700/60 bg-zinc-800/40 px-1.5 font-sans text-[8px] font-medium text-zinc-500 shrink-0 whitespace-nowrap">
+              <span className="hidden lg:inline">Search</span>
+              <kbd className="ml-1.5 hidden xl:inline-flex h-3.5 items-center justify-center rounded border border-zinc-700/60 bg-zinc-800/40 px-1.5 font-sans text-[8px] font-medium text-zinc-500 shrink-0 whitespace-nowrap">
                 Ctrl K
               </kbd>
             </button>
           </div>
 
           {/* Callout Dialogue Box */}
+              {/* First-run hint: only where there is genuinely spare width —
+                  on smaller laptops it overlapped the tab row. */}
               {!hasSearched && (
-                <div className="absolute right-full top-1/2 -translate-y-1/2 mr-4 w-44 p-2.5 text-[11px] leading-relaxed text-zinc-300 bg-zinc-800/90 backdrop-blur-md border border-white/10 rounded-lg shadow-xl z-50">
+                <div className="absolute right-full top-1/2 hidden -translate-y-1/2 mr-4 w-44 p-2.5 text-[11px] leading-relaxed text-zinc-300 bg-zinc-800/90 backdrop-blur-md border border-white/10 rounded-lg shadow-xl z-50 2xl:block">
                   Search any place here to view its details.
                   {/* Arrow pointing right */}
                   <div className="absolute top-1/2 -translate-y-1/2 -right-1.5 w-3 h-3 bg-zinc-800/90 border-t border-r border-white/10 transform rotate-45"></div>
@@ -324,7 +343,7 @@ export default function TopNav({
         </button>
 
         {/* Clock instead of PM icon */}
-        <div className="gsap-nav-item tabular-nums">
+        <div className="gsap-nav-item tabular-nums whitespace-nowrap text-[clamp(0.72rem,0.95vw,0.875rem)]">
           <Clock />
         </div>
       </div>

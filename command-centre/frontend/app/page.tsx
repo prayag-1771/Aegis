@@ -909,7 +909,7 @@ export default function Page() {
 
       {/* Research Lab — the three graph-ML experiments, made visible */}
       {activeTab === "research" && (
-        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 pointer-events-auto">
+        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center px-6 pb-6 pt-[clamp(4.25rem,8vh,6.5rem)] pointer-events-auto">
           <div ref={researchScope} className="w-full max-w-[95vw] max-h-[90vh] flex gap-4 relative">
             <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
@@ -929,7 +929,7 @@ export default function Page() {
 
       {/* Disrupt & Respond — detections turned into concrete, auditable actions */}
       {activeTab === "disrupt" && (
-        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 pointer-events-auto">
+        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center px-6 pb-6 pt-[clamp(4.25rem,8vh,6.5rem)] pointer-events-auto">
           <div ref={disruptScope} className="w-full max-w-[95vw] max-h-[90vh] flex gap-4 relative">
             <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
@@ -949,7 +949,7 @@ export default function Page() {
 
       {/* Metrics — Model Card (measured metrics, the evaluation focus) */}
       {activeTab === "metrics" && (
-        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 pointer-events-auto">
+        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center px-6 pb-6 pt-[clamp(4.25rem,8vh,6.5rem)] pointer-events-auto">
           <div ref={metricsScope} className="w-full max-w-[95vw] max-h-[90vh] flex gap-4 relative">
             <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
@@ -1025,7 +1025,7 @@ export default function Page() {
 
       {/* Full screen blur overlay for Modules — side-by-side layout */}
       {activeTab === "modules" && (
-        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 pointer-events-auto">
+        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center px-6 pb-6 pt-[clamp(4.25rem,8vh,6.5rem)] pointer-events-auto">
           <div ref={modulesScope} className="w-full max-w-[95vw] max-h-[90vh] flex gap-4 relative">
             {/* Close button */}
             <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
@@ -1127,7 +1127,7 @@ export default function Page() {
 
       {/* Full screen blur overlay for Fraud Rings — side-by-side layout */}
       {activeTab === "fraud-rings" && (
-        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 pointer-events-auto">
+        <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center px-6 pb-6 pt-[clamp(4.25rem,8vh,6.5rem)] pointer-events-auto">
           <div ref={ringsScope} className="w-full max-w-[95vw] max-h-[90vh] flex gap-4 relative">
             {/* Close button */}
             <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
