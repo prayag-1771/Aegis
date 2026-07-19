@@ -107,7 +107,7 @@ export default function FusionChatBot({
                 >
                   {fusion.threat_level} THREAT
                 </span>
-                {fusion.audit_trail && (
+                {fusion.audit_trail && fusion.audit_trail.model !== "template-fallback" && (
                   <span className="text-[9px] text-zinc-500 font-mono ml-auto">
                     {fusion.audit_trail.model}
                   </span>
