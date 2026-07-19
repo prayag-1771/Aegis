@@ -441,7 +441,26 @@ export default function CrimeMap({
     // (temporal analysis) — otherwise default to node order. The animation
     // itself becomes truthful instead of decorative.
     const nodes = trail.corridor.node_path;
-    const flowReverse = trail.flow != null && trail.flow.direction_toward === nodes[0]?.name;
+    const firstNode = nodes[0]?.name;
+    const lastNode = nodes[nodes.length - 1]?.name;
+    const originName = trail.inferred_origin?.name;
+
+    // Arrows and dashes must always run FROM the inferred origin outward.
+    //
+    // node_path is NOT guaranteed to be origin-first: the rail corridor lists
+    // Howrah (the origin) first, but the road and ship corridors list theirs
+    // LAST (Dhanbad->Varanasi with origin Varanasi; Haldia->JNPT with origin
+    // JNPT). The previous rule consulted only trail.flow.direction_toward,
+    // which is null whenever temporal analysis found no direction — true for
+    // both of those corridors — so they fell back to raw node order and pointed
+    // backwards, INTO the origin.
+    //
+    // So: when the origin sits at a known end of the path, that decides it.
+    // Only when it matches neither end do we fall back to the proven flow.
+    const flowReverse =
+      originName != null && (originName === firstNode || originName === lastNode)
+        ? originName === lastNode
+        : trail.flow != null && trail.flow.direction_toward === firstNode;
 
     // The dash head is QUANTIZED to a fixed cycle of exact values. The old
     // version marched a continuous float (offset ± 0.15, mod 8, abs), so every
@@ -535,18 +554,15 @@ export default function CrimeMap({
       );
     }
 
-    // 7 — Temporal flow: direction arrows + the next hub at risk with its ETA
-    if (trail.flow) {
-      const flow = trail.flow;
-      // cumulative km along node_path (flat-earth is fine at arrow scale)
-      const seg: number[] = [0];
-      for (let i = 1; i < nodes.length; i++) {
-        const dx = (nodes[i].lon - nodes[i - 1].lon) * Math.cos((nodes[i].lat * Math.PI) / 180);
-        const dy = nodes[i].lat - nodes[i - 1].lat;
-        seg.push(seg[i - 1] + Math.hypot(dx, dy));
-      }
-      const total = seg[seg.length - 1];
-      // three arrows at 30/50/70% along the corridor, rotated to flow direction
+    // 7 — Trail directional arrows (always show direction from origin to seizures)
+    const seg: number[] = [0];
+    for (let i = 1; i < nodes.length; i++) {
+      const dx = (nodes[i].lon - nodes[i - 1].lon) * Math.cos((nodes[i].lat * Math.PI) / 180);
+      const dy = nodes[i].lat - nodes[i - 1].lat;
+      seg.push(seg[i - 1] + Math.hypot(dx, dy));
+    }
+    const total = seg[seg.length - 1];
+    if (total > 0) {
       for (const frac of [0.3, 0.5, 0.7]) {
         const target = total * frac;
         let i = seg.findIndex((s) => s >= target);
@@ -558,15 +574,28 @@ export default function CrimeMap({
         let dy = nodes[i].lat - nodes[i - 1].lat;
         if (flowReverse) { dx = -dx; dy = -dy; }
         const deg = (Math.atan2(-dy, dx) * 180) / Math.PI; // CSS angle, screen y down
+        
+        const container = document.createElement("div");
         const el = document.createElement("div");
         el.className = "trail-flow-arrow";
         el.style.transform = `rotate(${deg}deg)`;
         el.textContent = "➤";
-        el.title = `Flow: toward ${flow.direction_toward} at ~${flow.speed_km_per_day} km/day (R²=${flow.consistency})`;
+        if (trail.flow) {
+          el.title = `Flow: toward ${trail.flow.direction_toward} at ~${trail.flow.speed_km_per_day} km/day (R²=${trail.flow.consistency})`;
+        } else {
+          el.title = "Direction of Trail";
+        }
+        container.appendChild(el);
+        
         trailMarkersRef.current.push(
-          new lib.Marker({ element: el }).setLngLat([lon, lat]).addTo(map)
+          new lib.Marker({ element: container }).setLngLat([lon, lat]).addTo(map)
         );
       }
+    }
+
+    // 8 — Temporal flow: next hub at risk with its ETA
+    if (trail.flow) {
+      const flow = trail.flow;
       // next hub at risk — pulsing warning ring + ETA tag
       const nxt = flow.next_hub_at_risk;
       if (nxt) {
@@ -737,6 +766,40 @@ export default function CrimeMap({
       }, 55);
     };
     animate();
+
+    // Add directional arrows for the entryRoute ("road")
+    const entrySeg: number[] = [0];
+    for (let i = 1; i < coords.length; i++) {
+      const dx = (coords[i][0] - coords[i - 1][0]) * Math.cos((coords[i][1] * Math.PI) / 180);
+      const dy = coords[i][1] - coords[i - 1][1];
+      entrySeg.push(entrySeg[i - 1] + Math.hypot(dx, dy));
+    }
+    const entryTotal = entrySeg[entrySeg.length - 1];
+    if (entryTotal > 0) {
+      for (const frac of [0.3, 0.5, 0.7]) {
+        const target = entryTotal * frac;
+        let i = entrySeg.findIndex((s) => s >= target);
+        if (i <= 0) i = 1;
+        const t = (target - entrySeg[i - 1]) / (entrySeg[i] - entrySeg[i - 1] || 1);
+        const lat = coords[i - 1][1] + t * (coords[i][1] - coords[i - 1][1]);
+        const lon = coords[i - 1][0] + t * (coords[i][0] - coords[i - 1][0]);
+        const dx = (coords[i][0] - coords[i - 1][0]) * Math.cos((lat * Math.PI) / 180);
+        const dy = coords[i][1] - coords[i - 1][1];
+        const deg = (Math.atan2(-dy, dx) * 180) / Math.PI;
+        
+        const container = document.createElement("div");
+        const el = document.createElement("div");
+        el.className = "trail-flow-arrow";
+        el.style.transform = `rotate(${deg}deg)`;
+        el.style.color = "#d8b4fe";
+        el.textContent = "➤";
+        container.appendChild(el);
+        
+        entryMarkersRef.current.push(
+          new lib.Marker({ element: container }).setLngLat([lon, lat]).addTo(map)
+        );
+      }
+    }
 
     // Source: the FIR-documented printing press the notes may have come from.
     const src = legs[0];
