@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 144" fill="none" role="img" aria-label="Aegis owl shield">
+  <defs>
+    <linearGradient id="aegis-g" x1="0" y1="0" x2="128" y2="144" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield whose top corners are the owl's ear tufts; brow dips between them -->
+  <path d="M24 34 L34 14 L50 26 Q64 20 78 26 L94 14 L104 34 L104 74 Q104 104 64 132 Q24 104 24 74 Z"
+        stroke="url(#aegis-g)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Eyes -->
+  <circle cx="46" cy="62" r="13" stroke="url(#aegis-g)" stroke-width="6.5"/>
+  <circle cx="82" cy="62" r="13" stroke="url(#aegis-g)" stroke-width="6.5"/>
+  <circle cx="46" cy="62" r="4" fill="url(#aegis-g)"/>
+  <circle cx="82" cy="62" r="4" fill="url(#aegis-g)"/>
+  <!-- Beak -->
+  <path d="M56 84 L64 96 L72 84" stroke="url(#aegis-g)" stroke-width="6.5"
+        stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

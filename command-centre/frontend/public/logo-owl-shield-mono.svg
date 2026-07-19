@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 144" fill="none" role="img" aria-label="Aegis owl shield">
+  <!-- Monochrome variant: inherits color when inlined (currentColor), renders
+       near-white from an <img> tag. Same geometry as logo-owl-shield.svg. -->
+  <g stroke="#fafafa" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M24 34 L34 14 L50 26 Q64 20 78 26 L94 14 L104 34 L104 74 Q104 104 64 132 Q24 104 24 74 Z"/>
+    <circle cx="46" cy="62" r="13" stroke-width="6.5"/>
+    <circle cx="82" cy="62" r="13" stroke-width="6.5"/>
+    <path d="M56 84 L64 96 L72 84" stroke-width="6.5"/>
+  </g>
+  <circle cx="46" cy="62" r="4" fill="#fafafa"/>
+  <circle cx="82" cy="62" r="4" fill="#fafafa"/>
+</svg>
