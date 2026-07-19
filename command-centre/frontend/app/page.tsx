@@ -870,6 +870,10 @@ export default function Page() {
         onSearch={handleSearch}
         onSearchClear={clearSearch}
         onLogoClick={handleRecenter}
+        isLeftPanelOpen={drawerOpen}
+        // Both tabs the Supply Trail panel can sit over, so the arrow shifts on
+        // Alerts & Analytics exactly as it does on the Live Map.
+        isRightPanelOpen={supplyTrailOpen && (activeTab === "map" || activeTab === "alerts")}
       />
 
       {/* Localized alerts panel (from search). Centred until dragged, then it

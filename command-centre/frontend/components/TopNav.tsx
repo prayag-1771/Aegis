@@ -26,6 +26,8 @@ export default function TopNav({
   onSearch,
   onSearchClear,
   onLogoClick,
+  isLeftPanelOpen,
+  isRightPanelOpen,
 }: {
   health: HealthResponse | null;
   alertCount: number;
@@ -33,10 +35,11 @@ export default function TopNav({
   onTabChange: (tab: TabKey) => void;
   onBell?: () => void;
   onSearch?: (query: string) => void;
-  /** Search dismissed — clear anything it drew on the map. */
   onSearchClear?: () => void;
   /** Hard-reset the map to the India overview (owl-logo click). */
   onLogoClick?: () => void;
+  isLeftPanelOpen?: boolean;
+  isRightPanelOpen?: boolean;
 }) {
   const backendUp = health?.status === "ok";
   const [searchQuery, setSearchQuery] = useState("");
@@ -355,7 +358,9 @@ export default function TopNav({
       {/* Floating Global Tab Navigation Arrows */}
       <button
         onClick={handlePrevTab}
-        className="pointer-events-auto fixed left-2 top-1/2 z-[100] -translate-y-1/2 p-1 text-white transition-all hover:scale-125 focus-visible:outline-none"
+        className={`pointer-events-auto fixed left-2 top-1/2 z-[100] p-1 text-white transition-all duration-300 ease-in-out hover:scale-125 focus-visible:outline-none -translate-y-1/2 ${
+          isLeftPanelOpen ? "translate-x-[calc(52px+22rem)]" : "translate-x-0"
+        }`}
         title="Previous tab"
       >
         <ChevronLeft className="h-8 w-8 drop-shadow-md" />
@@ -363,11 +368,15 @@ export default function TopNav({
 
       <button
         onClick={handleNextTab}
-        // Fixed position in every tab and whether or not the Supply Trail panel
-        // is open. It used to shift left by the panel's full width, which parked
-        // it on the panel's own content; anchoring it to the viewport edge keeps
-        // "next tab" exactly where the eye already expects it from the Live Map.
-        className="pointer-events-auto fixed right-0 top-1/2 z-[100] -translate-x-2 -translate-y-1/2 p-1 text-white transition-all duration-300 ease-in-out hover:scale-125 focus-visible:outline-none"
+        // With a right-hand panel open the arrow slides RIGHT, flush to the
+        // viewport edge, so it rides on the panel instead of being pushed onto
+        // the map beside it (the old -translate-x-[400px] parked it left of the
+        // panel entirely). Closing it eases back to the resting -translate-x-2,
+        // the same spot it holds on Modules and every other tab.
+        // duration-300 matches the panel's own slide, so the two move together.
+        className={`pointer-events-auto fixed right-0 top-1/2 z-[100] p-1 text-white transition-transform duration-300 ease-in-out hover:scale-125 focus-visible:outline-none -translate-y-1/2 ${
+          isRightPanelOpen ? "translate-x-0" : "-translate-x-2"
+        }`}
         title="Next tab"
       >
         <ChevronRight className="h-8 w-8 drop-shadow-md" />
