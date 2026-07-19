@@ -922,7 +922,7 @@ export default function Page() {
       {activeTab === "research" && (
         <div className="absolute inset-0 z-40 bg-zinc-950/60 backdrop-blur-md flex flex-col items-center justify-center px-6 pb-6 pt-28 pointer-events-auto">
           <div ref={researchScope} className="w-full max-w-[95vw] max-h-[85vh] flex gap-4 relative">
-            <div className="absolute -top-8 left-0 z-10 flex items-center">
+            <div className="absolute -top-5 left-0 z-10 flex items-center">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
             </div>
             <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
@@ -933,7 +933,7 @@ export default function Page() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
-            <div className="gsap-panel w-full bg-zinc-900/90 border border-white/10 shadow-2xl flex flex-col overflow-hidden" style={{ opacity: 0 }}>
+            <div className="gsap-panel w-full bg-zinc-900 border border-white/10 shadow-2xl flex flex-col overflow-hidden" style={{ opacity: 0 }}>
               <ResearchPanel onClose={closeResearch} />
             </div>
           </div>
@@ -944,7 +944,7 @@ export default function Page() {
       {activeTab === "disrupt" && (
         <div className="absolute inset-0 z-40 bg-zinc-950/60 backdrop-blur-md flex flex-col items-center justify-center px-6 pb-6 pt-28 pointer-events-auto">
           <div ref={disruptScope} className="w-full max-w-[95vw] max-h-[85vh] flex gap-4 relative">
-            <div className="absolute -top-8 left-0 z-10 flex items-center">
+            <div className="absolute -top-5 left-0 z-10 flex items-center">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
             </div>
             <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
@@ -955,7 +955,7 @@ export default function Page() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
-            <div className="gsap-panel w-full bg-zinc-900/90 border border-white/10 shadow-2xl flex flex-col overflow-hidden" style={{ opacity: 0 }}>
+            <div className="gsap-panel w-full bg-zinc-900 border border-white/10 shadow-2xl flex flex-col overflow-hidden" style={{ opacity: 0 }}>
               <DisruptPanel onClose={closeDisrupt} />
             </div>
           </div>
@@ -966,7 +966,7 @@ export default function Page() {
       {activeTab === "metrics" && (
         <div className="absolute inset-0 z-40 bg-zinc-950/60 backdrop-blur-md flex flex-col items-center justify-center px-6 pb-6 pt-28 pointer-events-auto">
           <div ref={metricsScope} className="w-full max-w-[95vw] max-h-[85vh] flex gap-4 relative">
-            <div className="absolute -top-8 left-0 z-10 flex items-center">
+            <div className="absolute -top-5 left-0 z-10 flex items-center">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
             </div>
             <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
@@ -977,7 +977,7 @@ export default function Page() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
-            <div className="gsap-panel w-full bg-zinc-900/90 border border-white/10 shadow-2xl flex flex-col overflow-hidden" style={{ opacity: 0 }}>
+            <div className="gsap-panel w-full bg-zinc-900 border border-white/10 shadow-2xl flex flex-col overflow-hidden" style={{ opacity: 0 }}>
               <ModelCardPanel onClose={closeMetrics} />
             </div>
           </div>
@@ -1043,7 +1043,7 @@ export default function Page() {
         <div className="absolute inset-0 z-40 bg-zinc-950/60 backdrop-blur-md flex flex-col items-center justify-center px-6 pb-6 pt-28 pointer-events-auto">
           <div ref={modulesScope} className="w-full max-w-[95vw] max-h-[85vh] flex gap-4 relative">
             {/* Close button */}
-            <div className="absolute -top-8 left-0 z-10 flex items-center">
+            <div className="absolute -top-5 left-0 z-10 flex items-center">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
             </div>
             <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
@@ -1056,7 +1056,7 @@ export default function Page() {
             </div>
 
             {/* LEFT: Modules list */}
-            <div className="gsap-panel w-[380px] shrink-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 shadow-2xl" style={{ opacity: 0 }}>
+            <div className="gsap-panel w-[380px] shrink-0 max-h-[90vh] overflow-y-auto bg-zinc-900 border border-white/10 shadow-2xl" style={{ opacity: 0 }}>
               <ModulesDrawer
                 events={events}
                 health={health}
@@ -1066,7 +1066,7 @@ export default function Page() {
             </div>
 
             {/* RIGHT: InfoPanel or GenAI summary */}
-            <div className="gsap-panel flex-1 min-w-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 shadow-2xl" style={{ opacity: 0 }}>
+            <div className="gsap-panel flex-1 min-w-0 max-h-[90vh] overflow-y-auto bg-zinc-900 border border-white/10 shadow-2xl" style={{ opacity: 0 }}>
               {selectedModule ? (
                 <InfoPanel
                   moduleType={selectedModule}
@@ -1147,7 +1147,7 @@ export default function Page() {
         <div className="absolute inset-0 z-40 bg-zinc-950/60 backdrop-blur-md flex flex-col items-center justify-center px-6 pb-6 pt-28 pointer-events-auto">
           <div ref={ringsScope} className="w-full max-w-[95vw] max-h-[85vh] flex gap-4 relative">
             {/* Close button */}
-            <div className="absolute -top-8 left-0 z-10 flex items-center">
+            <div className="absolute -top-5 left-0 z-10 flex items-center">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
             </div>
             <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
@@ -1160,7 +1160,7 @@ export default function Page() {
             </div>
 
             {/* LEFT: Fraud ring list */}
-            <div className="gsap-panel w-[380px] shrink-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 shadow-2xl" style={{ opacity: 0 }}>
+            <div className="gsap-panel w-[380px] shrink-0 max-h-[90vh] overflow-y-auto bg-zinc-900 border border-white/10 shadow-2xl" style={{ opacity: 0 }}>
               <FraudRingsDrawer
                 events={events}
                 onInjectRing={handleInjectRing}
@@ -1172,7 +1172,7 @@ export default function Page() {
             </div>
 
             {/* RIGHT: GenAI summary OR RingViewer */}
-            <div className="gsap-panel flex-1 min-w-0 max-h-[90vh] overflow-y-auto bg-zinc-900/90 border border-white/10 shadow-2xl" style={{ opacity: 0 }}>
+            <div className="gsap-panel flex-1 min-w-0 max-h-[90vh] overflow-y-auto bg-zinc-900 border border-white/10 shadow-2xl" style={{ opacity: 0 }}>
               {viewRing && viewerData ? (
                 <div className="p-5">
                   <RingViewer
@@ -1280,7 +1280,7 @@ export default function Page() {
       >
         {/* Hidden while its own panel is open: the row sits above that panel's
             z-index, and "open Supply Trail" is meaningless when it already is. */}
-        {activeTab === "map" && !supplyTrailOpen && (
+        {(!supplyTrailOpen && (activeTab === "map" || activeTab === "alerts")) && (
           !events || !hotspots ? (
             <div className="pointer-events-auto rounded-full border border-zinc-800 bg-zinc-900/80 mt-0.5 w-[140px] h-[36px] animate-pulse" />
           ) : (
