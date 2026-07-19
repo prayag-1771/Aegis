@@ -110,17 +110,26 @@ account totals, rupee value, ring archetypes, districts, risk scores).
 
 Output a strictly valid JSON object with exactly these two keys:
 
-1. "modules_overview" — 4 to 6 sentences on the scam and counterfeit landscape.
-   Name the dominant scam type and the districts involved, cite the risk scores,
-   and say what the failed note-security features and repeated denominations
-   suggest about the source. Finish with what an analyst should look at next.
+1. "modules_overview" — a substantial briefing of 160 to 220 words on the scam
+   and counterfeit landscape, written as two paragraphs separated by a blank
+   line. First paragraph: the scam picture — dominant scam type, districts,
+   risk scores, and what the recurring behavioural markers reveal about the
+   script the callers are running. Second paragraph: the counterfeit picture —
+   denominations, districts, and specifically what the failed security features
+   imply about the sophistication and likely source of the print run. Close
+   with the single most useful thing an analyst should examine next, and say
+   why that one.
 
-2. "rings_summary" — 4 to 6 sentences on the fraud-ring topology. Name the ring
-   archetypes present (mule collection hub, layering chain, round-tripping
-   cycle), what each one means operationally, how many accounts and how much
-   money are involved, and where they concentrate geographically. Note any
-   district that appears in BOTH the scam/counterfeit data and the ring data —
-   that overlap is the strongest lead available.
+2. "rings_summary" — a substantial briefing of 160 to 220 words on the
+   fraud-ring topology, written as two paragraphs separated by a blank line.
+   First paragraph: the archetypes present (mule collection hub, layering
+   chain, round-tripping cycle), what each means operationally in a money-
+   laundering chain, and the scale — how many rings, how many accounts, how
+   much traced value. Second paragraph: the geography, which districts carry
+   the heaviest concentration, and what the highest risk scores indicate.
+   Call out any district appearing in BOTH the detection data and the ring data
+   — that overlap is the strongest lead available and deserves an explicit
+   sentence on why it matters.
 
 Rules:
 - Analytical and professional. Written for an investigator, not a press release.
@@ -211,7 +220,7 @@ def _claude(data: dict) -> dict:
     client = anthropic.Anthropic(timeout=15.0)
     r = client.messages.create(
         model="claude-opus-4-8",
-        max_tokens=1400,
+        max_tokens=2000,
         system=_SYSTEM,
         messages=[{"role": "user", "content": "SYSTEM DATA:\n" + json.dumps(data, default=str)}],
     )
@@ -225,7 +234,7 @@ def _groq(data: dict) -> dict:
         json={
             "model": "llama-3.3-70b-versatile",
             "temperature": 0.2,
-            "max_tokens": 1400,
+            "max_tokens": 2000,
             "response_format": {"type": "json_object"},
             "messages": [
                 {"role": "system", "content": _SYSTEM},
