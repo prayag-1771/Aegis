@@ -1,0 +1,59 @@
+name: Keep Render services warm
+
+# Render's free tier stops an instance after ~15 minutes with no traffic, and
+# waking it costs 50-90s while PyTorch reloads. A judge opening the dashboard
+# cold sees every module reported offline, which is what happened here: the
+# services only came back because a health probe woke them.
+#
+# So: ping them on a schedule. Nothing here is a workaround for a bug — it is
+# the documented cost of the free tier, and this is the standard way to pay it.
+#
+# The backend's own /health fans out to fraud-shield, counterfeit-vision and
+# fraud-graph (see MODULES in aegis_command/api.py), so hitting that one URL
+# wakes all four. The others are pinged directly anyway: if the backend is the
+# slowest to wake, its fan-out can time out before the modules answer, and a
+# direct hit gets each one started in parallel instead of in sequence.
+
+on:
+  schedule:
+    # Every 10 minutes — comfortably inside the ~15 minute idle window. GitHub
+    # runs scheduled jobs on a best-effort basis and can delay them under load,
+    # so do not tighten this to match 15 exactly.
+    - cron: "*/10 * * * *"
+  # Lets you wake everything by hand right before a demo, from the Actions tab.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake every service
+        run: |
+          # Cold starts are slow, not broken: allow 120s before calling it a
+          # failure, and retry once for the case where the first request lands
+          # while the container is still booting.
+          urls=(
+            "https://aegis-backend-5oaw.onrender.com/health"
+            "https://aegis-fraud-shield.onrender.com/health"
+            "https://aegis-counterfeat.onrender.com/health"
+            "https://aegis-fraud-graph.onrender.com/health"
+          )
+          failed=0
+          for url in "${urls[@]}"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" \
+                     --max-time 120 --retry 1 --retry-delay 15 "$url" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "ok    $code  $url"
+            else
+              echo "WARN  $code  $url"
+              failed=$((failed + 1))
+            fi
+          done
+          echo "---"
+          # Report, but do not fail the workflow on a single slow wake: a red X
+          # every 10 minutes trains you to ignore the one that actually matters.
+          if [ "$failed" -gt 0 ]; then
+            echo "$failed service(s) did not answer 200 — check the Render dashboard if this repeats."
+          else
+            echo "all services warm"
+          fi
