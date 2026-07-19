@@ -8,6 +8,7 @@ Endpoints:
     POST /demo/inject-ring   stage demo: add a fresh 6-account ring + re-detect
     POST /demo/score-custom  fraud console: score human-designed transactions
     POST /demo/reset         drop injected rings, back to the base dataset
+    GET  /rings/{id}/spectral  spectral second opinion for one detected ring
 """
 
 from __future__ import annotations
@@ -217,6 +218,101 @@ def demo_score_custom(body: dict | None = None) -> dict:
         ),
         "committed": committed,
         "rings_total": len(rings),
+    }
+
+
+# Per-community Rayleigh cache: the partition + eigendecompositions take a few
+# seconds, and every ring click would repeat them for the same dataset.
+_SPECTRAL_CACHE: dict = {"ds_id": None, "result": None}
+
+
+def _community_rayleighs(ds) -> list[tuple[frozenset, float]]:
+    """[(community nodes, Rayleigh)] using the SAME pipeline the research lab
+    validated: build graph -> Leiden/Louvain partition -> per-community
+    normalized Laplacian -> Rayleigh of the total_in signal. Never the degree
+    fallback (documented to invert the shift)."""
+    import networkx as nx
+
+    from .graph import build_graph, compute_features
+    from .spectral import (
+        _leiden_or_louvain,
+        _signal,
+        build_normalized_laplacian,
+        rayleigh_quotient,
+    )
+
+    if _SPECTRAL_CACHE["ds_id"] == id(ds):
+        return _SPECTRAL_CACHE["result"]
+
+    g_full = build_graph(ds)
+    und = g_full.to_undirected()
+    und.remove_edges_from(nx.selfloop_edges(und))
+    features = compute_features(ds, g_full)
+    if features.index.name != "account_id" and "account_id" in features.columns:
+        features = features.set_index("account_id")
+
+    result: list[tuple[frozenset, float]] = []
+    for comm in _leiden_or_louvain(und):
+        if len(comm) < 5:
+            continue
+        sub = und.subgraph(comm)
+        if sub.number_of_edges() < 2:
+            continue
+        L, order = build_normalized_laplacian(sub)
+        result.append((frozenset(comm), rayleigh_quotient(_signal(order, features, sub), L)))
+
+    _SPECTRAL_CACHE["ds_id"] = id(ds)
+    _SPECTRAL_CACHE["result"] = result
+    return result
+
+
+@app.get("/rings/{ring_id}/spectral")
+def ring_spectral(ring_id: str) -> dict:
+    """Spectral second opinion for one detected ring — the MATCHED PAIRWISE
+    shift, which is the methodology spectral.py validates. Absolute
+    cross-community ranking is explicitly documented there as unreliable
+    (baseline Rayleigh varies with size/density), so this compares the ring's
+    community against the clean community closest to it in size. Corroborating
+    evidence only — the classifier's verdict already stands."""
+    out = _current_output()
+    members = {a["account_id"] for a in out.get("accounts", []) if a.get("ring_id") == ring_id}
+    if not members:
+        raise HTTPException(404, f"unknown ring_id {ring_id!r}")
+    flagged = {a["account_id"] for a in out.get("accounts", [])}
+
+    with _STATE_LOCK:
+        ds = _CURRENT_DATASET
+
+    comms = _community_rayleighs(ds)
+    if not comms:
+        raise HTTPException(422, "no communities large enough for a spectral measurement")
+
+    # Home community = partition cell holding most of this ring's members.
+    home_nodes, home_rq = max(comms, key=lambda c: len(members & c[0]))
+    if not members & home_nodes:
+        raise HTTPException(422, "ring members fall outside every measured community")
+
+    # Matched clean community: no flagged accounts at all, closest in size.
+    clean = [(n, rq) for n, rq in comms if not (n & flagged)]
+    if not clean:
+        raise HTTPException(422, "no clean community available for a matched comparison")
+    matched_nodes, matched_rq = min(clean, key=lambda c: abs(len(c[0]) - len(home_nodes)))
+
+    shift = home_rq - matched_rq
+    return {
+        "ring_id": ring_id,
+        "ring_rayleigh": round(home_rq, 4),
+        "ring_community_size": len(home_nodes),
+        "matched_clean_rayleigh": round(matched_rq, 4),
+        "matched_clean_size": len(matched_nodes),
+        "shift": round(shift, 4),
+        "agrees": shift > 0,
+        "note": (
+            "Matched pairwise Rayleigh shift (ring community vs the clean "
+            "community closest in size) — the methodology spectral.py "
+            "validates. Independent lens, corroboration only; absolute "
+            "cross-community ranking is documented as unreliable."
+        ),
     }
 
 

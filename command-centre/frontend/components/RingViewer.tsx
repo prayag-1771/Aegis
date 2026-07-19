@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
+import { fetchRingSpectral, type RingSpectral as RingSpectralType } from "@/lib/api";
 import gsap from "gsap";
 import { inr } from "@/lib/format";
 import { X, Play, Zap } from "./Icons";
@@ -104,6 +105,7 @@ export default function RingViewer({
   subtitle,
   badge,
   label,
+  ringId,
   nodes,
   edges,
   trail,
@@ -114,6 +116,8 @@ export default function RingViewer({
   subtitle?: string;
   badge?: string;
   label?: string | null;
+  /** When set, fetches the spectral second opinion for this ring. */
+  ringId?: string;
   nodes: ViewNode[];
   edges: ViewEdge[];
   trail?: { account_id: string; amount: number } | null;
@@ -122,6 +126,24 @@ export default function RingViewer({
 }) {
   const [picked, setPicked] = useState<ViewNode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Spectral second opinion — an independent lens corroborating the
+  // classifier. Silently absent on any failure: the viewer must not degrade
+  // because a research endpoint is down.
+  const [spectral, setSpectral] = useState<RingSpectralType | null>(null);
+  useEffect(() => {
+    setSpectral(null);
+    if (!ringId) return;
+    let stale = false;
+    fetchRingSpectral(ringId)
+      .then((s) => {
+        if (!stale) setSpectral(s);
+      })
+      .catch(() => {});
+    return () => {
+      stale = true;
+    };
+  }, [ringId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -261,6 +283,17 @@ export default function RingViewer({
             )}
           </div>
           {subtitle && <p className="mt-0.5 text-[11px] text-zinc-400">{subtitle}</p>}
+          {/* Corroboration-only, like the verify layer: shown when the
+              independent lens agrees, silent when neutral — a neutral reading
+              is documented as uninformative, never counter-evidence. */}
+          {spectral?.agrees && (
+            <p className="mt-1 text-[10px] text-zinc-400" title={spectral.note}>
+              <span className="font-semibold text-emerald-300">🎵 Spectral second opinion:</span>{" "}
+              Rayleigh {spectral.ring_rayleigh.toFixed(3)} vs matched clean{" "}
+              {spectral.matched_clean_rayleigh.toFixed(3)} (+{spectral.shift.toFixed(3)}) ·
+              independent lens agrees
+            </p>
+          )}
           {trail && (
             <p className="mt-1 text-[10px] font-semibold text-red-300">
               ⚠ ₹{trail.amount.toLocaleString("en-IN")} victim payment traced into{" "}

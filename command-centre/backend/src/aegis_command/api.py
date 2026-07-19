@@ -324,6 +324,19 @@ async def demo_reset() -> dict:
         raise HTTPException(502, f"fraud-graph service unreachable: {exc}") from exc
 
 
+@app.get("/rings/{ring_id}/spectral")
+def ring_spectral(ring_id: str) -> dict:
+    """Proxy: spectral second opinion for one ring (fraud-graph service)."""
+    try:
+        r = httpx.get(f"{MODULES['fraud-graph']}/rings/{ring_id}/spectral", timeout=10.0)
+        if r.status_code in (404, 422):
+            raise HTTPException(r.status_code, r.json().get("detail", "spectral unavailable"))
+        r.raise_for_status()
+        return r.json()
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"fraud-graph service unreachable: {exc}") from exc
+
+
 @app.get("/dashboard-summaries")
 def dashboard_summaries() -> dict:
     from .store import store

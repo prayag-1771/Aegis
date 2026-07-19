@@ -370,9 +370,7 @@ function SpectralCard({ spectral }: { spectral: ResearchResponse["spectral"] }) 
 
       <p className="mt-2 text-[10px] leading-relaxed text-zinc-600">
         {shiftHolds
-          ? ringRank === 1
-            ? "The ring carries the highest Rayleigh of every community on the graph — a rank-by-Rayleigh, investigate-top-k detector finds it first, today. An absolute per-community threshold is the genuinely hard BWGNN follow-up."
-            : "The ring community sits higher-frequency than a matched clean one — the validated result. Turning this into an automatic per-community detector is harder and is the BWGNN follow-up, not this threshold."
+          ? `The validated result is the MATCHED-PAIR shift: a ring community sits higher-frequency than a clean one of comparable size. The #${ringRank} rank is a triage hint on this artifact — the module's own validation warns that absolute cross-community comparison varies with size and density, so ranking is not claimed as a detector. The real detection gain is BWGNN wavelet features fed to the classifier.`
           : "The shift did not hold on this run."}
       </p>
     </Card>

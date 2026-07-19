@@ -478,6 +478,25 @@ export interface ResearchResponse {
   spectral: SpectralData | null;
 }
 
+export interface RingSpectral {
+  ring_id: string;
+  ring_rayleigh: number;
+  ring_community_size: number;
+  matched_clean_rayleigh: number;
+  matched_clean_size: number;
+  /** ring − matched clean; positive = the independent lens agrees. */
+  shift: number;
+  agrees: boolean;
+  note: string;
+}
+
+/** Spectral second opinion for one detected ring — corroboration, not verdict. */
+export async function fetchRingSpectral(ringId: string): Promise<RingSpectral> {
+  const r = await fetch(`${API_BASE}/rings/${encodeURIComponent(ringId)}/spectral`);
+  if (!r.ok) throw new Error(`ring spectral failed: ${r.status}`);
+  return r.json();
+}
+
 /** The three research modules' results. Any block may be null when its artifact
  *  has not been generated — the panel renders each independently. */
 export async function fetchResearch(): Promise<ResearchResponse> {
