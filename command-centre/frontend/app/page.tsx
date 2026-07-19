@@ -1321,7 +1321,16 @@ export default function Page() {
           over it, so the search box, bell and clock landed on top of the
           panel's own header and its close button. */}
       {supplyTrailOpen && (
-        <div className="pointer-events-auto absolute right-0 top-0 z-[60] flex h-full w-[400px] max-w-[90vw] flex-col border-l border-white/10 bg-zinc-950/95 shadow-2xl backdrop-blur-xl transition-transform duration-300">
+        <div
+          className={`pointer-events-auto absolute right-0 top-0 flex h-full w-[400px] max-w-[90vw] flex-col border-l border-white/10 bg-zinc-950/95 shadow-2xl backdrop-blur-xl transition-transform duration-300 ${
+            // Live Map and Alerts & Analytics are the only tabs this panel
+            // belongs on — there it goes above the nav (z-50) so nothing draws
+            // over its header. Every other tab is a full-screen overlay at
+            // z-40, and the panel must sit BEHIND that, not float on top of
+            // Modules/Disrupt/Research content.
+            activeTab === "map" || activeTab === "alerts" ? "z-[60]" : "z-30"
+          }`}
+        >
           <SupplyTrailPanel
             trail={activeTrail}
             allTrails={supplyTrailData?.all_trails ?? []}

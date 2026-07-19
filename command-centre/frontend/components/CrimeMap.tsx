@@ -478,13 +478,17 @@ export default function CrimeMap({
     // 4 — Seizure points (red circles) as DOM markers
     const lib = libRef.current;
     trail.seizures.forEach((s) => {
+      // Small amber dot with a real glow, matching the seizure rows in the
+      // Supply Trail panel. The old 16px flat red disc read as an error state
+      // and was heavy enough to hide the corridor line running under it.
       const el = document.createElement("div");
-      el.style.width = "16px";
-      el.style.height = "16px";
-      el.style.backgroundColor = "#ef4444";
-      el.style.border = "2px solid #fca5a5";
+      el.style.width = "10px";
+      el.style.height = "10px";
+      el.style.backgroundColor = "#facc15";
+      el.style.border = "1px solid #fde68a";
       el.style.borderRadius = "50%";
-      el.style.opacity = "0.85";
+      el.style.opacity = "0.95";
+      el.style.boxShadow = "0 0 8px 2px rgba(250, 204, 21, 0.75)";
       el.style.cursor = "pointer";
       el.style.setProperty("z-index", "9998", "important");
       
@@ -774,7 +778,13 @@ export default function CrimeMap({
   }, [entryRoute, ready, mapVersion]);
 
   return (
-    <div className="absolute inset-0">
+    // `isolate` (CSS isolation) is load-bearing, not cosmetic. MapLibre DOM
+    // markers carry z-index 9998/9999 !important, and `absolute` alone does NOT
+    // create a stacking context — so those markers competed directly with the
+    // page's own panels and painted OVER the Supply Trail panel (z-[60]) and the
+    // nav. Isolating traps every marker z-index inside the map, so a panel above
+    // the map always stays above it.
+    <div className="absolute inset-0 isolate">
       <div ref={container} className="h-full w-full" />
       <button
         onClick={() => setSatellite((s) => !s)}
