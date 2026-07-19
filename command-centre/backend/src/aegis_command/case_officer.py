@@ -219,7 +219,7 @@ def _groq(dossier: dict) -> dict:
 
     r = httpx.post(
         "https://api.groq.com/openai/v1/chat/completions",
-        headers={"Authorization": f"Bearer {os.environ['GROQ_API_KEY']}"},
+        headers={"Authorization": f"Bearer {os.environ[env_key]}"},
         json={
             "model": "llama-3.3-70b-versatile",
             "temperature": 0.2,
@@ -268,6 +268,12 @@ def write_case_file_safe(dossier: dict) -> tuple[dict, str]:
         chain.append(("groq/llama-3.3-70b", _groq))
     if os.environ.get("GEMINI_API_KEY"):
         chain.append(("gemini-2.0-flash", _gemini))
+    # Spare Groq keys last: separate daily token budgets, used only once the
+    # primary key and Gemini are exhausted.
+    for slot, label in (("GROQ_API_KEY_2", "groq#2/llama-3.3-70b"),
+                        ("GROQ_API_KEY_3", "groq#3/llama-3.3-70b")):
+        if os.environ.get(slot):
+            chain.append((label, lambda d, k=slot: _groq(d, k)))
     for name, fn in chain:
         try:
             return fn(dossier), name

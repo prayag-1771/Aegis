@@ -201,8 +201,16 @@ class GroqNarrator:
     GROQ_MODEL = "llama-3.3-70b-versatile"
     name = f"groq/{GROQ_MODEL}+prompt-v{PROMPT_VERSION}"
 
-    def __init__(self) -> None:
-        self._key = os.environ["GROQ_API_KEY"]
+    def __init__(self, env_key: str = "GROQ_API_KEY") -> None:
+        # Which key slot this instance uses. Groq's free tier caps tokens per
+        # DAY (100k), so one key runs dry mid-demo; separate keys have separate
+        # budgets and are tried in turn. The slot is carried into `name` so the
+        # audit trail records which one actually produced the narrative.
+        self._key = os.environ[env_key]
+        suffix = env_key.removeprefix("GROQ_API_KEY").lstrip("_")
+        self.name = (
+            f"groq{'#' + suffix if suffix else ''}/{self.GROQ_MODEL}+prompt-v{PROMPT_VERSION}"
+        )
 
     def narrate(self, facts: dict) -> Narrative:
         import httpx
@@ -274,27 +282,50 @@ def get_narrator() -> TemplateNarrator | ClaudeNarrator | GroqNarrator | GeminiN
     """Pick the best available narrator: Claude > Groq > Gemini > template.
     Construction never raises; call-time failures are handled by narrate_safe."""
     _load_dotenv()
-    for env_key, cls in (
-        ("ANTHROPIC_API_KEY", ClaudeNarrator),
-        ("GROQ_API_KEY", GroqNarrator),
-        ("GEMINI_API_KEY", GeminiNarrator),
-    ):
-        if os.environ.get(env_key):
-            try:
-                return cls()
-            except Exception as exc:
-                print(
-                    f"[narrator] {cls.__name__} construction failed: "
-                    f"{type(exc).__name__}: {exc}",
-                    flush=True,
-                )
-                continue
+    for factory in _available_narrators():
+        try:
+            return factory()
+        except Exception as exc:
+            print(
+                f"[narrator] {getattr(factory, '__name__', 'provider')} construction "
+                f"failed: {type(exc).__name__}: {exc}",
+                flush=True,
+            )
+            continue
     return TemplateNarrator()
 
 
 # A rate-limited provider is worth waiting for; a broken one is not. Bounded so
 # a user who clicked "Run Fusion" never waits on a hang.
 _MAX_RETRY_WAIT_S = 12.0
+
+# Provider order: Claude, then the first Groq key, then Gemini, then the spare
+# Groq keys. Groq's free tier caps tokens per DAY, so one key is exhausted by a
+# few hours of demoing — the spares are separate accounts with separate daily
+# budgets, deliberately placed AFTER Gemini so a Gemini window that has rolled
+# over is preferred over burning a reserve key.
+_PROVIDER_CHAIN: tuple[tuple[str, str], ...] = (
+    ("ANTHROPIC_API_KEY", "claude"),
+    ("GROQ_API_KEY", "groq"),
+    ("GEMINI_API_KEY", "gemini"),
+    ("GROQ_API_KEY_2", "groq"),
+    ("GROQ_API_KEY_3", "groq"),
+)
+
+
+def _available_narrators() -> list:
+    """Narrator factories for every provider whose key is set, in chain order."""
+    factories: list = []
+    for env_key, kind in _PROVIDER_CHAIN:
+        if not os.environ.get(env_key):
+            continue
+        if kind == "claude":
+            factories.append(ClaudeNarrator)
+        elif kind == "gemini":
+            factories.append(GeminiNarrator)
+        else:  # groq — bind the specific key slot this entry refers to
+            factories.append(lambda k=env_key: GroqNarrator(k))
+    return factories
 
 
 def _duration_seconds(raw: str) -> float | None:
@@ -342,14 +373,7 @@ def narrate_safe(facts: dict) -> tuple[Narrative, str]:
     """Run the best narrator; on ANY failure fall through the chain down to the
     template. Returns (narrative, narrator_name) — the demo can never die."""
     _load_dotenv()
-    chain: list = []
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        chain.append(ClaudeNarrator)
-    if os.environ.get("GROQ_API_KEY"):
-        chain.append(GroqNarrator)
-    if os.environ.get("GEMINI_API_KEY"):
-        chain.append(GeminiNarrator)
-    chain.append(TemplateNarrator)
+    chain: list = [*_available_narrators(), TemplateNarrator]
     for cls in chain:
         retried = False
         while True:

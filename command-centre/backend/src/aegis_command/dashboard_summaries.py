@@ -226,11 +226,11 @@ def _claude(data: dict) -> dict:
     )
     return _parse_json_reply("".join(b.text for b in r.content if b.type == "text"))
 
-def _groq(data: dict) -> dict:
+def _groq(data: dict, env_key: str = "GROQ_API_KEY") -> dict:
     import httpx
     r = httpx.post(
         "https://api.groq.com/openai/v1/chat/completions",
-        headers={"Authorization": f"Bearer {os.environ['GROQ_API_KEY']}"},
+        headers={"Authorization": f"Bearer {os.environ[env_key]}"},
         json={
             "model": "llama-3.3-70b-versatile",
             "temperature": 0.2,
@@ -268,6 +268,10 @@ def generate_summaries(data: dict) -> dict:
     except Exception:
         pass
 
+    # Claude -> Groq 1 -> Gemini -> Groq 2 -> Groq 3. Groq's free tier caps
+    # tokens per DAY, so one key runs dry mid-demo; the spares are separate
+    # accounts with separate budgets, placed after Gemini so a rolled-over
+    # Gemini window is preferred over burning a reserve key.
     chain: list[tuple[str, Any]] = []
     if os.environ.get("ANTHROPIC_API_KEY"):
         chain.append(("claude-opus-4-8", _claude))
@@ -275,6 +279,10 @@ def generate_summaries(data: dict) -> dict:
         chain.append(("groq/llama-3.3-70b", _groq))
     if os.environ.get("GEMINI_API_KEY"):
         chain.append(("gemini-2.0-flash", _gemini))
+    for slot, label in (("GROQ_API_KEY_2", "groq#2/llama-3.3-70b"),
+                        ("GROQ_API_KEY_3", "groq#3/llama-3.3-70b")):
+        if os.environ.get(slot):
+            chain.append((label, lambda d, k=slot: _groq(d, k)))
 
     for name, fn in chain:
         try:

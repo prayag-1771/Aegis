@@ -205,10 +205,16 @@ def _parse_json(text: str) -> RouteNarrative:
 
 
 class GroqRouteNarrator:
-    name = "groq/llama-3.3-70b"
+    GROQ_MODEL = "llama-3.3-70b"
+    name = f"groq/{GROQ_MODEL}"
 
-    def __init__(self) -> None:
-        self._key = os.environ["GROQ_API_KEY"]
+    def __init__(self, env_key: str = "GROQ_API_KEY") -> None:
+        # Which key slot this instance uses — Groq's free tier caps tokens per
+        # DAY, so the spare keys carry their own budgets. Recorded in `name` so
+        # the engine field says which key produced the prose.
+        self._key = os.environ[env_key]
+        suffix = env_key.removeprefix("GROQ_API_KEY").lstrip("_")
+        self.name = f"groq{'#' + suffix if suffix else ''}/{self.GROQ_MODEL}"
 
     def narrate(self, facts: dict) -> RouteNarrative:
         import httpx
@@ -282,6 +288,10 @@ def narrate_routes_safe(facts: dict) -> tuple[RouteNarrative, str]:
         chain.append(GroqRouteNarrator)
     if os.environ.get("GEMINI_API_KEY"):
         chain.append(GeminiRouteNarrator)
+    # Spare Groq keys last — separate daily budgets, see the fusion narrator.
+    for slot in ("GROQ_API_KEY_2", "GROQ_API_KEY_3"):
+        if os.environ.get(slot):
+            chain.append(lambda k=slot: GroqRouteNarrator(k))
     chain.append(TemplateRouteNarrator)
     for cls in chain:
         try:
