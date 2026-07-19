@@ -324,7 +324,11 @@ def _available_narrators() -> list:
         elif kind == "gemini":
             factories.append(GeminiNarrator)
         else:  # groq — bind the specific key slot this entry refers to
-            factories.append(lambda k=env_key: GroqNarrator(k))
+            factory = lambda k=env_key: GroqNarrator(k)  # noqa: E731
+            # Without this the failure log reads "<lambda> failed", which hides
+            # WHICH key slot ran out — the one thing you need from that line.
+            factory.__name__ = f"GroqNarrator[{env_key}]"
+            factories.append(factory)
     return factories
 
 
