@@ -101,6 +101,9 @@ export type RingAlert = {
 const DEMO_DISTRICT_COORDS: Record<string, { lat: number; lon: number }> = {
   Jamtara: { lat: 23.963, lon: 86.804 },
   Deoghar: { lat: 24.48, lon: 86.7 },
+  // Carries a counterfeit seizure (and shows up in the Supply Trail corridor),
+  // so it needs coords or searching it surfaces no alerts.
+  Dhanbad: { lat: 23.7957, lon: 86.4304 },
   Alwar: { lat: 27.55, lon: 76.63 },
   Bharatpur: { lat: 27.22, lon: 77.49 },
   Nuh: { lat: 28.1, lon: 77.0 },
@@ -108,6 +111,62 @@ const DEMO_DISTRICT_COORDS: Record<string, { lat: number; lon: number }> = {
   "Mumbai South": { lat: 18.93, lon: 72.83 },
   "Delhi East": { lat: 28.65, lon: 77.3 },
 };
+
+/** Damerau-Levenshtein distance (edits incl. adjacent transposition). */
+function editDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const d: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      // transposition — "deogarh" vs "deoghar" is exactly this
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + cost);
+      }
+    }
+  }
+  return d[m][n];
+}
+
+/** Resolve free text to a demo district key, tolerating spelling variants.
+ *
+ *  Indian place names have several romanisations in common use — "Deoghar" and
+ *  "Deogarh" are both current for the same Jharkhand town. A strict substring
+ *  test rejects the variant, and the search then falls through to the geocoder:
+ *  the map flies to the right place while the district's alerts silently stay
+ *  empty, which reads as "this district has no data".
+ *
+ *  Substring first (fast, exact), then the nearest key within 2 edits. Words of
+ *  a multi-word key are matched too, so "Chennai" still finds "Chennai Central".
+ *  Short keys are excluded from fuzzy matching — at 3 letters, 2 edits reaches
+ *  almost anything. */
+function resolveDistrictKey(query: string): string | null {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+  const keys = Object.keys(DEMO_DISTRICT_COORDS);
+
+  const exact = keys.find((k) => k.toLowerCase().includes(q));
+  if (exact) return exact;
+
+  let best: string | null = null;
+  let bestDistance = Infinity;
+  for (const key of keys) {
+    const lower = key.toLowerCase();
+    for (const candidate of [lower, ...lower.split(" ")]) {
+      if (candidate.length < 4) continue;
+      const distance = editDistance(q, candidate);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = key;
+      }
+    }
+  }
+  return bestDistance <= 2 ? best : null;
+}
 
 /** Geocode any place name to coordinates via the free, keyless OpenStreetMap
  *  Nominatim API — so search works for EVERY city, not just the demo districts.
@@ -199,6 +258,8 @@ export default function Page() {
   const [cardPos, setCardPos] = useState<{ x: number; y: number } | null>(null);
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
   const cardScope = useRef<HTMLDivElement>(null);
+  const [cardSize, setCardSize] = useState<{ width: number; height: number } | null>(null);
+  const resizeDragRef = useRef<{ startW: number; startH: number; startX: number; startY: number } | null>(null);
   const [cityOrigin, setCityOrigin] = useState<{
     loading: boolean;
     /** True when this city's own seizures could not trace a direction and the
@@ -373,6 +434,28 @@ export default function Page() {
     dragRef.current = null;
   }, []);
 
+  const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const card = e.currentTarget.closest("[data-search-card]") as HTMLElement | null;
+    if (!card) return;
+    const box = card.getBoundingClientRect();
+    resizeDragRef.current = { startW: box.width, startH: box.height, startX: e.clientX, startY: e.clientY };
+  }, []);
+
+  const onResizePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!resizeDragRef.current) return;
+    const dx = e.clientX - resizeDragRef.current.startX;
+    const dy = e.clientY - resizeDragRef.current.startY;
+    setCardSize({ width: Math.max(320, resizeDragRef.current.startW + dx), height: Math.max(200, resizeDragRef.current.startH + dy) });
+  }, []);
+
+  const onResizePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!resizeDragRef.current) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    resizeDragRef.current = null;
+  }, []);
+
   /* ── Search card open/close ──
      The card is now anchored to the bottom-left, so it animates in-place
      using opacity and scale without needing x/y translations. */
@@ -465,9 +548,9 @@ export default function Page() {
     if (!q) return;
 
     // 1) A known demo district → fly there AND surface its related alerts.
-    const districtKey = Object.keys(DEMO_DISTRICT_COORDS).find((k) =>
-      k.toLowerCase().includes(q.toLowerCase()),
-    );
+    //    Spelling-tolerant: "Deogarh" must resolve to the "Deoghar" data uses,
+    //    or the map flies there while the district's alerts come back empty.
+    const districtKey = resolveDistrictKey(q);
     if (districtKey) {
       locate(DEMO_DISTRICT_COORDS[districtKey]);
       const dk = districtKey.toLowerCase();
@@ -742,10 +825,15 @@ export default function Page() {
           // Capped at 70vh and column-flexed: the header stays put while the
           // body scrolls. Previously only the alerts list scrolled, so the entry
           // section grew the card past the viewport and ran off screen.
-          className={`absolute z-40 flex h-[350px] max-h-[70vh] w-[320px] min-w-[320px] min-h-[200px] max-w-[90vw] flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/90 shadow-2xl backdrop-blur-md pointer-events-auto resize ${
+          className={`absolute z-40 flex h-[350px] max-h-[70vh] w-[320px] min-w-[320px] min-h-[200px] max-w-[90vw] flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/90 shadow-2xl backdrop-blur-md pointer-events-auto ${
             cardPos ? "" : "bottom-10 left-[180px]"
           }`}
-          style={cardPos ? { left: cardPos.x, top: cardPos.y } : undefined}
+          style={{
+            left: cardPos ? cardPos.x : undefined,
+            top: cardPos ? cardPos.y : undefined,
+            width: cardSize?.width ?? 320,
+            height: cardSize?.height ?? 350,
+          }}
         >
           <div
             onPointerDown={onCardPointerDown}
@@ -915,6 +1003,20 @@ export default function Page() {
             </div>
           )}
           </div>
+
+          {/* Custom large resize handle */}
+          <div 
+             className="absolute bottom-0 right-0 w-12 h-12 cursor-se-resize flex items-end justify-end p-2 opacity-50 hover:opacity-100 transition-opacity"
+             onPointerDown={onResizePointerDown}
+             onPointerMove={onResizePointerMove}
+             onPointerUp={onResizePointerUp}
+             onPointerCancel={onResizePointerUp}
+          >
+             {/* Large diagonal lines to indicate grabbability */}
+             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+               <path d="M18 2L2 18 M18 8L8 18 M18 14L14 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-zinc-400" />
+             </svg>
+          </div>
         </div>
       )}
 
@@ -925,7 +1027,7 @@ export default function Page() {
             <div className="absolute -top-5 left-0 z-10 flex items-center">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
             </div>
-            <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
+            <div className="absolute -top-4 -right-2 z-10 flex items-center gap-2">
               <button
                 onClick={closeResearch}
                 className="text-zinc-400 hover:text-zinc-100 p-2 hover:bg-white/10 transition bg-zinc-900/80 border border-white/10"
@@ -947,7 +1049,7 @@ export default function Page() {
             <div className="absolute -top-5 left-0 z-10 flex items-center">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
             </div>
-            <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
+            <div className="absolute -top-4 -right-2 z-10 flex items-center gap-2">
               <button
                 onClick={closeDisrupt}
                 className="text-zinc-400 hover:text-zinc-100 p-2 hover:bg-white/10 transition bg-zinc-900/80 border border-white/10"
@@ -969,7 +1071,7 @@ export default function Page() {
             <div className="absolute -top-5 left-0 z-10 flex items-center">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
             </div>
-            <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
+            <div className="absolute -top-4 -right-2 z-10 flex items-center gap-2">
               <button
                 onClick={closeMetrics}
                 className="text-zinc-400 hover:text-zinc-100 p-2 hover:bg-white/10 transition bg-zinc-900/80 border border-white/10"
@@ -1046,7 +1148,7 @@ export default function Page() {
             <div className="absolute -top-5 left-0 z-10 flex items-center">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
             </div>
-            <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
+            <div className="absolute -top-4 -right-2 z-10 flex items-center gap-2">
               <button
                 onClick={closeModules}
                 className="text-zinc-400 hover:text-zinc-100 p-2 hover:bg-white/10 transition bg-zinc-900/80 border border-white/10"
@@ -1150,7 +1252,7 @@ export default function Page() {
             <div className="absolute -top-5 left-0 z-10 flex items-center">
               <span className="text-xs text-zinc-500 whitespace-nowrap">Press <kbd className="font-sans border border-white/10 bg-white/5 px-1.5 py-0.5 rounded text-zinc-400 mx-1">Esc</kbd> to exit</span>
             </div>
-            <div className="absolute -top-2 -right-2 z-10 flex items-center gap-2">
+            <div className="absolute -top-4 -right-2 z-10 flex items-center gap-2">
               <button
                 onClick={closeRings}
                 className="text-zinc-400 hover:text-zinc-100 p-2 hover:bg-white/10 transition bg-zinc-900/80 border border-white/10"
@@ -1275,7 +1377,7 @@ export default function Page() {
           // inset. Translating the full 400px stacked that 64px inset on top of
           // the panel edge, leaving a wide gap — and on narrower windows it
           // carried the button off the left edge ("...usion").
-          supplyTrailOpen ? "-translate-x-[calc(min(400px,90vw)-3rem)]" : ""
+          (supplyTrailOpen && (activeTab === "map" || activeTab === "alerts")) ? "-translate-x-[calc(min(400px,90vw)-3rem)]" : ""
         }`}
       >
         {/* Hidden while its own panel is open: the row sits above that panel's
