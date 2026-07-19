@@ -701,6 +701,12 @@ export interface DashboardSummariesResponse {
   modules_overview: string;
   rings_summary: string;
   engine: string;
+  /** True when the provider chain was unreachable and the backend served its
+   *  stored briefing instead. Still real model output — just not regenerated
+   *  for this exact snapshot. */
+  cached?: boolean;
+  /** When the served briefing was originally generated (cached responses). */
+  generated_at?: string;
 }
 
 export async function fetchDashboardSummaries(): Promise<DashboardSummariesResponse> {

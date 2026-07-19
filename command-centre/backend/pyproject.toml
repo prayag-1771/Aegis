@@ -13,6 +13,12 @@ dependencies = [
     "aegis-fusion",
     "aegis-geospatial",
     "aegis-supply-trail",
+    # Durable cache for the last model-written dashboard briefing. dnspython is
+    # declared explicitly because pymongo 4.x dropped the [srv] extra and
+    # mongodb+srv:// needs DNS SRV resolution. Both are unused when MONGODB_URI
+    # is unset — the briefing just falls back to its deterministic template.
+    "pymongo>=4.9",
+    "dnspython>=2.6",
 ]
 
 [project.optional-dependencies]

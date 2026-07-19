@@ -213,6 +213,9 @@ export default function Page() {
   const [consoleOpen, setConsoleOpen] = useState(false);
 
   const [aiSummaries, setAiSummaries] = useState<DashboardSummariesResponse | null>(null);
+  /** True when the backend served a retained briefing instead of a fresh one
+   *  (its provider chain was unreachable). Shown as a dot colour, never hidden. */
+  const [summaryStale, setSummaryStale] = useState(false);
 
   /** Fingerprint of everything the briefing is derived from.
    *
@@ -231,16 +234,21 @@ export default function Page() {
     ]);
   }, [events]);
 
-  // Fetch AI summaries whenever underlying threat counts meaningfully change.
+  // Fetch AI summaries whenever the underlying data meaningfully changes.
   // Stale-while-revalidate: the previous summary stays visible during the
   // refetch (first load shows the skeleton), and the cleanup flag stops a slow
   // older response from overwriting a newer one.
   useEffect(() => {
     if (!events && !hotspots) return;
     let stale = false;
+
     fetchDashboardSummaries()
       .then((res) => {
-        if (!stale) setAiSummaries(res);
+        if (stale) return;
+        setAiSummaries(res);
+        // `cached` = the backend fell back to its stored briefing. The text is
+        // still real model output, just not regenerated for this exact data.
+        setSummaryStale(Boolean(res.cached) || Boolean(res.engine?.includes("fallback")));
       })
       .catch((err) => {
         console.error("Failed to fetch dashboard summaries:", err);
@@ -1230,7 +1238,7 @@ export default function Page() {
                   <div className="bg-white/5 border border-white/10 p-5 flex-1 relative min-h-[220px] overflow-y-auto scroll-thin">
                     <div className="text-xs font-medium text-zinc-300 mb-3 flex justify-between items-center">
                       AI Intelligence Overview
-                      {aiSummaries && <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${aiSummaries.engine.includes("fallback") ? "text-amber-400 border-amber-400/30 bg-amber-400/10" : "text-emerald-400 border-emerald-400/30 bg-emerald-400/10 shadow-[0_0_8px_rgba(52,211,153,0.3)]"}`}>{aiSummaries.engine.split("/")[0]}</span>}
+                      {aiSummaries && <span aria-label={summaryStale ? "Retained briefing" : "Live briefing"} title={summaryStale ? "Live synthesis unreachable — showing the last generated briefing, which may predate the newest detections." : `Generated live by ${aiSummaries.engine}`} className={`h-2 w-2 shrink-0 rounded-full ${summaryStale ? "bg-amber-400 shadow-[0_0_6px_2px_rgba(251,191,36,0.6)]" : "bg-emerald-400 shadow-[0_0_6px_2px_rgba(52,211,153,0.6)]"}`} />}
                     </div>
                     {aiSummaries ? (
                       // Only the generated text lives in this block. A hardcoded
@@ -1344,7 +1352,7 @@ export default function Page() {
                   <div className="bg-white/5 border border-white/10 p-5 flex-1 relative min-h-[220px] overflow-y-auto scroll-thin">
                     <div className="text-xs font-medium text-zinc-300 mb-3 flex justify-between items-center">
                       Consolidated AI Summary
-                      {aiSummaries && <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded border ${aiSummaries.engine.includes("fallback") ? "text-amber-400 border-amber-400/30 bg-amber-400/10" : "text-emerald-400 border-emerald-400/30 bg-emerald-400/10 shadow-[0_0_8px_rgba(52,211,153,0.3)]"}`}>{aiSummaries.engine.split("/")[0]}</span>}
+                      {aiSummaries && <span aria-label={summaryStale ? "Retained briefing" : "Live briefing"} title={summaryStale ? "Live synthesis unreachable — showing the last generated briefing, which may predate the newest detections." : `Generated live by ${aiSummaries.engine}`} className={`h-2 w-2 shrink-0 rounded-full ${summaryStale ? "bg-amber-400 shadow-[0_0_6px_2px_rgba(251,191,36,0.6)]" : "bg-emerald-400 shadow-[0_0_6px_2px_rgba(52,211,153,0.6)]"}`} />}
                     </div>
                     {aiSummaries ? (
                       <div className="text-[13px] leading-relaxed text-zinc-300 space-y-3">

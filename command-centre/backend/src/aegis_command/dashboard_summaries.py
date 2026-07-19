@@ -1,7 +1,104 @@
 import json
 import os
 from collections import Counter
+from datetime import datetime, timezone
 from typing import Any
+
+# ── Durable briefing cache ───────────────────────────────────────────────────
+# Every provider being briefly unreachable used to swap a full model-written
+# analysis for two lines of template prose — strictly less than what was already
+# on screen. The last real briefing is kept in MongoDB instead, so an outage
+# degrades to "the previous analysis" and the template floor is reached only on
+# a genuinely cold system: no cache, no provider.
+#
+# Server-side rather than per-browser so the fallback holds for every client and
+# survives a backend restart. Every Mongo path FAILS OPEN — any connection or
+# query error just continues down to the template, never breaks the endpoint.
+_MONGO_TIMEOUT_MS = 2500
+_SUMMARY_DOC_ID = "latest"
+_mongo_client = None
+_mongo_unavailable = False
+_memory_summary: dict | None = None  # fast tier, warmed from Mongo on a cold start
+
+
+def _summary_collection():
+    """Cached collection handle, or None to skip the cache entirely."""
+    global _mongo_client, _mongo_unavailable
+    uri = os.environ.get("MONGODB_URI")
+    if not uri or _mongo_unavailable:
+        return None
+    if _mongo_client is None:
+        try:
+            from pymongo import MongoClient
+
+            _mongo_client = MongoClient(
+                uri,
+                serverSelectionTimeoutMS=_MONGO_TIMEOUT_MS,
+                connectTimeoutMS=_MONGO_TIMEOUT_MS,
+            )
+        except Exception:
+            # pymongo missing or URI unparseable — stop retrying for good.
+            _mongo_unavailable = True
+            return None
+    try:
+        return _mongo_client[os.environ.get("MONGO_DB", "aegis")][
+            os.environ.get("MONGO_SUMMARY_COLLECTION", "dashboard_summaries")
+        ]
+    except Exception:
+        return None
+
+
+def _store_summary(res: dict) -> None:
+    """Persist a freshly generated briefing as the new fallback floor.
+
+    Written to both tiers: the in-process copy answers instantly on the common
+    path, and Mongo carries it across restarts and out to every other client.
+    """
+    global _memory_summary
+    record = {
+        "modules_overview": res["modules_overview"],
+        "rings_summary": res["rings_summary"],
+        "engine": res.get("engine"),
+        "generated_at": datetime.now(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z"),
+    }
+    _memory_summary = record
+
+    collection = _summary_collection()
+    if collection is None:
+        return
+    try:
+        collection.replace_one(
+            {"_id": _SUMMARY_DOC_ID}, {"_id": _SUMMARY_DOC_ID, **record}, upsert=True
+        )
+    except Exception:
+        pass  # caching is best-effort; never fail the request over it
+
+
+def _load_summary() -> dict | None:
+    """Newest briefing available: memory first, then Mongo.
+
+    Memory costs nothing and covers the usual case (this process already served
+    a good briefing). Mongo is what makes the fallback survive a restart and
+    stay identical for everyone — a fresh worker with a cold memory tier still
+    serves exactly what the other clients are looking at.
+    """
+    global _memory_summary
+    if _memory_summary:
+        return _memory_summary
+
+    collection = _summary_collection()
+    if collection is None:
+        return None
+    try:
+        doc = collection.find_one({"_id": _SUMMARY_DOC_ID}, {"_id": 0})
+        if doc and doc.get("modules_overview") and doc.get("rings_summary"):
+            _memory_summary = doc  # warm the fast tier for subsequent requests
+            return doc
+    except Exception:
+        pass
+    return None
 
 _SYSTEM = """You are the Aegis Public Safety Intelligence AI.
 You write the intelligence briefing shown on an operational law-enforcement dashboard.
@@ -174,10 +271,20 @@ def generate_summaries(data: dict) -> dict:
         try:
             res = fn(data)
             res["engine"] = name
+            res["cached"] = False
+            # This becomes the floor every client falls back to until the next
+            # successful generation replaces it.
+            _store_summary(res)
             return res
         except Exception as e:
             print(f"Fallback failed for {name}: {e}")
             continue
+
+    # Providers exhausted. The last real briefing beats template prose — it says
+    # more, and it is the same text every other client is already looking at.
+    cached = _load_summary()
+    if cached:
+        return {**cached, "cached": True}
 
     # Deterministic floor: states only what the snapshot literally contains —
     # never invents methodology or findings. Reads the same enriched context the
