@@ -39,6 +39,26 @@ def test_payload_matches_contract(model, schema):
     assert 0.0 <= payload["confidence"] <= 1.0
 
 
+def test_low_memory_mode_same_verdict_no_heatmap(model, schema, monkeypatch):
+    """Low-memory hosts (512MB free tier) score forward-only: the Grad-CAM
+    backward pass that ~triples peak memory and OOM-kills the box mid-scan is
+    skipped. The verdict/confidence must be IDENTICAL — only the heatmap image
+    is dropped. This is the fix for the deployed 'fake to all / 502' regression."""
+    img = render_note(NoteSpec(denomination="500", seed=4242))
+
+    monkeypatch.setenv("COUNTERFEIT_LOW_MEMORY", "0")   # Grad-CAM on
+    full = analyze_image(img, model, save_capture=True)
+
+    monkeypatch.setenv("COUNTERFEIT_LOW_MEMORY", "1")   # forward-only
+    lean = analyze_image(img, model, save_capture=True)
+
+    jsonschema.validate(instance=lean, schema=schema)
+    assert lean["verdict"] == full["verdict"]
+    assert lean["confidence"] == full["confidence"]
+    assert lean["heatmap_ref"] is None            # no heatmap in low-memory mode
+    assert full["heatmap_ref"] is not None         # but it IS produced when RAM allows
+
+
 def test_fake_note_reports_missing_features(model, schema):
     img = render_note(NoteSpec(denomination="500", is_fake=True,
                                missing_features=["security_thread"], seed=778))

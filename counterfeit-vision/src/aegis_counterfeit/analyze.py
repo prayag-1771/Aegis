@@ -38,6 +38,43 @@ def _to_bgr(img: Image.Image) -> np.ndarray:
     return cv2.cvtColor(np.asarray(img.convert("RGB")), cv2.COLOR_RGB2BGR)
 
 
+_RAM_FLOOR_BYTES = 1024 * 1024 * 1024  # 1 GB: below this, skip the Grad-CAM backward pass
+
+
+def _detected_ram_bytes() -> int:
+    """Best-effort memory ceiling for this host. Reads the cgroup limit first
+    (that is what a container/Render instance is actually capped at), then total
+    RAM. Returns a huge sentinel when it cannot tell (e.g. Windows dev boxes), so
+    heatmaps stay ON where they have always worked."""
+    for p in ("/sys/fs/cgroup/memory.max",                     # cgroup v2
+              "/sys/fs/cgroup/memory/memory.limit_in_bytes"):   # cgroup v1
+        try:
+            v = open(p).read().strip()
+            if v.isdigit() and 0 < int(v) < (1 << 62):  # v2 "max" is a huge sentinel
+                return int(v)
+        except OSError:
+            pass
+    try:
+        return os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
+    except (ValueError, AttributeError, OSError):
+        return 1 << 62  # unknown host => assume plenty
+
+
+def _heatmaps_enabled() -> bool:
+    """Whether to run Grad-CAM. Its backward pass ~triples peak memory over a
+    forward-only score and OOM-kills a 512MB free-tier box mid-scan (the whole
+    service 502s — the 'Unexpected end of JSON' the UI shows). Enabled by default
+    (local dev has RAM), auto-disabled on a memory-constrained host, and always
+    overridable:
+        COUNTERFEIT_LOW_MEMORY=1  -> force forward-only (no heatmap)
+        COUNTERFEIT_LOW_MEMORY=0  -> force Grad-CAM on
+    The verdict is identical either way; only the heatmap overlay is dropped."""
+    override = os.environ.get("COUNTERFEIT_LOW_MEMORY")
+    if override is not None:
+        return override.strip().lower() in ("0", "false", "no", "")
+    return _detected_ram_bytes() >= _RAM_FLOOR_BYTES
+
+
 def analyze_image(
     img: Image.Image,
     model: CounterfeitModel,
@@ -92,8 +129,13 @@ def _analyze_core(
     checks = run_all_checks(warped)
     failed = [c.feature for c in checks if not c.passed]
     # Grad-CAM gives us p_fake AND a heatmap of the regions that drove the
-    # decision — the visual "why is it fake" explanation over the note.
-    p_fake, heatmap = model.gradcam(img.convert("RGB"))
+    # decision. The backward pass it needs ~triples peak memory, so on a
+    # memory-constrained host (512MB free tier) we score with a forward-only
+    # pass instead: same verdict, no heatmap. See _heatmaps_enabled().
+    if _heatmaps_enabled():
+        p_fake, heatmap = model.gradcam(img.convert("RGB"))
+    else:
+        p_fake, heatmap = model.p_fake(img.convert("RGB")), None
     verdict = model.decide_verdict(p_fake, len(failed))
 
     if verdict == "fake":
@@ -113,16 +155,16 @@ def _analyze_core(
         CAPTURES_DIR.mkdir(parents=True, exist_ok=True)
         capture_path = CAPTURES_DIR / f"{event_id}.jpg"
         img.convert("RGB").save(capture_path, quality=88)
-        # Grad-CAM overlay: the note with a heatmap marking the suspicious
-        # regions. Most useful when fake/uncertain; still saved for genuine so
-        # the UI can always show "what the model looked at".
-        heat_path = CAPTURES_DIR / f"{event_id}_cam.jpg"
-        _save_heatmap_overlay(img.convert("RGB"), heatmap, heat_path)
         _prune_captures()
         # Absolute URL on this service (api.py mounts CAPTURES_DIR at /captures),
         # so the dashboard on a different origin can actually display the note.
         image_ref = f"{SERVICE_BASE_URL}/captures/{capture_path.name}"
-        heatmap_ref = f"{SERVICE_BASE_URL}/captures/{heat_path.name}"
+        # Grad-CAM overlay: the note with a heatmap marking the suspicious
+        # regions. Only when heatmaps ran (heatmap is None in low-memory mode).
+        if heatmap is not None:
+            heat_path = CAPTURES_DIR / f"{event_id}_cam.jpg"
+            _save_heatmap_overlay(img.convert("RGB"), heatmap, heat_path)
+            heatmap_ref = f"{SERVICE_BASE_URL}/captures/{heat_path.name}"
 
     return {
         "schema_version": SCHEMA_VERSION,
