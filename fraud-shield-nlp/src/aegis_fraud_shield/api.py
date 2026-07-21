@@ -27,6 +27,7 @@ import base64
 import hashlib
 import hmac
 import os
+import re
 from pathlib import Path
 from threading import Lock
 from urllib.parse import parse_qs
@@ -38,6 +39,7 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from .analyze import analyze
+from .config import TranslateConfig
 from .model import MODEL_FILE, ScamClassifier
 
 UI_DIR = Path(__file__).parent / "ui"
@@ -113,15 +115,80 @@ def health() -> dict:
     return out
 
 
+# ── Multilingual input normalisation ─────────────────────────────────────────
+# The classifier is English-only, so a message in a native Indian script scores
+# as noise (a genuine Hindi KYC-freeze scam lands at risk 0.06 and is cleared).
+# Before classifying, a non-Latin message is translated to English via the
+# command centre, which holds SARVAM_API_KEY — Fraud Shield never needs the key.
+# Every step fails safe: on any error we classify the original text, i.e. exactly
+# today's behaviour. The verdict stays deterministic; only the input is normalised.
+_TRANSLATE = TranslateConfig()
+
+# Scripts of the 22 scheduled languages: the contiguous Brahmic Indian blocks
+# (Devanagari 0900 … Malayalam/Sinhala 0DFF), plus Perso-Arabic (Urdu, Sindhi,
+# Kashmiri), Ol Chiki (Santali) and Meetei Mayek (Manipuri). English is pure
+# Latin, matches none of these, and never pays for a translation round-trip.
+_NON_LATIN_SCRIPT = re.compile(
+    "["
+    "ऀ-෿"  # Brahmic Indian blocks: Devanagari, Bengali/Assamese, Gurmukhi,
+    #                  Gujarati, Odia, Tamil, Telugu, Kannada, Malayalam (contiguous)
+    "؀-ۿ"  # Perso-Arabic: Urdu, Sindhi, Kashmiri
+    "᱐-᱿"  # Ol Chiki: Santali
+    "ꯀ-꯿"  # Meetei Mayek: Manipuri
+    "]"
+)
+
+
+def _needs_translation(text: str) -> bool:
+    return _TRANSLATE.enabled and bool(_NON_LATIN_SCRIPT.search(text))
+
+
+def _translate_to_english(text: str) -> str:
+    """Ask the command centre (holder of SARVAM_API_KEY) to render `text` in
+    English. Returns the ORIGINAL text on ANY failure, so /analyze degrades to
+    English-only rather than breaking or hanging."""
+    cc = os.environ.get("COMMAND_CENTRE_URL", _TRANSLATE.command_centre_url).rstrip("/")
+    try:
+        # Lazy import: httpx is a declared dependency but the narrator/verify
+        # modules import it lazily too, so a stripped environment without it
+        # still loads and simply falls through to English-only here.
+        import httpx
+
+        r = httpx.post(
+            f"{cc}/translate",
+            json={"text": text[: _TRANSLATE.max_chars], "target": "en-IN"},
+            timeout=_TRANSLATE.timeout_s,
+        )
+        r.raise_for_status()
+        data = r.json()
+        if data.get("translated") and data.get("text"):
+            return data["text"]
+    except Exception:
+        # Never let a translation problem break /analyze — classify the original.
+        pass
+    return text
+
+
 @app.post("/analyze")
 def analyze_endpoint(req: AnalyzeRequest) -> dict:
-    return analyze(
-        req.text,
+    scored_text = req.text
+    if _needs_translation(req.text):
+        scored_text = _translate_to_english(req.text)
+
+    result = analyze(
+        scored_text,
         get_model(),
         source=req.source,
         phone_number=req.phone_number,
         location_hint=req.location_hint,
     )
+    # `raw_text` is the RAW input — keep the citizen's original message, even
+    # though the English rendering is what the classifier scored. The verdict,
+    # markers and explanation reflect the English analysis; the stored message
+    # stays in the language it arrived in. No new contract fields (the schema is
+    # additionalProperties:false), so this remains a valid scam_detection payload.
+    result["raw_text"] = req.text
+    return result
 
 
 @app.get("/")

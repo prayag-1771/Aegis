@@ -197,6 +197,27 @@ async def _citizen_pipeline(text: str, language: str | None, source: str = "manu
     }
 
 
+@app.post("/translate")
+async def translate_endpoint(body: dict) -> dict:
+    """Translate text to a target language (default English) via Sarvam.
+
+    A thin utility over multilingual.translate so a sibling service that does NOT
+    hold SARVAM_API_KEY — Fraud Shield — can normalise a non-English message to
+    English *before* classifying. The key stays on this one service. Fails safe:
+    on no key / same language / network error the input is returned unchanged with
+    translated=false, so the caller degrades to English-only and never breaks.
+    """
+    from .multilingual import translate
+
+    text = (body or {}).get("text")
+    if not text:
+        raise HTTPException(422, "body must contain 'text'")
+    target = (body or {}).get("target") or "en-IN"
+    source = (body or {}).get("source") or "auto"
+    translated, detected, ok = translate(text, target, source)
+    return {"text": translated, "detected_language": detected, "translated": ok}
+
+
 @app.get("/citizen/languages")
 def citizen_languages() -> dict:
     from .multilingual import LANGUAGES, sarvam_key

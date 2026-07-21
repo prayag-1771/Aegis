@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { fetchCaseFile, type CaseFileResponse } from "@/lib/api";
 import { X } from "./Icons";
 
@@ -33,7 +34,7 @@ export default function CaseFileModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
+  const tree = (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
@@ -116,4 +117,11 @@ export default function CaseFileModal({
       </div>
     </div>
   );
+
+  // Portal to <body>: the modal is rendered inside the alerts Drawer, whose
+  // panel carries a GSAP transform + backdrop-filter. Either makes this
+  // `fixed` overlay position relative to the drawer (not the viewport) and the
+  // drawer's `overflow-y-auto` then clips it — so it opens trapped inside the
+  // narrow column and reads as "nothing happened". Re-parenting to body frees it.
+  return typeof document !== "undefined" ? createPortal(tree, document.body) : null;
 }

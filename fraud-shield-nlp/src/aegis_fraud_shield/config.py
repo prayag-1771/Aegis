@@ -51,6 +51,28 @@ class ModelConfig(BaseModel):
     min_suspicious_precision: float = 0.90
 
 
+class TranslateConfig(BaseModel):
+    """Input normalisation for the 22 scheduled Indian languages (8th Schedule).
+
+    The classifier is English-only (TF-IDF over an English / Indian-English
+    corpus), so a message in a native script scores as noise — a real Hindi
+    KYC-freeze scam lands at risk 0.06 and is cleared. Before classifying, a
+    non-Latin message is translated to English via the command centre, which
+    holds SARVAM_API_KEY; Fraud Shield never needs the key itself. A wrapper,
+    not a retrain — the deterministic verdict is unchanged, only the language of
+    the input is normalised. Fail-safe throughout: any error / no key /
+    unreachable centre → the original text is classified (today's behaviour)."""
+
+    enabled: bool = True
+    # Where the Sarvam key lives — the same centre the citizen UIs already
+    # ingest to. Overridden at runtime by the COMMAND_CENTRE_URL env var.
+    command_centre_url: str = "http://127.0.0.1:8000"
+    # Translation must return within this budget or we classify the original.
+    timeout_s: float = 12.0
+    # Sarvam caps input length; a scam SMS / call transcript fits well under.
+    max_chars: int = 900
+
+
 class VerifyConfig(BaseModel):
     """Knobs for the agentic verification layer (additive; never overrides the
     deterministic verdict). See verify/ — an LLM agent investigates a *flagged*
