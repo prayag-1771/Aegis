@@ -180,6 +180,46 @@ class CounterfeitModel:
             h1.remove()
             h2.remove()
 
+    def activation_cam(self, img: Image.Image) -> tuple[float, np.ndarray]:
+        """Forward-only class-activation map (Eigen-CAM): returns (p_fake, heatmap)
+        exactly like gradcam(), but needs NO backward pass. Grad-CAM's backward
+        pass ~triples peak memory and OOM-kills a 512MB host mid-scan; this stays
+        within a plain forward inference, so the 'why' heatmap survives on the
+        free tier.
+
+        Eigen-CAM: hook the last conv layer's activations from the forward pass,
+        project them onto their first principal component (the dominant spatial
+        structure the network responds to), ReLU + normalise. No gradients, no
+        class logit — a class-agnostic 'where the model looked' map."""
+        self.net.eval()
+        target = self._last_conv()
+        if target is None:  # e.g. the tiny test net — no conv to read
+            return self.p_fake(img), np.zeros((self.img_size, self.img_size), dtype=np.float32)
+
+        acts: list[torch.Tensor] = []
+        h = target.register_forward_hook(lambda _m, _i, o: acts.append(o.detach()))
+        try:
+            tf = make_transform(self.img_size)
+            x = tf(img.convert("RGB")).unsqueeze(0)
+            with torch.no_grad():
+                logits = self.net(x)
+                p_fake = float(torch.softmax(logits, dim=1)[0, 1])
+                a = acts[0][0].float()          # (C, h, w)
+                c, hh, ww = a.shape
+                m = a.reshape(c, hh * ww).T      # (h*w, C) — one row per spatial cell
+                m = m - m.mean(dim=0, keepdim=True)
+                # First principal component via SVD (tiny matrices — negligible mem).
+                _u, _s, vh = torch.linalg.svd(m, full_matrices=False)
+                cam = (m @ vh[0]).reshape(hh, ww)
+                if float(cam.sum()) < 0:          # PC sign is arbitrary — orient it
+                    cam = -cam
+                cam = torch.relu(cam)
+                cam = cam - cam.min()
+                cam = cam / (cam.max() + 1e-8)
+                return p_fake, cam.cpu().numpy()
+        finally:
+            h.remove()
+
     def decide_verdict(self, p_fake: float, n_failed_features: int) -> str:
         """The CNN — trained on REAL photos of real notes vs REAL photos of
         counterfeit notes (98% genuine / 95% fake accuracy, AUC 0.994) — is the

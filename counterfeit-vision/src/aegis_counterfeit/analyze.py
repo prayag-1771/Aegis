@@ -60,15 +60,18 @@ def _detected_ram_bytes() -> int:
         return 1 << 62  # unknown host => assume plenty
 
 
-def _heatmaps_enabled() -> bool:
-    """Whether to run Grad-CAM. Its backward pass ~triples peak memory over a
-    forward-only score and OOM-kills a 512MB free-tier box mid-scan (the whole
-    service 502s — the 'Unexpected end of JSON' the UI shows). Enabled by default
-    (local dev has RAM), auto-disabled on a memory-constrained host, and always
+def _gradcam_enabled() -> bool:
+    """Which heatmap method to use — a heatmap is produced either way.
+
+    Grad-CAM is class-specific but needs a backward pass that ~triples peak
+    memory and OOM-kills a 512MB free-tier box mid-scan (the whole service 502s —
+    the 'Unexpected end of JSON' the UI shows). On a memory-constrained host we
+    fall back to Eigen-CAM, a forward-only heatmap that fits. Grad-CAM is used by
+    default (local dev has RAM), auto-swapped on a constrained host, and always
     overridable:
-        COUNTERFEIT_LOW_MEMORY=1  -> force forward-only (no heatmap)
-        COUNTERFEIT_LOW_MEMORY=0  -> force Grad-CAM on
-    The verdict is identical either way; only the heatmap overlay is dropped."""
+        COUNTERFEIT_LOW_MEMORY=1  -> force forward-only Eigen-CAM
+        COUNTERFEIT_LOW_MEMORY=0  -> force Grad-CAM
+    The verdict is identical either way; only the heatmap's method changes."""
     override = os.environ.get("COUNTERFEIT_LOW_MEMORY")
     if override is not None:
         return override.strip().lower() in ("0", "false", "no", "")
@@ -128,14 +131,15 @@ def _analyze_core(
 
     checks = run_all_checks(warped)
     failed = [c.feature for c in checks if not c.passed]
-    # Grad-CAM gives us p_fake AND a heatmap of the regions that drove the
-    # decision. The backward pass it needs ~triples peak memory, so on a
-    # memory-constrained host (512MB free tier) we score with a forward-only
-    # pass instead: same verdict, no heatmap. See _heatmaps_enabled().
-    if _heatmaps_enabled():
+    # Both paths return p_fake AND a heatmap of the regions that drove the
+    # decision. Grad-CAM (class-specific) needs a backward pass that ~triples
+    # peak memory, so on a memory-constrained host (512MB free tier) we use
+    # Eigen-CAM, a forward-only heatmap that fits. Same verdict either way — only
+    # the heatmap method changes. See _gradcam_enabled().
+    if _gradcam_enabled():
         p_fake, heatmap = model.gradcam(img.convert("RGB"))
     else:
-        p_fake, heatmap = model.p_fake(img.convert("RGB")), None
+        p_fake, heatmap = model.activation_cam(img.convert("RGB"))
     verdict = model.decide_verdict(p_fake, len(failed))
 
     if verdict == "fake":
@@ -236,9 +240,16 @@ def _fast_path_payload(
 
 
 def _save_heatmap_overlay(img: Image.Image, heatmap: np.ndarray, path: Path) -> None:
-    """Blend the Grad-CAM heatmap (red = suspicious) over the note and save it."""
+    """Blend the heatmap (red = suspicious) over the note and save it."""
+    # Cap the overlay resolution. On a 512MB host the full-res cv2 arrays below
+    # (base + colormap + blend, several copies) are what's left of the memory
+    # budget after inference; ~1024px is ample for a dashboard overlay.
+    _MAX_SIDE = 1024
+    if max(img.size) > _MAX_SIDE:
+        scale = _MAX_SIDE / max(img.size)
+        img = img.resize((max(1, round(img.width * scale)), max(1, round(img.height * scale))))
     w, h = img.size
-    if heatmap.size == 0:
+    if heatmap is None or heatmap.size == 0:
         img.save(path, quality=88)
         return
     cam = cv2.resize(heatmap.astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC)
