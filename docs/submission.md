@@ -42,6 +42,10 @@ India logged **1.14 million cybercrime complaints in 2023** (up 60% year-on-year
 
 **Aegis is the intelligence layer that sees them together, before mass victimisation.**
 
+> **Our aim was to reduce the investigative burden carried by the police — and to push past detection into prediction: inferring the most probable route the criminal money and counterfeit notes travelled, and the most probable place the operation is run from, so an officer opens a case with a ranked, evidence-backed lead instead of a stack of unconnected complaints.**
+
+That aim is visible in the product, not just the pitch. A district case file does not stop at "three crimes happened here" — it reads: *"Seizures sit on the Howrah–Delhi Grand Chord (Jharkhand corridor); likely origin Howrah (high confidence)"*, and it tells the officer where to look **next**: *"Alert Gaya units — flow analysis puts it at risk within 6.4–13.8 days."* One click turns scattered signals into a route, an origin, a predicted next target, and a numbered action list.
+
 We built a working, end-to-end **Digital Public Safety Intelligence Platform** with four cooperating systems:
 
 1. **Fraud Shield** — a real-time scam / digital-arrest classifier (NLP) that flags a scam **mid-message and mid-call, before any money moves**; names the exact manipulation markers *and the scam script they form* (an encoded reasoning chain a court can replay); **verifies the scammer's own claims with live tools** (where a short-link really redirects, whether a quoted IFSC exists); answers in **English + all 22 scheduled Indian languages**; and reaches citizens over the **web, live-call monitoring, and WhatsApp**.
@@ -79,8 +83,9 @@ Headline measured results (all from persisted, reproducible reports — nothing 
 12. [User Experience](#12-user-experience)
 13. [Challenge Compliance Matrix](#13-challenge-compliance-matrix)
 14. [Honest Limitations & Roadmap](#14-honest-limitations--roadmap)
-15. [Results & Conclusion](#15-results--conclusion)
-16. [Appendix: Team, Repository & How to Run](#16-appendix-team-repository--how-to-run)
+15. [The Platform in Action — Screenshots](#15-the-platform-in-action--screenshots)
+16. [Results & Conclusion](#16-results--conclusion)
+17. [Appendix: Team, Repository & How to Run](#17-appendix-team-repository--how-to-run)
 
 ---
 
@@ -357,7 +362,63 @@ Two citizen-facing sites and a police command centre, over one contract-validate
 - **The gateway is the single public entry** — it validates, forwards, and shields internal ML services from the public internet; the Gen-AI fusion and geospatial layers stay in Python behind it.
 - **Map tiles are keyless and free** (CARTO dark / Esri via MapLibre GL) — the demo cannot die on a missing token.
 
-### 6.2 The fusion pipeline
+### 6.2 Feature connection map — how the three detectors actually join
+
+This is the heart of Aegis: three independently-trained models that share **no code and no features**, joined only by evidence keys each one emits into a contract. The diagram below shows exactly which field from which detector creates each link.
+
+```
+      ①  TAKE                        ②  MOVE                       ③  CASH OUT
+ ┌──────────────────┐          ┌──────────────────┐          ┌──────────────────┐
+ │ SCAM DETECTION   │          │   FRAUD RING     │          │   COUNTERFEIT    │
+ │  Fraud Shield    │          │   Fraud Graph    │          │     Vision       │
+ │  NLP · :8001     │          │  Graph ML · :8003│          │  CV · :8002      │
+ └────────┬─────────┘          └────────┬─────────┘          └────────┬─────────┘
+          │                             │                             │
+  emits   │ district, lat/lon           │ ring district               │ seizure district,
+  into    │ phone_number                │ collector accounts          │ lat/lon
+  the     │ timestamp                   │ transaction edges           │ denomination
+  contract│ reported_payment (₹, time)  │ risk score, topology        │ defect signature
+          │                             │                             │ serial number
+          └───────────────┬─────────────┴──────────────┬──────────────┘
+                          ▼                            ▼
+        ╔═══════════════════════════════════════════════════════════╗
+        ║        DETERMINISTIC CORRELATION ENGINE (no LLM)          ║
+        ║  ───────────────────────────────────────────────────────  ║
+        ║  shared_district      same named district                 ║
+        ║  geospatial_overlap   ≤ 30 km (haversine)                 ║
+        ║  temporal_proximity   ≤ 96 hours                          ║
+        ║  shared_phone         same callback number                ║
+        ║  shared_account       MONEY TRAIL — amount ±1%            ║
+        ║                       ∧ payment 0–96 h after the call     ║
+        ║                       → names a freezable account         ║
+        ╚═════════════════════════════╤═════════════════════════════╝
+                                      │  established facts only
+        ┌─────────────────────────────┼─────────────────────────────┐
+        ▼                             ▼                             ▼
+ ┌──────────────┐            ┌──────────────────┐          ┌──────────────────┐
+ │ DBSCAN hubs  │            │  LLM NARRATOR    │          │ RESPONSE ENGINE  │
+ │ 3 domains =  │            │  writes the brief│          │ freeze · block · │
+ │ COORDINATED  │            │  cannot invent   │          │ MHA alert ·      │
+ │ 2 = multi-   │            │  or remove links │          │ intercept        │
+ │ signal       │            └──────────────────┘          └──────────────────┘
+ └──────────────┘                      │
+        │                              ▼
+        │                   audit_trail.inputs_hash  (re-run ⇒ same hash)
+        ▼
+ ┌───────────────────────────────────────────────────────────────────────────┐
+ │  NETWORK INTELLIGENCE — the layers that turn events into an operation     │
+ │  • Plate families  — same printing defects ⇒ one press                    │
+ │  • Serial registry — same serial twice     ⇒ one counterfeit printing run │
+ │  • Scam campaigns  — same script/callback  ⇒ one gang, many districts     │
+ │  • Supply Trail    — seizures on a corridor⇒ probable ROUTE + ORIGIN      │
+ └───────────────────────────────────────────────────────────────────────────┘
+```
+
+**Reading the map in one sentence:** a scam call gives us a *phone, a district and a victim's payment*; the fraud graph gives us *the account that payment landed in*; a counterfeit seizure gives us *a district, a defect signature and a serial*. The correlation engine joins them on space, time, phone and money — and the intelligence layers above lift that join from "three events" to "one operation, running along this corridor, printed on this press, using this script."
+
+**Why the modules can be joined at all without being coupled:** they never import each other. Each emits contract-validated JSON, and every link above is computed from those published fields — which is why any model can be swapped without breaking a single connection in this diagram.
+
+### 6.3 The fusion pipeline
 
 ```
 Dashboard ──POST /fuse──▶ Backend ──▶ Deterministic correlator
@@ -379,7 +440,7 @@ Dashboard ──POST /fuse──▶ Backend ──▶ Deterministic correlator
                                    response engine auto-derives Disrupt/Respond actions
 ```
 
-### 6.3 The complete backend surface (31 endpoints)
+### 6.4 The complete backend surface (31 endpoints)
 
 | Group | Endpoints |
 |---|---|
@@ -394,7 +455,7 @@ Dashboard ──POST /fuse──▶ Backend ──▶ Deterministic correlator
 
 (Fraud Shield additionally serves its own `/analyze`, `/webhook/whatsapp` (Twilio, HMAC-validated), `/live-call`, `/whatsapp` and chat UIs on :8001; Counterfeit Vision serves `/analyze`, `/analyze_b64`, captures and its camera UI on :8002; Fraud Graph serves `/fraud-graph`, `/detect` and demo endpoints on :8003.)
 
-### 6.4 Tech stack
+### 6.5 Tech stack
 
 - **Fraud Shield** — Python · scikit-learn (word+char TF-IDF ⊕ 8 marker features ⊕ playbook features → Logistic Regression) · FastAPI · browser SpeechRecognition (en-IN) + speechSynthesis for the live-call monitor · Twilio WhatsApp
 - **Counterfeit Vision** — PyTorch (EfficientNet-B0 transfer learning; MobileNet-V3 / tiny alternatives) · OpenCV (feature checks, triage forensics, contour + perspective note localisation) · MongoDB Atlas serial registry (fail-open JSON fallback)
@@ -579,9 +640,65 @@ We state these before a judge asks — the platform's credibility *is* its evide
 
 ---
 
-## 15. Results & Conclusion
+## 15. The Platform in Action — Screenshots
 
-### 15.1 Results at a glance
+Every screen below is the running system on real module output — no mockups.
+
+### 15.1 The command centre
+
+![The command centre: module health pills, live signal cards, the cross-domain crime map, and the TAKE → MOVE → CASH OUT pipeline strip.](Screenshots/01-dashboard.png.png)
+
+![Coordinated crime hub on the map — the red circle marks a place where independent detection systems converged.](Screenshots/11-map-hub.png.png)
+
+### 15.2 Detection — the three engines
+
+![Fraud Shield: a digital-arrest script flagged with the manipulation markers that triggered it, each traceable to the exact words.](Screenshots/02-scam-verdict.png.png)
+
+![Counterfeit Vision: a fake ₹500 verdict that names the specific security feature that failed.](Screenshots/05-counterfeit-fake.png.png)
+
+![Fraud Graph ring viewer: the gang's actual money flow, with plain-word evidence on any account.](Screenshots/06-ring-viewer.png.png)
+
+![Caught live — a ring the judges named, injected into the transaction stream and detected in about three seconds with no retraining.](Screenshots/07-inject-caught.png.png)
+
+![The same catch on the map: the ring count ticks up and the camera flies to the district.](Screenshots/07-inject-caught2.png.png)
+
+### 15.3 Pre-transfer interception — the citizen channels
+
+![Live-call monitoring: risk climbs as the call proceeds.](Screenshots/03-live-call-intercept.png.png)
+
+![The intercept fires mid-call — a full-screen and spoken warning before the payment demand completes.](Screenshots/03-live-call-intercept2.png.png)
+
+![WhatsApp channel: the same classifier reached over the app citizens already use.](Screenshots/04-whatsapp.png.png)
+
+![Multilingual advisory — the verdict returned in the citizen's own language (English + all 22 scheduled Indian languages).](Screenshots/16-multilingual.png.png)
+
+### 15.4 The fusion moment
+
+![Fusion output: CRITICAL threat, written live by the Groq narrator over deterministic evidence — with the money trail of ₹49,999 traced into collector account acc_02033, 29 linked signals, and the correlation basis shown as chips.](Screenshots/08-fusion.png.png)
+
+### 15.5 From detection to prediction and action
+
+![AI Case Officer: one district, one brief — summary, timeline, a hedged hypothesis, the inferred corridor and likely origin, a predicted next-at-risk district, and a numbered action list.](Screenshots/14-case-file.png.png)
+
+![Supply Trail: counterfeit provenance inferred along real transport corridors — the probable route and injection point.](Screenshots/15-supply-trail.png.png)
+
+![Supply Trail route detail with the multi-modal alternatives ranked by plausibility.](Screenshots/15-supply-trail2.png.png)
+
+![Disrupt queue: each action carries a priority, an SLA against the fraud clock, its evidence chain, and an append-only audit log.](Screenshots/12-disrupt.png.png)
+
+![Bank Partner — the API-key-gated B2B surface a bank's AML system calls.](Screenshots/13-bank-partner.png.png)
+
+### 15.6 Honesty on screen
+
+![Model Card: every measured metric read from the model's own persisted report, with caveats where a criterion is not in the artifact.](Screenshots/09-model-card.png.png)
+
+![Research Lab: three genuine experiments with data-driven verdicts — including the negative results, shown as prominently as the positives.](Screenshots/10-research-lab.png.png)
+
+---
+
+## 16. Results & Conclusion
+
+### 16.1 Results at a glance
 
 | System | Headline measured result |
 |---|---|
@@ -594,7 +711,7 @@ We state these before a judge asks — the platform's credibility *is* its evide
 | Engineering | 6 services · 6 contracts · 31 endpoints · **183 automated tests** · zero-key operation |
 | Cost of the entire stack | **₹0** — free-tier cloud or a single laptop |
 
-### 15.2 Conclusion
+### 16.2 Conclusion
 
 The challenge asked for a shift **from reactive case investigation to predictive threat neutralisation**. Aegis delivers that shift in the three places it actually happens:
 
@@ -610,7 +727,7 @@ Four people. A few days. Free-tier infrastructure. **Because the architecture �
 
 ---
 
-## 16. Appendix: Team, Repository & How to Run
+## 17. Appendix: Team, Repository & How to Run
 
 ### Team
 
