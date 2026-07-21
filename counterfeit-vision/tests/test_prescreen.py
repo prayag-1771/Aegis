@@ -71,29 +71,30 @@ def test_subtle_fake_is_the_models_job():
     assert run_prescreen(bgr).decision == "pass"
 
 
-# ── obvious fakes exit before the CNN ───────────────────────────────────────
+# ── triage NEVER convicts — only the CNN owns the genuine/fake call ──────────
+# These synth-collapsed inputs trip the tells, but the tells are calibrated on
+# the renderer and mis-fire on real photos, so a "fake" verdict here would brand
+# genuine phone-shot notes as counterfeit (the reported regression). Triage now
+# only gates unscannable photos; every scannable note goes to the CNN authority.
 
-def test_photocopy_convicts_without_model(schema):
+def test_photocopy_does_not_convict():
+    """A colour-collapsed (grayscale) note trips the photocopy/flat-print tells,
+    but triage must NOT convict — the CNN decides. The evidence is still recorded
+    on the checks for the triage block; the decision stays 'pass'."""
     gray3 = cv2.cvtColor(cv2.cvtColor(BASE, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
-    payload = analyze_image(to_pil(gray3), model=None)  # None => CNN untouched
-    jsonschema.validate(instance=payload, schema=schema)
-    assert payload["verdict"] == "fake"
-    assert payload["confidence"] >= 0.9
-    assert "color_shifting_ink" in payload["missing_features"]
-    assert payload["triage"]["decision"] == "obvious_fake"
-    assert payload["triage"]["engine"] == "template"  # keyless floor engaged
-    assert payload["triage"]["narrative"]
-    assert payload["heatmap_ref"] is None  # no CNN => no Grad-CAM
+    result = run_prescreen(gray3)
+    assert result.decision == "pass"
+    assert any(c.name == "photocopy" and not c.passed for c in result.checks)
 
 
-def test_novelty_colour_convicts(schema):
+def test_novelty_colour_does_not_convict():
+    """An out-of-gamut (green) note is the CNN's call too — triage never brands
+    it fake on colour alone."""
     hsv = cv2.cvtColor(BASE, cv2.COLOR_BGR2HSV)
     hsv[:, :, 0] = 60  # green — no circulating denomination
     hsv[:, :, 1] = np.clip(hsv[:, :, 1].astype(int) + 80, 0, 255).astype(np.uint8)
-    payload = analyze_image(to_pil(cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)), model=None)
-    jsonschema.validate(instance=payload, schema=schema)
-    assert payload["verdict"] == "fake"
-    assert payload["triage"]["decision"] == "obvious_fake"
+    result = run_prescreen(cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR))
+    assert result.decision == "pass"
 
 
 # ── unscannable photos ask for a rescan, not a verdict ──────────────────────

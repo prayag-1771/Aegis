@@ -210,15 +210,24 @@ def prescreen(img_bgr: np.ndarray, warped_bgr: np.ndarray) -> TriageResult:
     if any(not c.passed for c in gate):
         return TriageResult("unscannable", gate)
 
+    # Advisory tells ONLY — never a conviction. These are calibrated against the
+    # synth renderer and mis-fire on real phone photos of genuine notes: dim or
+    # warm light collapses saturation (photocopy tell) and soft focus / JPEG
+    # compression collapses face texture (flat_print tell), so a real ₹note trips
+    # two tells at once and used to be branded "fake" before the CNN ever ran —
+    # the "false note for almost every note" regression. That is exactly the
+    # failure mode model.decide_verdict warns about for the OpenCV feature checks:
+    # synth-geometry measurements MUST NOT flip the verdict on real-world input.
+    # The CNN (EfficientNet-B0, AUC 0.994 on REAL photos) is the sole genuine/fake
+    # authority. The tells still run and are recorded as evidence for the triage
+    # block, but the decision here is only ever "unscannable" (above) or "pass".
     tells = [
         check_photocopy(warped_bgr),
         check_flat_print(warped_bgr),
         check_geometry(img_bgr),
         check_unknown_colour(warped_bgr),
     ]
-    failed = [c for c in tells if not c.passed]
-    convicted = len(failed) >= 2 or any(c.conclusive for c in failed)
-    return TriageResult("obvious_fake" if convicted else "pass", gate + tells)
+    return TriageResult("pass", gate + tells)
 
 
 def triage_block(result: TriageResult, narrative: str | None = None,

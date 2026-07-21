@@ -195,13 +195,13 @@ def test_serial_block_in_contract_payload(tmp_path, monkeypatch):
     reg = SerialRegistry(tmp_path / "reg.json")
     monkeypatch.setattr(serials_mod, "SerialRegistry", lambda *a, **k: reg)
 
-    base = cv2.cvtColor(
-        np.asarray(render_note(NoteSpec(denomination="500", seed=9)).convert("RGB")),
-        cv2.COLOR_RGB2BGR)
-    photocopy = Image.fromarray(cv2.cvtColor(
-        cv2.cvtColor(cv2.cvtColor(base, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR),
-        cv2.COLOR_BGR2RGB))
-    payload = analyze_image(photocopy, model=None, serial_number="4CB 738291",
+    # An unscannable (too-small) frame takes the quality-gate fast path, so the
+    # CNN is skipped (model=None is safe) and this test can exercise the serial
+    # layer without a trained model. Triage no longer convicts, so a photocopy
+    # would now go to the CNN — the quality gate is the reliable CNN-free path.
+    base = render_note(NoteSpec(denomination="500", seed=9)).convert("RGB")
+    unscannable = base.resize((120, 52))
+    payload = analyze_image(unscannable, model=None, serial_number="4CB 738291",
                             location_hint={"district": "Nuh"})
     schema = json.loads(CONTRACT_SCHEMA.read_text(encoding="utf-8"))
     jsonschema.validate(instance=payload, schema=schema)
