@@ -1,0 +1,11 @@
+{
+  "backbone": "efficientnet_b0",
+  "img_size": 224,
+  "fake_threshold": 0.5,
+  "genuine_threshold": 0.45,
+  "trained_at": "2026-07-11T20:46:07+00:00",
+  "classes": [
+    "genuine",
+    "fake"
+  ]
+}

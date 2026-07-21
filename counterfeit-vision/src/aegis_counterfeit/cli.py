@@ -52,6 +52,17 @@ def cmd_prepare_real(_: argparse.Namespace) -> int:
 
 
 def cmd_train(args: argparse.Namespace) -> int:
+    # Idempotent by default. If a trained model is already present — e.g. the
+    # accurate EfficientNet-B0 weights that ship in the repo — do NOT silently
+    # retrain over it. A deploy that ran `train` on every boot was replacing the
+    # shipped model with whatever it could build in-container: on Render's free
+    # tier that meant a `tiny` net on synthetic data, which reads REAL notes as
+    # fake ("fake to all"). Serving the shipped weights is the fix; pass --force
+    # to retrain deliberately (local development / a real dataset refresh).
+    if META_FILE.exists() and not getattr(args, "force", False):
+        print(f"Model already present at {MODELS_DIR} — skipping training "
+              "(pass --force to retrain). Serving the existing weights.")
+        return 0
     data_dir = Path(args.data)
     if not data_dir.exists():
         sys.exit(f"{data_dir} not found. Run: python -m aegis_counterfeit.cli generate")
@@ -113,6 +124,8 @@ def main() -> None:
     p_train.add_argument("--data", default=str(DATA_DIR / "real"))
     p_train.add_argument("--backbone", default=TrainConfig().backbone,
                          choices=["efficientnet_b0", "mobilenet_v3_small", "tiny"])
+    p_train.add_argument("--force", action="store_true",
+                         help="retrain even if a model already exists (overwrites shipped weights)")
     p_train.set_defaults(fn=cmd_train)
 
     p_analyze = sub.add_parser("analyze", help="scan one note image")
