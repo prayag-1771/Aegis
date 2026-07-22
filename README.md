@@ -573,7 +573,7 @@ Free-tier, fully env-driven: **Vercel** (dashboard) + **Render** (gateway, backe
 - ✅ **Working prototype** — 6 services, 3 websites, 31 endpoints, 183 tests, all paths verified end-to-end
 - ✅ **Architecture diagram** — [`docs/architecture.md`](docs/architecture.md)
 - ✅ **Presentation deck** — [`docs/pitch-deck.md`](docs/pitch-deck.md)
-- 🎬 **Demo video** — run-of-show scripted, recording in progress
+- 🎬 **Demo video** — https://drive.google.com/file/d/1bdxVDEU7Ds6m1O_2noiKMBVDmUXSr9F1/view
 
 ---
 
