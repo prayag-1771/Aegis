@@ -108,8 +108,16 @@ class CriminalStrategy:
         """Map [0,1] → [2, 8] chain hops."""
         return int(2 + self.hop_depth * 6)
 
-    def _map_amount(self, base: float) -> float:
-        """Generate an amount based on amount_type gene."""
+    def _map_amount(self, base: float, rng: random.Random | None = None) -> float:
+        """Generate an amount based on amount_type gene.
+
+        `rng` MUST be the caller's seeded generator. These two branches used the
+        module-level `random` instead, which is a shared global stream: the same
+        strategy with the same seed produced different amounts on every call, so
+        the arms race was not reproducible and fitness carried noise that had
+        nothing to do with the strategy being evaluated.
+        """
+        rng = rng or random
         if self.amount_type < 0.33:
             # Round amounts (easy to detect)
             return round(base / 1000) * 1000
@@ -118,13 +126,27 @@ class CriminalStrategy:
             thresholds = [10_000, 25_000, 50_000, 100_000]
             closest = min(thresholds, key=lambda t: abs(t - base))
             offset = self.threshold_proximity * 500
-            return closest - offset + random.uniform(-100, 100)
+            return closest - offset + rng.uniform(-100, 100)
         else:
             # Organic-looking: log-normal with realistic noise
-            return abs(random.lognormvariate(np.log(base), 0.3))
+            return abs(rng.lognormvariate(np.log(base), 0.3))
 
 
 # ── Ring injection ─────────────────────────────────────────────────────────
+
+
+def _dataset_end(ds: Dataset) -> datetime:
+    """Latest transaction timestamp in the dataset, as the anchor for injected
+    rings. Deterministic — the whole point — with a fixed fallback if the column
+    is missing or unparseable."""
+    try:
+        ts = pd.to_datetime(ds.transactions["timestamp"], errors="coerce", utc=True)
+        latest = ts.max()
+        if pd.notna(latest):
+            return latest.to_pydatetime().replace(microsecond=0)
+    except (KeyError, ValueError, TypeError):
+        pass
+    return datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
 def inject_adversarial_ring(
@@ -149,17 +171,31 @@ def inject_adversarial_ring(
 
     # Total members: 1 source + n_splits chains of n_hops + 1 collector
     total_members = 1 + n_splits * n_hops + 1
-    base_ts = datetime.now(timezone.utc).replace(microsecond=0)
+    # Anchor the injected ring to the END OF THE DATASET, not to wall-clock time.
+    # This used to be datetime.now(), which had two consequences: the run was not
+    # reproducible (identical seed, different numbers on every call, because the
+    # timestamps moved), and the injected ring drifted further from the real data
+    # every day the demo was not re-run — the synthetic set ends 2026-07-02, so by
+    # late August the "laundering" sat seven weeks after every genuine
+    # transaction, which is not a realistic evasion and skews time-based features.
+    base_ts = _dataset_end(ds)
     base_amount = rng.uniform(200_000, 800_000)
 
     # Generate member accounts
+    # Account ids are namespaced BY RING. They used to be f"adv_{len(accounts)+i}",
+    # which is a function of the base dataset only — so every strategy injected
+    # into the same base produced the SAME ids. _retrain_detector merges evaders
+    # with drop_duplicates(subset=["account_id"], keep="last"), so a whole
+    # generation of distinct evaders collapsed into one ring and the detector
+    # retrained on a single example instead of top_k. Namespacing by ring_id
+    # keeps distinct rings distinct through the merge.
     members: list[str] = []
-    next_id = len(accounts)
     for i in range(total_members):
-        aid = f"adv_{next_id + i:05d}"
+        aid = f"adv_{ring_id}_{i:04d}"
+        dedup = 0
         while aid in existing:
-            next_id += 1
-            aid = f"adv_{next_id + i:05d}"
+            dedup += 1
+            aid = f"adv_{ring_id}_{i:04d}_{dedup}"
         existing.add(aid)
         members.append(aid)
         accounts.loc[len(accounts)] = {
@@ -201,7 +237,7 @@ def inject_adversarial_ring(
     for i, chain in enumerate(chains):
         delay = delay_mean * (1 + rng.gauss(0, delay_jitter))
         ts = base_ts + timedelta(minutes=max(1, delay) * (i + 1))
-        amt = strategy._map_amount(split_amount)
+        amt = strategy._map_amount(split_amount, rng)
         add_tx(source, chain[0], amt, ts)
 
     # Phase 2: Mule chains — each chain passes money down
@@ -211,7 +247,7 @@ def inject_adversarial_ring(
             current_amount *= rng.uniform(0.94, 0.99)  # mule takes cut
             delay = delay_mean * (1 + rng.gauss(0, delay_jitter))
             ts = base_ts + timedelta(minutes=max(1, delay) * (j + 2 + len(chains)))
-            amt = strategy._map_amount(current_amount)
+            amt = strategy._map_amount(current_amount, rng)
             add_tx(chain[j], chain[j + 1], amt, ts)
 
     # Phase 3: Fan-in — chain tails collect into the final account
@@ -220,7 +256,7 @@ def inject_adversarial_ring(
         delay = delay_mean * (1 + rng.gauss(0, delay_jitter))
         ts = base_ts + timedelta(minutes=max(1, delay) * (n_hops + len(chains) + 2))
         current_amount = split_amount * (0.96 ** n_hops)
-        amt = strategy._map_amount(current_amount)
+        amt = strategy._map_amount(current_amount, rng)
         add_tx(tail, collector, amt, ts)
 
     # Camouflage: each member also does some small organic traffic
@@ -356,6 +392,54 @@ def _retrain_detector(
     )
 
 
+# ── Parallel evaluation ────────────────────────────────────────────────────
+#
+# Evaluating one individual costs ~5-8s (a deep copy of the dataset, a networkx
+# feature pass over the whole graph, then scoring), and a pop-50 x 20-generation
+# run needs thousands of them — hours. Two things make that tractable, neither
+# of which changes a single number:
+#
+#   1. Evaluate ONCE per individual. The loop used to call evaluate_strategy for
+#      fitness, then call it AGAIN with the same seed to recover the `detection`
+#      value the first call had discarded, then a THIRD time for the best
+#      individual. evaluate_strategy is deterministic in (strategy, ds, seed), so
+#      those repeats recomputed an identical result — pure waste, ~2x the work.
+#   2. Fan the population out across processes. Individuals are independent
+#      within a generation, so this is embarrassingly parallel.
+#
+# Worker safety: _default_detector calls load_model(), which reads the model file
+# fresh on every call, so a worker automatically picks up the retrained detector
+# after _retrain_detector writes it. Nothing is cached across the retrain
+# boundary, and workers are only ever handed the base dataset.
+
+_WORKER_DS: Dataset | None = None
+
+
+def _init_worker(ds: Dataset) -> None:
+    """Hand each worker the base dataset once, rather than pickling it per task."""
+    global _WORKER_DS
+    _WORKER_DS = ds
+
+
+def _eval_one(payload: tuple[list[float], int]) -> tuple[float, float, float]:
+    """Evaluate one individual and return the FULL (fitness, money, detection)
+    triple, so the caller never has to recompute any part of it.
+
+    Module-level and picklable on purpose: Windows spawns fresh interpreters for
+    worker processes, so a closure would not survive the trip.
+    """
+    vector, seed = payload
+    strategy = CriminalStrategy.from_vector(vector)
+    return evaluate_strategy(strategy, _WORKER_DS, _default_detector, seed=seed)
+
+
+def _individual_seed(ind) -> int:
+    """The per-individual seed. Unchanged from the original inline expression —
+    keeping it identical is what makes the de-duplicated evaluation produce
+    exactly the same numbers as the three separate calls it replaces."""
+    return int(sum(ind) * 1000) % 2**31
+
+
 # ── Evolutionary loop ──────────────────────────────────────────────────────
 
 
@@ -378,6 +462,9 @@ def run_arms_race(
     retrain_every: int = 5,
     source: str = "synthetic",
     seed: int = 42,
+    keep_per_retrain: int = 5,
+    evader_memory: int = 40,
+    n_jobs: int = 1,
 ) -> pd.DataFrame:
     """Full evolutionary arms race.
 
@@ -430,51 +517,98 @@ def run_arms_race(
     history: list[GenerationLog] = []
     evading_datasets: list[tuple[Dataset, list[str]]] = []
 
+    # n_jobs=1 keeps everything in-process (and is what the tests use); >1 fans
+    # the population across processes. Set the module global either way so the
+    # sequential path uses the same worker function as the parallel one.
+    _init_worker(base_ds)
+    executor = None
+    if n_jobs != 1:
+        import os as _os
+        from concurrent.futures import ProcessPoolExecutor
+
+        workers = n_jobs if n_jobs > 0 else max(1, (_os.cpu_count() or 2) - 1)
+        if workers > 1:
+            executor = ProcessPoolExecutor(
+                max_workers=workers, initializer=_init_worker, initargs=(base_ds,)
+            )
+            logger.info("Parallel evaluation across %d worker processes", workers)
+
     logger.info("=== Arms Race: %d generations, pop=%d ===", n_generations, population_size)
 
+    # Evaluation cache. evaluate_strategy is deterministic in (genes, seed), and
+    # the ONLY thing that changes its answer is the detector — which changes just
+    # at a retrain. So a result stays valid until the next retrain, keyed by
+    # `retrain_epoch`. This matters because selection is elitist: the top_k
+    # individuals are cloned into the next generation UNCHANGED and were being
+    # re-evaluated from scratch every generation for no reason.
+    eval_cache: dict[tuple, tuple[float, float, float]] = {}
+    retrain_epoch = 0
+
     for gen in range(n_generations):
-        # Evaluate all individuals
-        fitnesses = list(map(toolbox.evaluate, population))
-        for ind, fit in zip(population, fitnesses):
-            ind.fitness.values = fit
+        # ONE evaluation per individual — fitness, escape rate and detector
+        # recall all come from the same (fitness, money, detection) triple.
+        keys = [(retrain_epoch, tuple(round(g, 12) for g in ind)) for ind in population]
+        todo = [(i, (list(ind), _individual_seed(ind)))
+                for i, (ind, k) in enumerate(zip(population, keys)) if k not in eval_cache]
 
-        fits = [f[0] for f in fitnesses]
+        if todo:
+            payloads = [p for _i, p in todo]
+            if executor is not None:
+                computed = list(executor.map(_eval_one, payloads))
+            else:
+                computed = [_eval_one(p) for p in payloads]
+            for (idx, _p), res in zip(todo, computed):
+                eval_cache[keys[idx]] = res
 
-        # Track escape rates
-        escape_rates = []
-        for ind in population:
-            strategy = CriminalStrategy.from_vector(ind)
-            _, _, detection = evaluate_strategy(
-                strategy, base_ds, _default_detector,
-                seed=int(sum(ind) * 1000) % 2**31,
-            )
-            escape_rates.append(1.0 - detection)
+        results = [eval_cache[k] for k in keys]
+        if todo and len(todo) < len(population):
+            logger.info("Gen %02d: %d/%d evaluated, %d served from cache",
+                        gen, len(todo), len(population), len(population) - len(todo))
 
-        # Detector recall on the best evader this generation
+        for ind, (fitness, _money, _detection) in zip(population, results):
+            ind.fitness.values = (fitness,)
+
+        fits = [r[0] for r in results]
+        escape_rates = [1.0 - r[2] for r in results]
+
+        # Detector recall on the best evader this generation — reuse its result.
         best_idx = int(np.argmax(fits))
-        best_strategy = CriminalStrategy.from_vector(population[best_idx])
-        _, _, best_detection = evaluate_strategy(
-            best_strategy, base_ds, _default_detector,
-            seed=int(sum(population[best_idx]) * 1000) % 2**31,
-        )
+        best_detection = results[best_idx][2]
 
         retrained = False
         if (gen + 1) % retrain_every == 0 and gen > 0:
-            # Collect evading rings (fitness > 0 means partial evasion)
-            for ind in population:
-                if ind.fitness.values[0] > 0:
-                    strategy = CriminalStrategy.from_vector(ind)
-                    ds_aug, members, _ = inject_adversarial_ring(
-                        base_ds, strategy,
-                        ring_id=f"evader_g{gen}",
-                        seed=int(sum(ind) * 1000) % 2**31,
-                    )
-                    evading_datasets.append((ds_aug, members))
+            # Collect this generation's BEST evaders (fitness > 0 = partial
+            # evasion), each with its own ring_id so their accounts stay
+            # distinct through the merge in _retrain_detector.
+            ranked = sorted(population, key=lambda i: i.fitness.values[0], reverse=True)
+            kept = 0
+            for rank, ind in enumerate(ranked):
+                if ind.fitness.values[0] <= 0 or kept >= keep_per_retrain:
+                    break
+                strategy = CriminalStrategy.from_vector(ind)
+                ds_aug, members, _ = inject_adversarial_ring(
+                    base_ds, strategy,
+                    ring_id=f"evader_g{gen}_r{rank}",
+                    seed=int(sum(ind) * 1000) % 2**31,
+                )
+                evading_datasets.append((ds_aug, members))
+                kept += 1
+
+            # NO reset. The detector previously retrained on only the newest
+            # generation's evaders and then wiped its memory, so each retrain
+            # taught it the latest trick while it forgot every earlier one —
+            # catastrophic forgetting, and the reason recall decayed from ~0.95
+            # to ~0.09 across the run. Memory now persists across generations
+            # and is FIFO-capped only to bound retrain cost.
+            if len(evading_datasets) > evader_memory:
+                evading_datasets = evading_datasets[-evader_memory:]
 
             if evading_datasets:
-                _retrain_detector(base_ds, evading_datasets[-top_k:])
+                _retrain_detector(base_ds, evading_datasets)
                 retrained = True
-                evading_datasets = []  # reset after retraining
+                # The detector changed, so every cached score is now stale.
+                # Bumping the epoch invalidates them without dropping the dict.
+                retrain_epoch += 1
 
         log = GenerationLog(
             generation=gen,
@@ -513,6 +647,9 @@ def run_arms_race(
             offspring.extend([c1, c2])
 
         population = offspring[:population_size]
+
+    if executor is not None:
+        executor.shutdown(wait=True)
 
     df = pd.DataFrame([
         {

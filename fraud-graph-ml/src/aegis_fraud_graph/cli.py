@@ -103,6 +103,10 @@ def arms_race(
     population: int = typer.Option(50, help="Population size"),
     retrain_every: int = typer.Option(5, help="Retrain detector every N generations"),
     source: str = typer.Option("synthetic"),
+    n_jobs: int = typer.Option(
+        1, help="Parallel worker processes for evaluation (0 = cpu_count-1). "
+                "Results are identical; only wall-clock changes."
+    ),
 ):
     """Criminal Trains the Cop: adversarial evolutionary arms race.
 
@@ -117,6 +121,7 @@ def arms_race(
         population_size=population,
         retrain_every=retrain_every,
         source=source,
+        n_jobs=n_jobs,
     )
 
     # Save history
