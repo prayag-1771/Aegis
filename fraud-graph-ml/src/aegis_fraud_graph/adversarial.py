@@ -324,8 +324,39 @@ def evaluate_strategy(
 # ── Default detector (XGBoost) ─────────────────────────────────────────────
 
 
+def _calibrated_risk_threshold() -> float:
+    """The score cut the CURRENT model calibrated for itself, falling back to the
+    RingConfig default if no report is available.
+
+    detect_rings() otherwise applies a hardcoded 0.5, which decouples detection
+    from retraining and is why the cop could never fight back: retraining moves
+    the model's score distribution and re-picks `chosen_threshold` (it landed at
+    0.0049 here), but ring linking kept cutting at 0.5, and it only links
+    accounts whose transactions have BOTH endpoints above the cut. So the
+    criminal simply evolved long chains whose middle mules score just under
+    0.5 — the chain fragments and the ring vanishes. Measured on an evolved
+    evader: at 0.5 the detector recovers 7/51 members, at the model's own
+    threshold it recovers 46/51 (precision 1.00 -> 0.87).
+    """
+    import json as _json
+
+    from .config import MODELS_DIR
+
+    try:
+        report = _json.loads((MODELS_DIR / "train_report.json").read_text(encoding="utf-8"))
+        thr = float(report["chosen_threshold"])
+        if 0.0 < thr < 1.0:
+            return thr
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    from .config import RingConfig
+
+    return RingConfig().risk_threshold
+
+
 def _default_detector(ds: Dataset, suspect_members: list[str]) -> list[str]:
     """Run the existing XGBoost pipeline and return detected members."""
+    from .config import RingConfig
     from .graph import compute_features
     from .model import load_model, score_all
     from .rings import detect_rings
@@ -339,7 +370,11 @@ def _default_detector(ds: Dataset, suspect_members: list[str]) -> list[str]:
         clf, _ = train_model(features, labels)
 
     scores = score_all(clf, features)
-    rings, accounts = detect_rings(ds, scores)
+    # Scoped to the arms race on purpose — production ring detection keeps its
+    # own default so the Fraud Rings module's published numbers are unaffected.
+    rings, accounts = detect_rings(
+        ds, scores, RingConfig(risk_threshold=_calibrated_risk_threshold())
+    )
 
     # All accounts placed in any ring
     detected = set()
