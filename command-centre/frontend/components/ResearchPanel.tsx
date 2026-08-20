@@ -452,7 +452,7 @@ function SpectralCard({ spectral }: { spectral: ResearchResponse["spectral"] }) 
 
       <p className="mt-2 text-[10px] leading-relaxed text-zinc-600">
         {shiftHolds
-          ? `The validated result is the MATCHED-PAIR shift: a ring community sits higher-frequency than a clean one of comparable size. The #${ringRank} rank is a triage hint on this artifact — the module's own validation warns that absolute cross-community comparison varies with size and density, so ranking is not claimed as a detector. The real detection gain is BWGNN wavelet features fed to the classifier.`
+          ? `The validated result is the MATCHED-PAIR shift: a ring community sits higher-frequency than a clean one of comparable size. The #${ringRank} rank is a triage hint on this artifact — the module's own validation warns that absolute cross-community comparison varies with size and density, so ranking is not claimed as a detector. Beta wavelet (BWGNN) band-pass filters are implemented and unit-tested in spectral.py, but are NOT yet fed to the classifier — the numbers above come from the eigen-decomposition alone.`
           : "The shift did not hold on this run."}
       </p>
     </Card>

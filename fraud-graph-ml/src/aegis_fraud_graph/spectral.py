@@ -552,8 +552,11 @@ def run_spectral_analysis(
     # flag produces both misses and false alarms. It is a triage hint, and the
     # honest, validated result is the matched pairwise shift, not this flag.
     # This is the "subtler than the papers" caveat the module documents made
-    # concrete — the real detection gain is the BWGNN wavelet features fed to
-    # the classifier, never a raw Rayleigh cut.
+    # concrete. BetaWaveletFilter below is the intended route to a real detection
+    # gain, but it is NOT wired into the classifier yet — it is implemented and
+    # unit-tested only, so nothing downstream consumes it. Said plainly here
+    # because the dashboard used to claim the wavelet features were already
+    # feeding the classifier, which the code does not do.
     if rayleigh_values:
         median_rq = float(np.median(rayleigh_values))
         for r in reports:
