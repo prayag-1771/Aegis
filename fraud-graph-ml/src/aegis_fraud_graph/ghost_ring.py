@@ -26,6 +26,7 @@ Stack: PyTorch Geometric, NetworkX, leidenalg, scipy.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import warnings
 from dataclasses import dataclass, field
@@ -110,14 +111,39 @@ class BankSilo:
 
 @dataclass
 class BoundaryInfo:
-    """Published info for a boundary node (shared with central matcher)."""
-    pseudo_id: str
+    """One boundary record. Only `published()` crosses the bank boundary.
+
+    The privacy claim this module makes is structural, so the split has to be
+    explicit rather than a comment: `pseudo_id` is a per-bank salted hash, and
+    the raw `account_id` is retained ONLY in-process, so the evaluation harness
+    can score matches against ground truth. Nothing outside the owning bank ever
+    reads it — `CentralMatcher.match()` scores purely on the published fields
+    (embedding, direction, amount_bucket, time_bucket, bank_id).
+    """
+
+    pseudo_id: str  # salted per-bank hash — the published identifier
     bank_id: int
-    account_id: str  # real id — in production this would be hashed
+    # BANK-PRIVATE. Never published; see published(). Kept so the evaluator can
+    # de-reference a match back to ground truth (in production this is the
+    # bank's own re-identification step, taken only on a confirmed hit).
+    account_id: str
     embedding: np.ndarray  # 64-dim
     direction: str  # "outgoing" or "incoming"
     amount_bucket: int  # quantized total amount
     time_bucket: int  # quantized avg timestamp
+
+    def published(self) -> dict:
+        """Exactly what leaves the bank — auditable, and deliberately without
+        `account_id`. Amounts and timestamps are already coarsened to buckets,
+        so no exact value is disclosed either."""
+        return {
+            "pseudo_id": self.pseudo_id,
+            "bank_id": self.bank_id,
+            "embedding": self.embedding,
+            "direction": self.direction,
+            "amount_bucket": self.amount_bucket,
+            "time_bucket": self.time_bucket,
+        }
 
 
 @dataclass
@@ -148,6 +174,11 @@ class GhostRingReport:
     false_merge_rate: float
     recall_gap: float  # fused_recall - avg(per_bank_recall)
     best_min_score: float = 0.85
+    # Privacy settings this run actually used, so the artifact is self-describing
+    # and a reader never has to assume DP was on. None = no-privacy baseline.
+    dp_epsilon: float | None = None
+    dp_delta: float = 1e-5
+    pseudonymised_ids: bool = True
 
     def to_dict(self) -> dict:
         return {
@@ -164,6 +195,9 @@ class GhostRingReport:
             "false_merge_rate": round(self.false_merge_rate, 4),
             "recall_gap": round(self.recall_gap, 4),
             "best_min_score": self.best_min_score,
+            "dp_epsilon": self.dp_epsilon,
+            "dp_delta": self.dp_delta,
+            "pseudonymised_ids": self.pseudonymised_ids,
         }
 
 
@@ -416,18 +450,41 @@ def _time_bucket(timestamps: list[str]) -> int:
     return 0
 
 
+def _bank_salt(bank_id: int) -> bytes:
+    """Per-bank pseudonymisation salt.
+
+    Derived here so the demo is reproducible. In production this is a secret the
+    bank alone holds and never discloses — that is what stops the central matcher
+    (or any other bank) from re-deriving the pseudonym for a guessed account id,
+    which an unsalted hash of a short identifier would allow by brute force.
+    """
+    return hashlib.blake2b(f"aegis-ghost-ring-bank-{bank_id}".encode(), digest_size=16).digest()
+
+
+def _pseudonymise(account_id: str, bank_id: int) -> str:
+    """Keyed hash of an account id — stable within a bank, unlinkable across
+    banks (different salts), and not invertible without the bank's salt."""
+    digest = hashlib.blake2b(
+        account_id.encode(), key=_bank_salt(bank_id), digest_size=12
+    ).hexdigest()
+    return f"b{bank_id}_{digest}"
+
+
 def extract_boundary_info(
     silo: BankSilo,
     ds_full: Dataset,
 ) -> list[BoundaryInfo]:
     """Extract publishable boundary information for the central matcher.
 
-    For each boundary node, we publish:
-    - pseudo_id (bank_id + hash)
+    For each boundary node, we publish (see BoundaryInfo.published()):
+    - pseudo_id — per-bank SALTED HASH of the account id, never the id itself
     - 64-dim embedding from the local GraphSAGE
     - direction (outgoing/incoming based on cut edges)
     - amount_bucket (log-scale quantization)
     - time_bucket (day-of-month quantization)
+
+    The raw account id stays on the BoundaryInfo for the evaluator only; it is
+    not part of the published record.
     """
     infos: list[BoundaryInfo] = []
     bank_set = set(silo.node_ids)
@@ -448,7 +505,7 @@ def extract_boundary_info(
         # Publish one entry per outgoing cross-bank edge
         for idx, tx in outgoing_tx.iterrows():
             infos.append(BoundaryInfo(
-                pseudo_id=f"b{silo.bank_id}_out_{node}_{idx}",
+                pseudo_id=_pseudonymise(node, silo.bank_id),
                 bank_id=silo.bank_id,
                 account_id=node,
                 embedding=silo.embeddings[node],
@@ -460,7 +517,7 @@ def extract_boundary_info(
         # Publish one entry per incoming cross-bank edge
         for idx, tx in incoming_tx.iterrows():
             infos.append(BoundaryInfo(
-                pseudo_id=f"b{silo.bank_id}_in_{node}_{idx}",
+                pseudo_id=_pseudonymise(node, silo.bank_id),
                 bank_id=silo.bank_id,
                 account_id=node,
                 embedding=silo.embeddings[node],
@@ -770,6 +827,8 @@ def run_ghost_ring(
     source: str = "synthetic",
     n_banks: int = 4,
     min_score: float = 0.5,
+    dp_epsilon: float | None = 1.0,
+    dp_delta: float = 1e-5,
 ) -> GhostRingReport:
     """End-to-end Ghost Ring pipeline.
 
@@ -798,11 +857,29 @@ def run_ghost_ring(
     for silo in silos:
         train_local_model(silo, epochs=80)
 
-    # Step 3: Extract boundary info
+    # Step 3: Extract boundary info, then apply differential privacy to the
+    # embeddings BEFORE they leave the bank. Without this the embedding is a
+    # deterministic function of the local training set, so publishing it leaks
+    # information about individual accounts (embedding-inversion / membership
+    # inference). The Gaussian mechanism bounds that leak to (eps, delta)-DP.
+    # eps is a genuine privacy/utility knob — smaller eps is more private and
+    # noisier — so the run reports which value was used, and dp_epsilon=None
+    # disables it for an explicit no-privacy baseline.
     all_boundary_infos: list[list[BoundaryInfo]] = []
     for silo in silos:
         infos = extract_boundary_info(silo, ds)
         all_boundary_infos.append(infos)
+
+    if dp_epsilon is not None:
+        from .ghost_ring_privacy import add_dp_noise_to_boundary_infos
+
+        for bank_infos in all_boundary_infos:
+            add_dp_noise_to_boundary_infos(
+                bank_infos, epsilon=dp_epsilon, delta=dp_delta, seed=42
+            )
+        logger.info("Applied (%.2f, %.0e)-DP to published embeddings", dp_epsilon, dp_delta)
+    else:
+        logger.warning("DP DISABLED (dp_epsilon=None) — no-privacy baseline run")
 
     # Step 4: Match
     matcher = CentralMatcher(min_score=min_score)
@@ -863,6 +940,9 @@ def run_ghost_ring(
         false_merge_rate=false_merge_rate,
         recall_gap=fused_recall - avg_per_bank,
         best_min_score=min_score,
+        dp_epsilon=dp_epsilon,
+        dp_delta=dp_delta,
+        pseudonymised_ids=True,
     )
 
     logger.info("=== Ghost Ring Results ===")

@@ -175,6 +175,24 @@ function GhostRingCard({ ring }: { ring: ResearchResponse["ghost_ring"] }) {
                       <span>{ring.best_min_score.toFixed(2)}</span>
                     </div>
                   )}
+                  {/* What actually crossed the bank boundary on THIS run —
+                      stated from the artifact, never assumed. */}
+                  <div className="mt-1 flex justify-between border-t border-white/5 pt-1 text-zinc-500">
+                    <span>Published embeddings</span>
+                    <span className={ring.dp_epsilon != null ? "text-emerald-400" : "text-amber-400"}>
+                      {ring.dp_epsilon != null
+                        ? `DP ε=${ring.dp_epsilon}, δ=${ring.dp_delta ?? 1e-5}`
+                        : "no DP (baseline)"}
+                    </span>
+                  </div>
+                  {ring.pseudonymised_ids != null && (
+                    <div className="mt-1 flex justify-between text-zinc-500">
+                      <span>Published identifiers</span>
+                      <span className={ring.pseudonymised_ids ? "text-emerald-400" : "text-amber-400"}>
+                        {ring.pseudonymised_ids ? "salted hash (per bank)" : "raw account id"}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* The verdict the whole method turns on — shown, not hidden.

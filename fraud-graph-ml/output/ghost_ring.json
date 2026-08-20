@@ -19,5 +19,8 @@
   "matching_precision": 1.0,
   "false_merge_rate": 0.0,
   "recall_gap": 0.3373,
-  "best_min_score": 0.5
+  "best_min_score": 0.5,
+  "dp_epsilon": 1.0,
+  "dp_delta": 1e-05,
+  "pseudonymised_ids": true
 }

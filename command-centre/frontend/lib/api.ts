@@ -482,6 +482,12 @@ export interface GhostRing {
   false_merge_rate: number;
   recall_gap: number;
   best_min_score?: number;
+  /** Differential-privacy budget applied to published embeddings before they
+   *  leave a bank. null/absent = no-privacy baseline run. */
+  dp_epsilon?: number | null;
+  dp_delta?: number;
+  /** True when published identifiers are per-bank salted hashes, not raw ids. */
+  pseudonymised_ids?: boolean;
 }
 
 export interface ArmsRace {
