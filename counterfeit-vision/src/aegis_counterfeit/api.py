@@ -87,10 +87,30 @@ def _open_image(raw: bytes) -> Image.Image:
         raise HTTPException(status_code=400, detail=f"Not a readable image: {exc}") from exc
 
 
+def _save_captures_enabled() -> bool:
+    """Whether scanned note photos are written to disk (docs/privacy.md P5).
+
+    These are citizen photographs, and /captures is a static mount with no
+    authentication — anyone holding a returned URL can fetch the image. EXIF is
+    already stripped (PIL's convert("RGB") + save drops it, verified), and
+    filenames carry 48 bits of UUID, so the practical exposure is limited; but a
+    privacy-sensitive deployment should be able to turn persistence off outright.
+
+    Set COUNTERFEIT_SAVE_CAPTURES=0 to do that. The scan UI degrades gracefully:
+    it falls back to the browser's own copy of the upload for the original image
+    (`r.image_ref || uploadDataUrl`), so only the server-rendered heatmap overlay
+    is lost. Defaults to on, because the demo shows that overlay.
+    """
+    return os.environ.get("COUNTERFEIT_SAVE_CAPTURES", "1").strip().lower() not in (
+        "0", "false", "no",
+    )
+
+
 def _analyze_pil(img: Image.Image, location_hint: dict | None = None,
                  serial_number: str | None = None) -> dict:
     return analyze_image(img, get_model(), location_hint=location_hint,
-                         save_capture=True, serial_number=serial_number)
+                         save_capture=_save_captures_enabled(),
+                         serial_number=serial_number)
 
 
 @app.get("/health")

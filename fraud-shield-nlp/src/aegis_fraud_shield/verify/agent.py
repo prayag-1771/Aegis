@@ -20,10 +20,29 @@ test and consumer still passes.
 from __future__ import annotations
 
 import os
+import re
 import time
 
 from ..config import VerifyConfig
 from . import offline, tools
+
+# Identifier masking for anything that leaves this process. Mirrors
+# aegis_command.intel.redact — the two run in different services, so the pattern
+# is duplicated rather than shared, but they must stay in step.
+_URL_RE = re.compile(r"(https?://|www\.)\S+")
+_EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
+_UPI_RE = re.compile(r"\b[\w.\-]{2,}@[a-z]{2,}\b", re.I)
+_DIGITS_RE = re.compile(r"\d[\d\s\-]{4,}\d")
+
+
+def _redact(text: str | None) -> str:
+    """Mask links, emails, UPI handles and long digit runs, keeping the wording."""
+    if not text:
+        return ""
+    out = _URL_RE.sub("[link]", str(text))
+    out = _EMAIL_RE.sub("[email]", out)
+    out = _UPI_RE.sub("[upi]", out)
+    return _DIGITS_RE.sub("[number]", out)
 
 # --- system prompt: same restraint as the fusion narrator's STRICT RULES ---
 
@@ -92,8 +111,18 @@ def _synthesize_llm(text: str, det_result: dict, checked: list[dict],
     import anthropic
 
     client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
+    # The citizen's message is NOT sent (docs/privacy.md P3). It used to go
+    # verbatim as {"message": text}, and scam messages routinely quote the
+    # victim's name, bank, account tail or case number — all of it leaving Indian
+    # jurisdiction for a US processor, on every flagged message.
+    #
+    # The synthesis job is to explain TOOL RESULTS ("this bit.ly resolves to a
+    # credential-harvest page", "that IFSC is not SBI"), which the tool layer
+    # already extracted. It never needed to read the message. A redacted excerpt
+    # is included only for tone, with digits, links, emails and UPI handles
+    # masked, so the model can still say what kind of message this is.
     payload = {
-        "message": text,
+        "message_excerpt_redacted": _redact(text)[:200],
         "deterministic_verdict": det_result.get("verdict"),
         "scam_type": det_result.get("scam_type"),
         "tool_results": checked,

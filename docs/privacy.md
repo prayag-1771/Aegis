@@ -15,23 +15,23 @@ answer, written before anyone asks.
 
 ## Severity summary
 
-| ID | Exposure | Severity |
-|---|---|---|
-| [P1](#p1) | No authentication on any endpoint; stored messages publicly readable | 🔴 Critical |
-| [P2](#p2) | Phone numbers sent to third-party LLMs in the case-file dossier | 🔴 Critical |
-| [P3](#p3) | Full message text sent to Anthropic by the verification agent | 🔴 High |
-| [P4](#p4) | Full message text sent to Sarvam AI for translation | 🔴 High |
-| [P5](#p5) | Scanned note images served publicly with no auth | 🔴 High |
-| [P6](#p6) | Message text stored server-side and shown on the dashboard | 🔴 High |
-| [P7](#p7) | Live-call audio streamed to Google by the browser | 🔴 High |
-| [P8](#p8) | GPS coordinates travel and persist with every scan | 🟠 Medium-High |
-| [P9](#p9) | WhatsApp message body + sender number transit Twilio | 🟠 Medium-High |
-| [P10](#p10) | Every place search is sent to OpenStreetMap (Nominatim) | 🟠 Medium |
-| [P11](#p11) | Map tiles leak the investigation viewport to three foreign CDNs | 🟠 Medium |
-| [P12](#p12) | FIR case references sent to third-party LLMs | 🟠 Medium |
-| [P13](#p13) | Backend fetches attacker-controlled URLs (IP disclosure + SSRF) | 🟠 Medium |
-| [P14](#p14) | IFSC codes sent to Razorpay | 🟡 Low |
-| [P15](#p15) | Message text transits the Express gateway | 🟡 Low |
+| ID | Exposure | Severity | Status |
+|---|---|---|---|
+| [P1](#p1) | No authentication on any endpoint; stored messages publicly readable | 🔴 Critical | ✅ **Fixed** |
+| [P2](#p2) | Phone numbers sent to third-party LLMs in the case-file dossier | 🔴 Critical | ✅ **Fixed** |
+| [P3](#p3) | Full message text sent to Anthropic by the verification agent | 🔴 High | ✅ **Fixed** |
+| [P4](#p4) | Full message text sent to Sarvam AI for translation | 🔴 High  | — |
+| [P5](#p5) | Scanned note images served publicly with no auth | 🔴 High | 🟡 Partial |
+| [P6](#p6) | Message text stored server-side and shown on the dashboard | 🔴 High | 🟡 Partial |
+| [P7](#p7) | Live-call audio streamed to Google by the browser | 🔴 High  | — |
+| [P8](#p8) | GPS coordinates travel and persist with every scan | 🟠 Medium-High  | — |
+| [P9](#p9) | WhatsApp message body + sender number transit Twilio | 🟠 Medium-High  | — |
+| [P10](#p10) | Every place search is sent to OpenStreetMap (Nominatim) | 🟠 Medium  | — |
+| [P11](#p11) | Map tiles leak the investigation viewport to three foreign CDNs | 🟠 Medium  | — |
+| [P12](#p12) | FIR case references sent to third-party LLMs | 🟠 Medium  | — |
+| [P13](#p13) | Backend fetches attacker-controlled URLs (IP disclosure + SSRF) | 🟠 Medium  | — |
+| [P14](#p14) | IFSC codes sent to Razorpay | 🟡 Low  | — |
+| [P15](#p15) | Message text transits the Express gateway | 🟡 Low  | — |
 
 ---
 
@@ -62,6 +62,16 @@ exhausted); the code path is unambiguous.*
 4. Combine with **P6** — once `raw_text` is no longer stored, a leak of `/events` is
    materially less damaging. Defence in depth: do both.
 
+**Status: fixed.** Reads feed a PUBLIC dashboard and a browser cannot hold a secret, so reads
+are protected by not returning private content rather than by a key: `_public_scam()` strips
+`raw_text`, pseudonymises `phone_number` and redacts `explanation`. Writes are now guarded —
+`/ingest/*`, `/demo/reset`, `/demo/inject-ring` and `/refresh/fraud-graph` require
+`X-Aegis-Key`. Enforcement is opt-in (`AEGIS_API_KEY`) so a live demo cannot be broken by a
+missing env var, and `/health` reports `write_auth: enforced|disabled` rather than implying a
+protection that is not active. Verified: without a key ingest returns 200 and the demo path is
+untouched; with a key, no/wrong key gives 401 and the correct key 200, while `/events` and
+`/hotspots` stay 200.
+
 ---
 
 ### P2 — Phone numbers sent to third-party LLMs {#p2}
@@ -79,8 +89,18 @@ hardest exposure to defend, and it is invisible to a reader of the UI.
 **Solution.** The LLM never needs the digits. It needs to know a callback number *exists* so
 it can recommend pulling CDRs. Replace with a salted hash plus a count:
 `{"phone_ref": "ph_" + hmac(salt, number)[:8], "has_callback": true}`. The narrative is
-unchanged; the investigator de-references the hash locally. **~5 lines. Do this first — it is
-the highest severity-to-effort ratio in this document.**
+unchanged; the investigator de-references the hash locally.
+
+**Status: fixed.** Redaction lives in `intel.py` at the source, not at each consumer, so a new
+caller cannot reintroduce the leak by forgetting to sanitise. `phone_ref()` is a keyed BLAKE2b
+pseudonym — stable, so campaign clustering still links reports sharing a caller, and not
+reversible without `AEGIS_PII_SALT`. `redact()` masks digit runs, emails, links and UPI handles
+inside excerpts while keeping the scam wording. This covered a second leak path found during
+the fix: campaign objects carried both a phone list and a 180-character message excerpt, and
+those are embedded whole into the dossier *and* served by the unauthenticated
+`/intel/campaigns`. Verified: the dossier and `/events` contain no phone digits, no UPI handle
+and no `raw_text`. The dashboard renders `len(phone_numbers)` and `sample_text` only, so both
+still work.
 
 ---
 
@@ -100,6 +120,10 @@ mismatched IFSC), not to read the message. Send only the extracted entities and 
 deterministic verdict — never `text`. If a short quote genuinely helps the narrative, send a
 redacted span with digits and names masked. The tool layer already extracts these entities,
 so the change is to the payload only.
+
+**Status: fixed.** The payload now carries `message_excerpt_redacted` (links, emails, UPI
+handles and digit runs masked, capped at 200 characters) instead of `message`, so the model can
+still judge tone without receiving the citizen's content.
 
 ### P4 — Full message text sent to Sarvam AI {#p4}
 
@@ -130,12 +154,24 @@ serial numbers and whatever the camera caught around the note — desks, documen
 Filenames are guessable UUID stems returned in API responses, and the directory is world
 -readable.
 
-**Solution.**
-1. Serve captures through an authenticated route, not a static mount.
-2. Make them ephemeral — delete after the analysis is returned, or set a short TTL. The
-   dashboard only needs the image for the lifetime of the alert.
-3. Strip EXIF (GPS, device ID) before writing.
-4. If the demo needs a visible image, store a **downscaled crop of the note only**.
+**Correction — EXIF is already stripped.** An earlier draft of this document recommended
+stripping EXIF. That was wrong: PIL's `convert("RGB")` followed by `save()` drops the EXIF
+block, verified empirically (a JPEG carrying Make/Model tags comes back with an empty EXIF
+dict). Citizen photos therefore carry **no GPS or device identifiers**. Filenames also hold
+48 bits of UUID, so they are not enumerable — the real exposure is limited to someone who
+already holds a returned URL.
+
+**Status: partially fixed.** `COUNTERFEIT_SAVE_CAPTURES=0` now disables persistence entirely
+([api.py](../counterfeit-vision/src/aegis_counterfeit/api.py)). The scan UI degrades
+gracefully — it falls back to the browser's own copy of the upload
+(`r.image_ref || uploadDataUrl`), so only the server-rendered heatmap overlay is lost.
+Default remains on because the demo shows that overlay.
+
+**Remaining work.**
+1. Serve captures through an authenticated route rather than a static mount.
+2. Add a TTL so images are deleted after the alert's lifetime, not merely evicted once 200
+   newer scans arrive.
+3. If the demo needs a visible image, store a **downscaled crop of the note only**.
 
 ### P6 — Message text stored and displayed {#p6}
 
