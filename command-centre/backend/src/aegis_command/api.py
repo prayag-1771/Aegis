@@ -21,11 +21,44 @@ from pathlib import Path
 
 import httpx
 import jsonschema
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import __version__
 from .store import store
+
+# ── Write authentication ────────────────────────────────────────────────────
+#
+# Nothing here was authenticated (docs/privacy.md P1). Read endpoints feed a
+# PUBLIC dashboard, and a browser cannot hold a secret — a key shipped to Vercel
+# is readable in the JS bundle — so reads are protected by not returning private
+# content in the first place (see _public_scam) rather than by a key.
+#
+# Writes are different: they had no protection and no excuse. Unauthenticated,
+# anyone who knew the URL could inject events into the national crime picture, or
+# call /demo/reset and wipe it mid-demo.
+#
+# Enforcement is opt-in so a live demo cannot be broken by a missing env var: set
+# AEGIS_API_KEY and protected writes require `X-Aegis-Key`; leave it unset and
+# the service runs open, which /health reports honestly instead of implying a
+# protection that is not active.
+
+_API_KEY_ENV = "AEGIS_API_KEY"
+
+
+def require_write_key(request: Request) -> None:
+    """Guard for mutating endpoints. No-op when no key is configured."""
+    import hmac as _hmac
+
+    expected = os.environ.get(_API_KEY_ENV)
+    if not expected:
+        return
+    provided = request.headers.get("x-aegis-key", "")
+    if not _hmac.compare_digest(provided, expected):
+        raise HTTPException(401, "missing or invalid X-Aegis-Key")
+
+
+WRITE_GUARD = [Depends(require_write_key)]
 
 # Sibling service URLs — env-overridable so the same code deploys to Render
 # (each module gets its own hostname) and still defaults to local dev ports.
@@ -94,16 +127,24 @@ async def health() -> dict:
                 modules[name] = "up" if r.status_code == 200 else f"error({r.status_code})"
             except httpx.HTTPError:
                 modules[name] = "down"
-    return {"status": "ok", "service": "command-centre", "version": __version__, "modules": modules}
+    return {
+        "status": "ok",
+        "service": "command-centre",
+        "version": __version__,
+        "modules": modules,
+        # Stated plainly rather than assumed: an operator can see whether write
+        # protection is actually active without reading the deployment config.
+        "write_auth": "enforced" if os.environ.get(_API_KEY_ENV) else "disabled",
+    }
 
 
-@app.post("/ingest/scam")
+@app.post("/ingest/scam", dependencies=WRITE_GUARD)
 def ingest_scam(event: dict) -> dict:
     store.add_scam(_validated("scam_detection", event))
     return {"accepted": event["event_id"]}
 
 
-@app.post("/ingest/counterfeit")
+@app.post("/ingest/counterfeit", dependencies=WRITE_GUARD)
 def ingest_counterfeit(event: dict) -> dict:
     store.add_counterfeit(_validated("counterfeit", event))
     return {"accepted": event["event_id"]}
@@ -283,7 +324,7 @@ async def citizen_whatsapp(body: dict) -> dict:
     }
 
 
-@app.post("/refresh/fraud-graph")
+@app.post("/refresh/fraud-graph", dependencies=WRITE_GUARD)
 async def refresh_fraud_graph() -> dict:
     """Pull the latest ring detection from the fraud-graph service."""
     try:
@@ -296,7 +337,7 @@ async def refresh_fraud_graph() -> dict:
         raise HTTPException(502, f"fraud-graph service unreachable: {exc}") from exc
 
 
-@app.post("/demo/inject-ring")
+@app.post("/demo/inject-ring", dependencies=WRITE_GUARD)
 async def demo_inject_ring(body: dict | None = None) -> dict:
     """Inject a fresh ring into the fraud graph, then refresh dashboard state."""
     payload = body or {}
@@ -346,7 +387,7 @@ async def demo_score_custom(body: dict | None = None) -> dict:
     return result
 
 
-@app.post("/demo/reset")
+@app.post("/demo/reset", dependencies=WRITE_GUARD)
 async def demo_reset() -> dict:
     """Drop injected rings (rehearsal cleanup), then refresh dashboard state."""
     try:
@@ -386,14 +427,39 @@ def dashboard_summaries() -> dict:
 
 @app.get("/events")
 def events() -> dict:
-    """Everything the dashboard needs to render cards, graph, and map."""
+    """Everything the dashboard needs to render cards, graph, and map.
+
+    Citizen message bodies are NOT part of that. This endpoint is unauthenticated
+    and internet-facing, so returning `raw_text` published every message the
+    system had ever processed to anyone who knew the URL (docs/privacy.md P1/P6).
+    The dashboard never rendered it — only the redacted campaign `sample_text` is
+    shown — so stripping it costs no functionality.
+
+    `phone_number` is replaced with the same stable pseudonym the campaign
+    clustering uses, which keeps "these two reports share a caller" visible
+    without publishing the number.
+    """
     scams, counterfeits, fraud_graph = store.snapshot()
     return {
-        "scams": scams,
+        "scams": [_public_scam(s) for s in scams],
         "counterfeits": counterfeits,
         "fraud_graph": fraud_graph,
         "last_fusion": store.last_fusion,
     }
+
+
+def _public_scam(event: dict) -> dict:
+    """A scam event with the citizen's content and identifiers removed."""
+    from .intel import phone_ref, redact
+
+    safe = {k: v for k, v in event.items() if k != "raw_text"}
+    if event.get("phone_number"):
+        safe["phone_number"] = phone_ref(event["phone_number"])
+    # The explanation quotes matched evidence out of the message, so it needs the
+    # same masking the campaign samples get.
+    if safe.get("explanation"):
+        safe["explanation"] = redact(safe["explanation"])
+    return safe
 
 
 @app.post("/fuse")

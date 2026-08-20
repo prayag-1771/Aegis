@@ -24,6 +24,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
+from .intel import phone_ref as _phone_ref
 from .intel import plate_families, scam_campaigns
 
 # ── layer 1: deterministic dossier ──────────────────────────────────────────
@@ -82,9 +83,19 @@ def build_dossier(
             "rings": len(d_rings),
             "ring_accounts": sum(r.get("size", 0) for r in d_rings),
         },
+        # PHONE NUMBERS ARE NEVER PUT IN THIS DOSSIER. It is serialised and sent
+        # to Claude/Groq/Gemini, so a raw number here is a direct personal
+        # identifier of a victim or suspect leaving Indian jurisdiction for a
+        # third-party processor — the hardest exposure in the system to defend
+        # under the DPDP Act, and invisible from the UI.
+        #
+        # The brief does not need the digits. It needs to know a callback number
+        # EXISTS, so it can recommend pulling CDRs, and it needs a stable token
+        # so it can refer to the same number twice. `phone_ref` gives both; the
+        # investigator de-references it locally against the event store.
         "scams": [
             {"ref": s.get("event_id"), "type": s.get("scam_type"), "risk": s.get("risk_score"),
-             "phone": s.get("phone_number"), "when": s.get("timestamp")}
+             "phone_ref": _phone_ref(s.get("phone_number")), "when": s.get("timestamp")}
             for s in d_scams
         ],
         "fake_notes": [

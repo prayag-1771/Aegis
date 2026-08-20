@@ -19,9 +19,55 @@ Honestly stated: a defect overlap is an investigative lead, not forensic proof
 
 from __future__ import annotations
 
+import hashlib
 import math
+import os
+import re
 from collections import defaultdict
 from typing import Any
+
+# ── PII redaction ───────────────────────────────────────────────────────────
+#
+# Everything built here travels further than it looks. Campaigns are returned by
+# GET /intel/campaigns (no authentication — see docs/privacy.md P1) AND embedded
+# whole into the AI Case Officer dossier, which is serialised to Claude / Groq /
+# Gemini. So a raw phone number or a raw message excerpt in this module is a
+# personal identifier published to the internet and shipped to a third-party
+# processor outside India.
+#
+# Both are redacted at the source rather than at each consumer, so a new caller
+# cannot reintroduce the leak by forgetting to sanitise.
+
+_PHONE_SALT = os.environ.get("AEGIS_PII_SALT", "aegis-local-dev-salt").encode()
+
+_DIGIT_RUN = re.compile(r"\d[\d\s\-]{4,}\d")   # phone / account / card / OTP runs
+_EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
+_URL = re.compile(r"(https?://|www\.)\S+")
+_UPI = re.compile(r"\b[\w.\-]{2,}@[a-z]{2,}\b", re.I)
+
+
+def phone_ref(number: str | None) -> str | None:
+    """Stable pseudonym for a phone number — same number gives the same ref, and
+    the digits cannot be recovered without the salt. Correlation (the only thing
+    campaign clustering actually needs) is preserved."""
+    if not number:
+        return None
+    digest = hashlib.blake2b(str(number).encode(), key=_PHONE_SALT, digest_size=5).hexdigest()
+    return f"ph_{digest}"
+
+
+def redact(text: str | None) -> str:
+    """Mask identifiers inside a free-text excerpt, keeping the scam WORDING —
+    which is the whole investigative value of a sample — while removing digits,
+    emails, links and UPI handles. 'Pay 50000 to x@ybl' becomes
+    'Pay [number] to [upi]': still recognisably the same script, no payload."""
+    if not text:
+        return ""
+    out = _URL.sub("[link]", str(text))
+    out = _EMAIL.sub("[email]", out)
+    out = _UPI.sub("[upi]", out)
+    out = _DIGIT_RUN.sub("[number]", out)
+    return out
 
 # match tiers, strongest first — index doubles as sort rank
 _TIERS = ("high", "probable", "possible")
@@ -266,16 +312,18 @@ def scam_campaigns(scams: list[dict]) -> list[dict]:
             "n_events": len(evs),
             "scam_type": max(set(types), key=types.count) if types else "other",
             "district_spread": spread,
-            "phone_numbers": camp_phones,
+            # Pseudonymous refs, not digits. The dashboard only renders
+            # len(phone_numbers), so the count is unaffected.
+            "phone_numbers": [phone_ref(p) for p in camp_phones],
             "first_seen": evs[0].get("timestamp"),
             "last_seen": evs[-1].get("timestamp"),
-            "sample_text": (evs[0].get("raw_text") or "")[:180],
+            "sample_text": redact((evs[0].get("raw_text") or ""))[:180],
             "events": [
                 {
                     "event_id": s.get("event_id"),
                     "district": (s.get("location_hint") or {}).get("district"),
                     "timestamp": s.get("timestamp"),
-                    "phone_number": s.get("phone_number"),
+                    "phone_number": phone_ref(s.get("phone_number")),
                 }
                 for s in evs
             ],
