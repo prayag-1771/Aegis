@@ -134,7 +134,12 @@ class MatchedEdge:
 class GhostRingReport:
     """Final evaluation: per-bank vs fused detection."""
     n_banks: int
+    # Recall of ALL illicit accounts in the network, per bank acting alone —
+    # the same denominator as fused_ring_recall, so the two are comparable.
     per_bank_ring_recall: dict[int, float]
+    # The same detectors scored only within each bank's own visible slice.
+    # Reported for transparency; NOT comparable with the fused number.
+    per_bank_ring_recall_local: dict[int, float]
     fused_ring_recall: float
     fused_ring_precision: float
     n_ground_truth_cross_edges: int
@@ -148,6 +153,9 @@ class GhostRingReport:
         return {
             "n_banks": self.n_banks,
             "per_bank_ring_recall": {str(k): round(v, 4) for k, v in self.per_bank_ring_recall.items()},
+            "per_bank_ring_recall_local": {
+                str(k): round(v, 4) for k, v in self.per_bank_ring_recall_local.items()
+            },
             "fused_ring_recall": round(self.fused_ring_recall, 4),
             "fused_ring_precision": round(self.fused_ring_precision, 4),
             "n_ground_truth_cross_edges": self.n_ground_truth_cross_edges,
@@ -803,14 +811,32 @@ def run_ghost_ring(
     # Step 5: Fuse and detect
     fused_rings, fused_accounts = fuse_and_detect(silos, matched, ds)
 
-    # Step 6: Per-bank detection
+    # Step 6: Per-bank detection.
+    #
+    # BOTH recalls are measured against the SAME denominator — every illicit
+    # account in the whole network (`ds.accounts`) — because the question this
+    # experiment asks is "does fusing beat any bank alone at recovering THE
+    # RING?", and the ring spans all banks.
+    #
+    # Scoring a bank against `silo.accounts` (its own slice) instead answers a
+    # different, much easier question: "of the illicit accounts you could
+    # already see, how many did you flag?". A bank holding a quarter of the ring
+    # was graded on a quarter-size exam and could score 72% while structurally
+    # unable to find the other three quarters — then fusion, graded on the full
+    # exam, "lost" at 49%. That comparison was apples-to-oranges and produced a
+    # false negative result. The local number is still reported below, as
+    # `per_bank_ring_recall_local`, because it is genuinely informative — it
+    # shows each bank's detector works fine on what it can see.
     per_bank_recall: dict[int, float] = {}
+    per_bank_recall_local: dict[int, float] = {}
     for silo in silos:
         bank_rings, bank_accs = detect_per_bank(silo)
-        recall = _compute_ring_recall(bank_rings, silo.accounts)
-        per_bank_recall[silo.bank_id] = recall
+        # Fair, comparable-to-fused: global denominator.
+        per_bank_recall[silo.bank_id] = _compute_ring_recall(bank_rings, ds.accounts)
+        # Transparency: how the bank scores within its own visible slice.
+        per_bank_recall_local[silo.bank_id] = _compute_ring_recall(bank_rings, silo.accounts)
 
-    # Fused recall
+    # Fused recall — same global denominator as per_bank_recall above.
     fused_recall = _compute_ring_recall(fused_rings, ds.accounts)
 
     # Matching precision: of matched edges, how many correspond to real cross edges
@@ -828,6 +854,7 @@ def run_ghost_ring(
     report = GhostRingReport(
         n_banks=len(silos),
         per_bank_ring_recall=per_bank_recall,
+        per_bank_ring_recall_local=per_bank_recall_local,
         fused_ring_recall=fused_recall,
         fused_ring_precision=matching_precision,
         n_ground_truth_cross_edges=len(cross_edges),

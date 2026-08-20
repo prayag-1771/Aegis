@@ -470,7 +470,13 @@ export async function fetchEntryRoutes(
 
 export interface GhostRing {
   n_banks: number;
+  /** Per-bank recall of ALL illicit accounts in the network — same denominator
+   *  as `fused_ring_recall`, so the two are directly comparable. */
   per_bank_ring_recall: Record<string, number>;
+  /** The same per-bank detectors scored only within each bank's own visible
+   *  slice. Informative, but NOT comparable with the fused number. Optional:
+   *  artifacts generated before the scoring fix do not carry it. */
+  per_bank_ring_recall_local?: Record<string, number>;
   fused_ring_recall: number;
   matching_precision: number;
   false_merge_rate: number;

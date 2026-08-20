@@ -126,10 +126,26 @@ function GhostRingCard({ ring }: { ring: ResearchResponse["ghost_ring"] }) {
                 </div>
               </div>
             );
+            // Every bar answers the SAME question — "of all illicit accounts in
+            // the network, how many did you recover?" — so the bars are
+            // comparable. Scoring each bank on only its own slice instead made
+            // a bank that holds a quarter of the ring look like it beat fusion.
+            const local = ring.per_bank_ring_recall_local;
             return (
               <>
-                {perBank.map(([k, v]) => bar(`Bank ${k} alone`, v))}
+                {perBank.map(([k, v]) =>
+                  bar(
+                    local?.[k] != null
+                      ? `Bank ${k} alone (${pct(local[k])} of its own slice)`
+                      : `Bank ${k} alone`,
+                    v,
+                  ),
+                )}
                 {bar("Fused (all banks)", ring.fused_ring_recall, true)}
+                <p className="mb-2 text-[9px] leading-relaxed text-zinc-600">
+                  All bars: share of <em>every</em> illicit account in the network. A bank cannot
+                  recover accounts it never sees{local ? ", so its score on its own slice (in brackets) is much higher" : ""}.
+                </p>
               </>
             );
           })()}
