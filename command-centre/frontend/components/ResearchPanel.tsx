@@ -296,10 +296,57 @@ function ArmsRaceCard({ arms }: { arms: ResearchResponse["arms_race"] }) {
                 </div>
               );
             }
+            // Does the loop actually see-saw? A retrain happens DURING generation
+            // g, so its effect lands in g+1: averaging recall(g+1) - recall(g)
+            // over the retrains measures whether the detector actually recovers
+            // when it learns. Reporting this instead of the final number alone
+            // is the difference between "the cop is winning" and "the cop
+            // happened to be ahead on the last generation".
+            const gens = arms.generation;
+            const idxOf = (g: number) => gens.indexOf(g);
+            const lifts = arms.retrained_generations
+              .map((g) => {
+                const i = idxOf(g);
+                return i >= 0 && i + 1 < recall.length ? recall[i + 1] - recall[i] : null;
+              })
+              .filter((v): v is number => v != null);
+            const meanLift = lifts.length
+              ? lifts.reduce((a, b) => a + b, 0) / lifts.length
+              : 0;
+            const third = Math.max(1, Math.floor(recall.length / 3));
+            const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(xs.length, 1);
+            const early = avg(recall.slice(0, third));
+            const late = avg(recall.slice(-third));
+            const decaying = late < early - 0.15;
+            const recovers = meanLift > 0.05;
+
+            if (decaying) {
+              return (
+                <div className="mt-2 border border-amber-500/25 bg-amber-500/5 p-2.5 text-[10px] leading-relaxed text-amber-200/80">
+                  <span className="font-semibold">The detector is losing the war.</span> Recall
+                  averages {pct(early)} early and {pct(late)} late across{" "}
+                  {arms.retrained_generations.length} retrain(s) — it learns each new trick but
+                  does not hold its earlier ground.
+                </div>
+              );
+            }
             return (
               <div className="mt-2 border border-emerald-500/20 bg-emerald-500/5 p-2.5 text-[10px] leading-relaxed text-emerald-200/70">
-                Final generation: escape {pct(escape[escape.length - 1] ?? 0)}, detector recall{" "}
-                {pct(finalRecall)}, after {arms.retrained_generations.length} retrain(s).
+                {recovers ? (
+                  <>
+                    <span className="font-semibold">Genuine see-saw.</span> Each retrain lifts
+                    detector recall by {pct(meanLift)} on average (
+                    {arms.retrained_generations.length} retrains), and recall holds at {pct(late)}{" "}
+                    late versus {pct(early)} early — the criminal adapts, the detector catches up.
+                  </>
+                ) : (
+                  <>
+                    Final generation: escape {pct(escape[escape.length - 1] ?? 0)}, detector recall{" "}
+                    {pct(finalRecall)}, after {arms.retrained_generations.length} retrain(s). Recall
+                    holds ({pct(early)} early vs {pct(late)} late) but no single retrain moves it
+                    much — the criminal is not finding new ground to take.
+                  </>
+                )}
               </div>
             );
           })()}
