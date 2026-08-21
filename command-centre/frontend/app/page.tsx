@@ -199,7 +199,7 @@ async function geocodePlace(
 
 export default function Page() {
   const { data: events, refresh: refreshEvents } = usePolling<EventsResponse>("/events", 5000);
-  const { data: health } = usePolling<HealthResponse>("/health", 10000);
+  const { data: health, refresh: refreshHealth } = usePolling<HealthResponse>("/health", 10000);
   const { data: hotspots, refresh: refreshHotspots } = usePolling<HotspotsResponse>(
     "/hotspots",
     8000
@@ -1243,6 +1243,7 @@ export default function Page() {
                 health={health}
                 onSelectModule={setSelectedModule}
                 onOpenBankPartner={() => setBankPartnerOpen(true)}
+                onPing={refreshHealth}
               />
             </div>
 

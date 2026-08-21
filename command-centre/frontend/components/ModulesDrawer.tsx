@@ -22,12 +22,15 @@ export default function ModulesDrawer({
   health,
   onSelectModule,
   onOpenBankPartner,
+  onPing,
 }: {
   events: EventsResponse | null;
   health: HealthResponse | null;
   onSelectModule?: (type: "scam" | "counterfeit") => void;
   /** Opens the financial-institution (Bank Partner) B2B console. */
   onOpenBankPartner?: () => void;
+  /** Re-probe module health on demand. Wired to the health poller's refresh. */
+  onPing?: () => void | Promise<void>;
 }) {
   const scam = events?.scams.at(-1) ?? null;
   const note = events?.counterfeits.at(-1) ?? null;
@@ -36,6 +39,20 @@ export default function ModulesDrawer({
   const up = modules.filter(([, s]) => s === "up").length;
   const down = modules.length - up;
   const container = useRef<HTMLDivElement>(null);
+  const [pinging, setPinging] = useState(false);
+
+  // Re-probe health now instead of waiting out the 10s poll. The backend's
+  // /health already probes every module (1.5s timeout each), so a refresh IS
+  // the ping — no separate endpoint needed.
+  const handlePing = async () => {
+    if (!onPing || down === 0 || pinging) return;
+    setPinging(true);
+    try {
+      await onPing();
+    } finally {
+      setPinging(false);
+    }
+  };
 
   useGSAP(() => {
     // Fade + subtle scale (compositor transform) instead of a positional slide
@@ -69,8 +86,29 @@ export default function ModulesDrawer({
           <div className="mt-1 text-3xl font-light">{up}</div>
         </div>
         <div>
-          <div className="flex items-center gap-2 text-xs text-zinc-400">
-            <AlertTriangle className="h-3.5 w-3.5 text-red-400" /> Offline
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs text-zinc-400">
+              <AlertTriangle className="h-3.5 w-3.5 text-red-400" /> Offline
+            </div>
+            <button
+              type="button"
+              onClick={handlePing}
+              disabled={down === 0 || pinging}
+              aria-label={
+                down === 0
+                  ? "All modules online"
+                  : `Ping ${down} offline module${down > 1 ? "s" : ""}`
+              }
+              title={
+                down === 0
+                  ? "All modules online"
+                  : `Re-probe ${down} offline module${down > 1 ? "s" : ""}`
+              }
+              className="flex shrink-0 items-center gap-1 border border-white/10 px-1.5 py-0.5 text-[10px] text-zinc-300 transition-colors hover:border-white/25 hover:text-zinc-100 disabled:cursor-not-allowed disabled:border-white/5 disabled:text-zinc-600 disabled:hover:border-white/5 disabled:hover:text-zinc-600"
+            >
+              <Zap className={`h-3 w-3 ${pinging ? "animate-pulse" : ""}`} />
+              {pinging ? "Pinging" : "Ping"}
+            </button>
           </div>
           <div className="mt-1 text-3xl font-light">{down}</div>
         </div>
