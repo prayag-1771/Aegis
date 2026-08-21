@@ -147,6 +147,19 @@
 <footer>
   <button class="btn primary" id="play">▶ Play scripted call</button>
   <button class="btn" id="mic">🎙 Start live mic</button>
+  <select class="btn" id="lang" title="Language the caller is speaking">
+    <option value="en-IN">English</option>
+    <option value="hi-IN">हिन्दी Hindi</option>
+    <option value="ta-IN">தமிழ் Tamil</option>
+    <option value="te-IN">తెలుగు Telugu</option>
+    <option value="bn-IN">বাংলা Bengali</option>
+    <option value="mr-IN">मराठी Marathi</option>
+    <option value="gu-IN">ગુજરાતી Gujarati</option>
+    <option value="kn-IN">ಕನ್ನಡ Kannada</option>
+    <option value="ml-IN">മലയാളം Malayalam</option>
+    <option value="pa-IN">ਪੰਜਾਬੀ Punjabi</option>
+    <option value="ur-IN">اردو Urdu</option>
+  </select>
   <button class="btn danger" id="stop" disabled>⏹ End call</button>
   <label class="toggle"><input type="checkbox" id="voice" checked> 🔊 voice warning</label>
 </footer>
@@ -377,7 +390,7 @@ function intercept(r, pct) {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(
       "Warning. This call matches a " + type + " scam. Do not transfer money. Hang up immediately.");
-    u.lang = "en-IN";
+    u.lang = document.getElementById("lang")?.value || "en-IN";
     speechSynthesis.speak(u);
   }
 }
@@ -432,7 +445,13 @@ function startMic() {
   recognition = new SR();
   recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.lang = "en-IN";
+  // Language the caller is speaking. Chrome cannot auto-detect it, so the
+  // officer picks it before starting. English stays the default because that is
+  // the path scored ON DEVICE — see score(): Latin text never leaves the
+  // browser, while other scripts fall back to the server, which translates
+  // before classifying. Picking Hindi therefore trades the on-device guarantee
+  // for coverage, and the badge already says which path ran.
+  recognition.lang = document.getElementById("lang")?.value || "en-IN";
 
   recognition.onresult = (ev) => {
     let interim = "";
