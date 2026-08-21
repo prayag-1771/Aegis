@@ -289,6 +289,18 @@ function ensureEdge() {
 }
 ensureEdge();   // warm on page load, before any speech arrives
 
+const HINGLISH = new Set("aap aapka aapke aapki aapko nahi nahin kya karna karne karke kijiye dijiye hoon raha rahi rahe hain zaroori zarurat turant abhi sakta sakte sakti warna madad namaste kripya jaldi paisa paise rupaye rupee bata batao batana bol bolo bolta hua hui liye wala wali kar diya karo mera meri mere tumhara aapse mujhe humein unka iska uska koi kuch bahut thoda accha theek galat sahi".split(" "));
+/* Romanised Hindi is Latin script, so NON_LATIN never fires on it, and the
+   on-device model has never seen "aapka" or "zaroori" — the message scored 0.076
+   legit. Three distinct tokens are required and English homographs are excluded,
+   so ordinary English still scores locally. */
+function looksHinglish(t) {
+  const words = new Set((t.toLowerCase().match(/[a-z]+/g) || []));
+  let n = 0;
+  for (const w of words) if (HINGLISH.has(w) && ++n >= 3) return true;
+  return false;
+}
+
 async function score(text) {
   if (!text.trim()) return;
   if (scoring) { pendingText = text; return; }
@@ -297,7 +309,7 @@ async function score(text) {
     // Synchronous check — no await inside the lock. If the model has not
     // finished loading yet, this utterance goes to the server and the next one
     // picks up the local path; nothing is ever queued behind a download.
-    if (!NON_LATIN.test(text) && edgeLoaded) {
+    if (!NON_LATIN.test(text) && !looksHinglish(text) && edgeLoaded) {
       const t0 = performance.now();
       const local = AegisEdge.score(text);
       const ms = performance.now() - t0;
@@ -316,7 +328,13 @@ async function score(text) {
       const resp = await fetch("/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, source: "call_transcript" }),
+        // Send the picked language: script alone cannot tell Hindi from
+        // Marathi, and Sarvam's auto-detect drops Urdu entirely.
+        body: JSON.stringify({
+          text,
+          source: "call_transcript",
+          lang: document.getElementById("lang")?.value || undefined,
+        }),
       });
       if (resp.ok) render(await resp.json());
     }

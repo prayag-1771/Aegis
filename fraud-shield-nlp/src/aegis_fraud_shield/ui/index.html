@@ -356,8 +356,20 @@ function edgePayload(local, text, source, location_hint) {
    them locally would silently drop a real Hindi scam from 0.96 to 0.07. */
 const NON_LATIN = /[ऀ-෿؀-ۿ᱐-᱿ꯀ-꯿]/;
 
+const HINGLISH = new Set("aap aapka aapke aapki aapko nahi nahin kya karna karne karke kijiye dijiye hoon raha rahi rahe hain zaroori zarurat turant abhi sakta sakte sakti warna madad namaste kripya jaldi paisa paise rupaye rupee bata batao batana bol bolo bolta hua hui liye wala wali kar diya karo mera meri mere tumhara aapse mujhe humein unka iska uska koi kuch bahut thoda accha theek galat sahi".split(" "));
+/* Romanised Hindi is Latin script, so NON_LATIN never fires on it, and the
+   on-device model has never seen "aapka" or "zaroori" — the message scored 0.076
+   legit. Three distinct tokens are required and English homographs are excluded,
+   so ordinary English still scores locally. */
+function looksHinglish(t) {
+  const words = new Set((t.toLowerCase().match(/[a-z]+/g) || []));
+  let n = 0;
+  for (const w of words) if (HINGLISH.has(w) && ++n >= 3) return true;
+  return false;
+}
+
 async function scoreMessage(text, source, location_hint) {
-  if (!NON_LATIN.test(text) && (await ensureEdge())) {
+  if (!NON_LATIN.test(text) && !looksHinglish(text) && (await ensureEdge())) {
     const t0 = performance.now();
     const local = AegisEdge.score(text);
     const ms = performance.now() - t0;

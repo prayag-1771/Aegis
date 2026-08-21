@@ -101,6 +101,10 @@ class AnalyzeRequest(BaseModel):
     )
     phone_number: str | None = None
     location_hint: dict | None = None
+    # Sarvam code for the language being spoken/typed, when the caller knows it
+    # (the live-call picker does). Beats script detection for Devanagari, where
+    # Hindi and Marathi are indistinguishable by script alone.
+    lang: str | None = None
 
 
 @app.get("/health")
@@ -139,11 +143,71 @@ _NON_LATIN_SCRIPT = re.compile(
 )
 
 
+# Script -> Sarvam language code. Sarvam's auto-detect is NOT reliable: with
+# source="auto" it silently refused Urdu entirely (translated=false, original
+# returned) and mistranslated Marathi and Telugu into the OPPOSITE meaning --
+# "KYC has expired" came back as "KYC is already completed, thank you", which
+# scores as harmless. Measured on the same messages, passing an explicit source
+# fixed all three. Every script below maps to exactly one language except
+# Devanagari, which Hindi and Marathi share; hi-IN is the default there and the
+# caller can override with an explicit `lang`.
+_SCRIPT_LANG: tuple[tuple[str, str], ...] = (
+    ("ঀ-৿", "bn-IN"),   # Bengali / Assamese
+    ("਀-੿", "pa-IN"),   # Gurmukhi
+    ("઀-૿", "gu-IN"),   # Gujarati
+    ("଀-୿", "od-IN"),   # Odia
+    ("஀-௿", "ta-IN"),   # Tamil
+    ("ఀ-౿", "te-IN"),   # Telugu
+    ("ಀ-೿", "kn-IN"),   # Kannada
+    ("ഀ-ൿ", "ml-IN"),   # Malayalam
+    ("؀-ۿ", "ur-IN"),   # Perso-Arabic (Urdu)
+    ("ऀ-ॿ", "hi-IN"),   # Devanagari — Hindi or Marathi; hi-IN default
+)
+
+
+def _detect_language(text: str) -> str | None:
+    """Best-effort source language from the script actually used."""
+    for ranges, code in _SCRIPT_LANG:
+        if re.search(f"[{ranges}]", text):
+            return code
+    # No Indic script but Hinglish word shape -> romanised Hindi.
+    return "hi-IN" if _looks_hinglish(text) else None
+
+
+# Romanised Hindi ("Hinglish") written in LATIN script — the single most common
+# form of Indian scam messaging, and completely invisible to a script check.
+# "Aapke account mein suspicious transaction detect hua hai ... OTP bata dijiye"
+# scored 0.076 legit: no non-Latin character to trigger translation, and an
+# English-only model that has never seen "aapka" or "zaroori". Sarvam translates
+# it correctly when told source=hi-IN, so the only missing piece was noticing.
+#
+# Deliberately distinctive tokens only. English homographs like "main", "hai",
+# "ke", "to" are excluded, and THREE distinct hits are required, so ordinary
+# English cannot trip it.
+_HINGLISH_TOKENS = frozenset("""
+aap aapka aapke aapki aapko nahi nahin kya karna karne karke kijiye dijiye
+hoon raha rahi rahe hain zaroori zarurat turant abhi sakta sakte sakti warna
+madad namaste kripya jaldi paisa paise rupaye rupee bata batao batana bol bolo
+bolta hua hui liye wala wali kar diya karo mera meri mere tumhara aapse mujhe
+humein unka iska uska koi kuch bahut thoda accha theek galat sahi
+""".split())
+
+_WORD_RE = re.compile(r"[a-z]+")
+
+
+def _looks_hinglish(text: str) -> bool:
+    """True when Latin text carries enough romanised-Hindi function words."""
+    words = set(_WORD_RE.findall(text.lower()))
+    return len(words & _HINGLISH_TOKENS) >= 3
+
+
 def _needs_translation(text: str) -> bool:
-    return _TRANSLATE.enabled and bool(_NON_LATIN_SCRIPT.search(text))
+    if not _TRANSLATE.enabled:
+        return False
+    return bool(_NON_LATIN_SCRIPT.search(text)) or _looks_hinglish(text)
 
 
-def _translate_to_english(text: str) -> str:
+def _translate_to_english(text: str, source: str | None = None) -> str:
     """Ask the command centre (holder of SARVAM_API_KEY) to render `text` in
     English. Returns the ORIGINAL text on ANY failure, so /analyze degrades to
     English-only rather than breaking or hanging."""
@@ -156,7 +220,13 @@ def _translate_to_english(text: str) -> str:
 
         r = httpx.post(
             f"{cc}/translate",
-            json={"text": text[: _TRANSLATE.max_chars], "target": "en-IN"},
+            json={
+                "text": text[: _TRANSLATE.max_chars],
+                "target": "en-IN",
+                # Explicit source when we can tell — "auto" loses Urdu outright
+                # and inverts Marathi/Telugu. See _SCRIPT_LANG.
+                **({"source": source} if source else {}),
+            },
             timeout=_TRANSLATE.timeout_s,
         )
         r.raise_for_status()
@@ -173,7 +243,8 @@ def _translate_to_english(text: str) -> str:
 def analyze_endpoint(req: AnalyzeRequest) -> dict:
     scored_text = req.text
     if _needs_translation(req.text):
-        scored_text = _translate_to_english(req.text)
+        source = req.lang or _detect_language(req.text)
+        scored_text = _translate_to_english(req.text, source)
 
     result = analyze(
         scored_text,
