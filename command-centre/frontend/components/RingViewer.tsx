@@ -19,9 +19,17 @@ export type ViewNode = {
     in_degree?: number;
     out_degree?: number;
   } | null;
+  /** Owning bank, for the cross-bank ring. Colours the node so it is obvious
+   *  which institution holds each account — the whole point of that result. */
+  bank?: number;
 };
 
 export type ViewEdge = { source: string; target: string; amount?: number | null };
+
+/** One colour per bank for the cross-bank ring. Ordinary rings never set
+ *  `bank`, so they keep the original violet/zinc styling untouched. */
+const BANK_FILL = ["#0e7490", "#6d28d9", "#be123c", "#a16207"];
+const BANK_STROKE = ["#22d3ee", "#a78bfa", "#fb7185", "#fbbf24"];
 
 const W = 520;
 const H = 340;
@@ -375,7 +383,14 @@ export default function RingViewer({
             const hot = (n.score ?? 0) >= 0.9;
             return (
               <g key={n.id} onClick={() => setPicked(n)} className={`cursor-pointer gsap-node gsap-node-${n.id.replace(/[^a-zA-Z0-9]/g, "_")}`}>
-                <circle cx={p.x} cy={p.y} r={12} fill={hot ? "#7c3aed" : "#3f3f46"} stroke={picked?.id === n.id ? "#f0abfc" : hot ? "#c4b5fd" : "#71717a"} strokeWidth={picked?.id === n.id ? 2.5 : 1.2} />
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={12}
+                  fill={n.bank != null ? BANK_FILL[n.bank % BANK_FILL.length] : hot ? "#7c3aed" : "#3f3f46"}
+                  stroke={picked?.id === n.id ? "#f0abfc" : n.bank != null ? BANK_STROKE[n.bank % BANK_STROKE.length] : hot ? "#c4b5fd" : "#71717a"}
+                  strokeWidth={picked?.id === n.id ? 2.5 : 1.2}
+                />
                 <text x={p.x} y={p.y + 26} textAnchor="middle" fontSize="9" fill="#d4d4d8">{short(n.id)}</text>
                 {n.score != null && (
                   <text x={p.x} y={p.y + 3.5} textAnchor="middle" fontSize="8" fontWeight="bold" fill="#fafafa">{Math.round(n.score * 100)}</text>

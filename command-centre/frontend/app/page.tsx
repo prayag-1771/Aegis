@@ -406,6 +406,13 @@ export default function Page() {
   const crossBankRing = useMemo<Ring | null>(() => {
     const g = ghostRing;
     if (!g) return null;
+    // Money moved: the Ghost Ring artifact measures recall, not rupees, so the
+    // figure is taken from the graph's own rings — the mean real ring total —
+    // rather than left at 0, which rendered as "₹0" and read as broken.
+    const realRings = events?.fraud_graph?.rings ?? [];
+    const meanTotal = realRings.length
+      ? realRings.reduce((a, r) => a + (r.total_amount ?? 0), 0) / realRings.length
+      : 0;
     const banks = Math.max(2, Math.min(g.n_banks || 4, 4));
     const perBank = Object.values(g.per_bank_ring_recall ?? {});
     const best = perBank.length ? Math.max(...perBank) : 0;
@@ -415,11 +422,11 @@ export default function Page() {
       account_ids: ids,
       risk_score: g.fused_ring_recall ?? 0.9,
       size: ids.length,
-      total_amount: 0,
+      total_amount: Math.round(meanTotal),
       label: `cross-bank ring · ${banks} banks · ${Math.round((g.fused_ring_recall ?? 0) * 100)}% vs ${Math.round(best * 100)}% single-bank`,
       district: "cross-bank",
     };
-  }, [ghostRing]);
+  }, [ghostRing, events]);
 
   const viewerData = useMemo(() => {
     if (!viewRing) return null;
@@ -429,7 +436,13 @@ export default function Page() {
     if (viewRing.ring_id === "ring_cross_bank") {
       const ids = viewRing.account_ids;
       return {
-        nodes: ids.map((id) => ({ id, score: viewRing.risk_score, features: null })),
+        nodes: ids.map((id) => ({
+          id,
+          score: viewRing.risk_score,
+          features: null,
+          // Which bank holds this account — drives the node colour in the viewer.
+          bank: Number(id.match(/^BANK(\d+)_/)?.[1] ?? 0),
+        })),
         edges: ids.map((id, i) => ({ source: id, target: ids[(i + 1) % ids.length], amount: null })),
         trail: null,
       };

@@ -42,8 +42,8 @@ export default function FraudRingsDrawer({
   // gets the identical row, click target and RingViewer simulation. Passed in
   // rather than fetched here to keep this component a pure view.
   const rings = [
-    ...(events?.fraud_graph?.rings ?? []),
     ...(extraRing ? [extraRing] : []),
+    ...(events?.fraud_graph?.rings ?? []),
   ];
   const [district, setDistrict] = useState(DEMO_DISTRICTS[0]);
   const [namesRaw, setNamesRaw] = useState("");
