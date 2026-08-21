@@ -72,3 +72,12 @@ tsconfig.tsbuildinfo
 !fraud-graph-ml/models/ring_eval_report.json
 !fraud-graph-ml/models/elliptic_benchmark_report.json
 !fraud-graph-ml/output/arms_race_history.csv
+
+# local dev venv for counterfeit-vision
+counterfeit-vision/.venv/
+
+# py3.14 venv used to verify sibling modules
+.venv314/
+
+# throwaway venv used to verify a clean deployment build
+counterfeit-vision/.venv-deploy/

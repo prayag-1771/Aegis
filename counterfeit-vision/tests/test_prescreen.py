@@ -14,24 +14,14 @@ from PIL import Image
 
 from aegis_counterfeit.analyze import analyze_image
 from aegis_counterfeit.config import CONTRACT_SCHEMA
-from aegis_counterfeit.features import locate_note
+from aegis_counterfeit.features import locate_note_ex
 from aegis_counterfeit.prescreen import (
+    TriageCheck,
+    TriageResult,
     narrate_triage_safe,
     prescreen,
-    TriageResult,
-    TriageCheck,
 )
 from aegis_counterfeit.synth import NoteSpec, render_note
-
-
-@pytest.fixture(autouse=True)
-def _no_llm_keys(monkeypatch):
-    """Keep narration hermetic: template floor only, no network."""
-    for key in ("ANTHROPIC_API_KEY", "GROQ_API_KEY", "GEMINI_API_KEY"):
-        monkeypatch.delenv(key, raising=False)
-    import aegis_counterfeit.prescreen as prescreen_mod
-
-    monkeypatch.setattr(prescreen_mod, "_load_env_keys", lambda: None)
 
 
 @pytest.fixture(scope="module")
@@ -48,7 +38,8 @@ def to_pil(bgr: np.ndarray) -> Image.Image:
 
 
 def run_prescreen(bgr: np.ndarray):
-    return prescreen(bgr, locate_note(bgr))
+    warped, located = locate_note_ex(bgr)
+    return prescreen(bgr, warped, located=located)
 
 
 BASE = to_bgr(render_note(NoteSpec(denomination="500", seed=9)))
@@ -71,30 +62,65 @@ def test_subtle_fake_is_the_models_job():
     assert run_prescreen(bgr).decision == "pass"
 
 
-# ── triage NEVER convicts — only the CNN owns the genuine/fake call ──────────
-# These synth-collapsed inputs trip the tells, but the tells are calibrated on
-# the renderer and mis-fire on real photos, so a "fake" verdict here would brand
-# genuine phone-shot notes as counterfeit (the reported regression). Triage now
-# only gates unscannable photos; every scannable note goes to the CNN authority.
+# ── conviction: strict thresholds only, and never on a single soft tell ─────
+# Two levels per tell. The ADVISORY level records evidence; only the strict
+# `convicts` level counts toward a verdict. This is the middle ground between
+# the build that convicted on the advisory level (and branded genuine
+# phone-shot notes counterfeit) and the build that deleted the conviction path
+# entirely (leaving the CNN as the only thing able to affect any verdict).
 
-def test_photocopy_does_not_convict():
-    """A colour-collapsed (grayscale) note trips the photocopy/flat-print tells,
-    but triage must NOT convict — the CNN decides. The evidence is still recorded
-    on the checks for the triage block; the decision stays 'pass'."""
+def test_colourless_note_is_conclusive_and_convicts():
+    """A note with literally no ink colour cannot be genuine under any lighting
+    — every circulating INR note is colour-printed. One conclusive tell is
+    enough on its own."""
     gray3 = cv2.cvtColor(cv2.cvtColor(BASE, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
     result = run_prescreen(gray3)
-    assert result.decision == "pass"
-    assert any(c.name == "photocopy" and not c.passed for c in result.checks)
+    assert result.decision == "obvious_fake"
+    photocopy = next(c for c in result.checks if c.name == "photocopy")
+    assert not photocopy.passed and photocopy.conclusive and photocopy.convicts
 
 
-def test_novelty_colour_does_not_convict():
-    """An out-of-gamut (green) note is the CNN's call too — triage never brands
-    it fake on colour alone."""
+def test_single_non_conclusive_tell_never_convicts():
+    """An out-of-gamut (green) note trips `unknown_colour` at the strict level,
+    but one non-conclusive tell always has an innocent explanation — a colour
+    cast from tungsten or LED light. Recorded as evidence, decision stays
+    'pass', and the CNN gets its say."""
     hsv = cv2.cvtColor(BASE, cv2.COLOR_BGR2HSV)
     hsv[:, :, 0] = 60  # green — no circulating denomination
     hsv[:, :, 1] = np.clip(hsv[:, :, 1].astype(int) + 80, 0, 255).astype(np.uint8)
     result = run_prescreen(cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR))
     assert result.decision == "pass"
+    assert len(result.convicting) == 1
+
+
+def test_genuine_rs50_blue_is_not_flagged_wrong_colour():
+    """Rs50 is fluorescent blue (OpenCV hue ~96). The old KNOWN_HUE_WINDOWS
+    were [(0,40),(110,179)], leaving that blue in the gap, so a genuine Rs50
+    read as 'matches no circulating denomination'."""
+    hsv = cv2.cvtColor(BASE, cv2.COLOR_BGR2HSV)
+    hsv[:, :, 0] = 96
+    hsv[:, :, 1] = np.clip(hsv[:, :, 1].astype(int) + 80, 0, 255).astype(np.uint8)
+    result = run_prescreen(cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR))
+    colour = next(c for c in result.checks if c.name == "unknown_colour")
+    assert colour.passed
+    assert result.decision == "pass"
+
+
+def test_unlocated_note_can_never_convict():
+    """When no note outline is found the 'note' is a resize of the whole photo,
+    so every tell is measuring background. Evidence is still recorded; the
+    decision may not use it."""
+    gray3 = cv2.cvtColor(cv2.cvtColor(BASE, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
+    result = prescreen(gray3, locate_note_ex(gray3)[0], located=False)
+    assert result.decision == "pass"
+    assert any(not c.passed and c.convicts for c in result.checks)
+
+
+def test_convictions_can_be_disabled(monkeypatch):
+    """COUNTERFEIT_TRIAGE_CONVICTS=0 restores advisory-only triage."""
+    monkeypatch.setenv("COUNTERFEIT_TRIAGE_CONVICTS", "0")
+    gray3 = cv2.cvtColor(cv2.cvtColor(BASE, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
+    assert run_prescreen(gray3).decision == "pass"
 
 
 # ── unscannable photos ask for a rescan, not a verdict ──────────────────────

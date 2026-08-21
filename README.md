@@ -77,7 +77,7 @@ This isn't a narrative device — it's documented, and [`docs/crime-pipeline.md`
 | Module | Port | AI type | What it does | Lead |
 |---|---|---|---|---|
 | 🗣️ **Fraud Shield** | `8001` | NLP + rules + playbooks + agentic verification | Scam / digital-arrest classifier with **evidence spans**, replayable **reasoning chains**, live-call **mid-call intercept**, WhatsApp, 23 languages | Sudarsan |
-| 💵 **Counterfeit Vision** | `8002` | CNN + OpenCV forensics + serial registry + vision-LLM | Fake-note detection **naming the failed security feature**, printing-run detection via serial dedup | Adharshan |
+| 💵 **Counterfeit Vision** | `8002` | CNN + OpenCV forensics + serial registry + **semantic vision-LLM** | Fake-note detection **naming the failed security feature**, printing-run detection via serial dedup, **content check** (portrait / header / denomination) that catches tampering print-physics cannot | Adharshan |
 | 🕸️ **Fraud Graph** | `8003` | Graph features + XGBoost + Louvain | Clusters accounts into **mule rings in seconds**, topology-labelled, real-data validated | Prayag |
 | 🎛️ **Command Centre** | `8000`/`4000`/`3000` | Agentic Gen-AI fusion + DBSCAN + deterministic engines | Correlates everything into **court-auditable intelligence packages**, predicts routes, derives actions | Pushkar (+ Prayag) |
 
@@ -264,6 +264,13 @@ Template-grouped 3-way split (tune on val, report on untouched test) so paraphra
 ### Counterfeit Vision
 **Real photographed notes** (~4,900 genuine + ~2,500 **real counterfeits**, ₹10–₹2000, mobile-camera, varied lighting): accuracy **0.969** · ROC-AUC **0.994** · fake P/R **0.976 / 0.964** · false-alarm **2.4%**
 
+> These figures describe the shipped weights but come from a training report that predates the
+> current `save_report()` (it is missing `uncertain_rate` and `n_val`), so they have not been
+> re-verified against this pipeline — see `models/train_report.json`. Re-run
+> `python -m aegis_counterfeit.cli train --force` on the real dataset for a reproducible one.
+> They also measure **print-physics discrimination only**: no accuracy number here covers
+> semantically tampered notes, which is what the semantic review layer is for.
+
 **Synthetic baseline** (per-feature ground truth no public dataset has):
 
 | Metric | Value |
@@ -361,15 +368,50 @@ flowchart LR
 <details open>
 <summary><b>💵 Counterfeit Vision — fake-currency detection</b></summary>
 
-A **layered funnel — cheap-and-certain before expensive-and-probabilistic:**
+A **layered funnel with explicit authority** — every layer states what it is allowed to
+conclude, and the payload records which layers actually ran. **Nothing acquits:** no layer
+can turn a `fake` into a `genuine`.
 
-1. **Triage (OpenCV, pre-AI)** — quality gate (resolution / blur / exposure → `unscannable` with rescan advice, because the CNN would only produce noise) and hard tells: B&W photocopy saturation *(conclusive)*, flat-print texture, aspect-ratio window, ink-hue windows. `obvious_fake` needs **≥2 independent tells or one conclusive**. A "pass" claims nothing — **the CNN verdict is never overridden**.
-2. **CNN** — EfficientNet-B0, head-only fine-tuning (the textbook small-data recipe), trained on **real photographed genuine + counterfeit notes**. An `uncertain` band routes to manual check — *a note is money, and the false-positive requirement cuts both ways.*
-3. **Feature checks** — security-thread column-darkness at the true thread position, watermark brightness lift, microprint Laplacian sharpness — each pass/fail **with a numeric score** → `missing_features`. Fusion: ≥2 failed (or 1 + elevated CNN) ⇒ fake; **never genuine while any check fails**.
-4. **Serial layer** — RBI format validation + durable sighting registry (printing-run detection).
-5. **Vision-LLM** — three narrow questions optics can't answer: portrait is Gandhi? SPECIMEN overprint? header reads "RESERVE BANK OF INDIA"? Claude → Gemini → absent. **Cap-only.** SPECIMEN is deliberately *not* counterfeit — genuine RBI specimen notes exist; it means "not legal tender → manual check".
+1. **Triage (OpenCV, pre-AI)** — quality gate (resolution / blur / exposure → `unscannable`
+   with rescan advice, because the CNN would only produce noise) and four tells: B&W
+   photocopy saturation *(conclusive)*, flat-print texture, aspect-ratio window, ink-hue
+   windows. Each tell reports at **two levels** — an *advisory* threshold that records
+   evidence, and a much stricter *convicts* threshold a genuine note cannot reach under any
+   lighting. Only the strict level counts, and only on a **located** note. `obvious_fake`
+   needs ≥2 strict tells or one conclusive one.
+2. **CNN** — EfficientNet-B0, head-only fine-tuning (the textbook small-data recipe), trained
+   on **real photographed genuine + counterfeit notes**. Owns the print-physics call. An
+   `uncertain` band routes to manual check — *a note is money, and the false-positive
+   requirement cuts both ways* — and `MIN_UNCERTAIN_BAND` guarantees that band is ≥0.20 wide.
+3. **Feature checks** — security-thread column-darkness at the true thread position, watermark
+   brightness lift, microprint Laplacian sharpness — each pass/fail **with a numeric score**
+   → `missing_features`. They may **block a certification** (`genuine` → `uncertain`) but
+   never convict: thread and watermark are structural, so one failure blocks; microprint is a
+   sharpness measure that soft focus degrades on genuine notes, so it needs a second.
+4. **Semantic review (vision-LLM)** — the **only layer that reads what is printed on the
+   note** rather than measuring how it was printed. Portrait is Gandhi? Header reads "RESERVE
+   BANK OF INDIA"? Printed denomination, serial, tampering signs. A wrong portrait or header
+   **convicts** — a note whose portrait is not Gandhi is not a genuine Indian banknote, and
+   that is a fact about content, not a fragile surface measurement. Claude → Gemini → Groq
+   (multimodal Qwen) → unavailable. SPECIMEN is deliberately *not* counterfeit — genuine RBI
+   specimen notes exist; it caps to "not legal tender → manual check". **Without an API key
+   the layer reports itself unavailable** and any `genuine` is capped to 0.80 confidence with
+   an explicit `caveats` entry.
+5. **Serial layer** — RBI format validation + durable sighting registry (printing-run
+   detection), using the typed-in serial or the one the semantic layer read off the note.
+   Caps a certification; never convicts.
 
-Plus contour + perspective-warp **note localisation** so angled phone shots land the feature regions. **28 tests.**
+**Why layer 4 exists.** Every other layer measures *print physics* — ink saturation, intaglio
+texture, thread darkness, paper sharpness — and the CNN included, since it was trained to
+separate real notes from physically counterfeited ones. A genuine note with a different face
+pasted over Gandhi passes all of them: it is real paper with real texture and real ink, and
+one altered region vanishes when EfficientNet pools it at 224×224. Tampering that preserves
+print quality is invisible without a channel that reads content.
+
+Plus contour + perspective-warp **note localisation** so angled phone shots land the feature
+regions — and when localisation *fails*, `analysis.note_located: false` says so and every
+fixed-geometry measurement is barred from the verdict, because it is reading background
+rather than note. **63 tests.**
 
 </details>
 
