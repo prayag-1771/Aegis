@@ -115,6 +115,12 @@ from .institution import router as institution_router  # noqa: E402
 
 app.include_router(institution_router)
 
+# Intel Feed — human review surface for news-ingested Supply Trail intelligence.
+# Read/approve only; fetching stays in the offline batch CLI.
+from .intel_feed import router as intel_feed_router  # noqa: E402
+
+app.include_router(intel_feed_router)
+
 
 @app.get("/health")
 async def health() -> dict:

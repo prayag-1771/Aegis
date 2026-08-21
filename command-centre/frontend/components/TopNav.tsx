@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, Fragment } from "react";
 import { gsap, useGSAP, prefersReducedMotion } from "@/lib/gsap";
 import type { HealthResponse } from "@/lib/api";
 import type { TabKey } from "./types";
-import { Bell, Search, Wifi, X, ChevronLeft, ChevronRight } from "./Icons";
+import { Bell, Layers, Search, Wifi, X, ChevronLeft, ChevronRight } from "./Icons";
 import Clock from "./Clock";
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -350,6 +350,17 @@ export default function TopNav({
             </span>
           )}
         </button>
+
+        {/* Intel Feed — human review of news-ingested Supply Trail intelligence.
+            A separate page, not a tab: it edits the FIR corpus rather than
+            visualising live signals, so it stays out of the map workspace. */}
+        <a
+          href="/intel-feed"
+          title="Intel Feed — review news-ingested intelligence"
+          className="relative rounded-full p-1 text-zinc-300 transition-colors hover:text-zinc-100 gsap-nav-item"
+        >
+          <Layers className="h-4 w-4" />
+        </a>
 
         {/* Clock instead of PM icon */}
         <div className="gsap-nav-item tabular-nums whitespace-nowrap text-[clamp(0.72rem,0.95vw,0.875rem)]">

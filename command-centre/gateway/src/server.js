@@ -185,6 +185,20 @@ app.post("/actions/:id/dismiss", (req, res) =>
 // ---- Model Card: measured metrics ----
 app.get("/metrics", (_req, res) => forward(res, "/metrics"));
 
+// ---- Intel Feed: human review of news-ingested Supply Trail intelligence ----
+// Read + approve only. Fetching news stays in the offline batch CLI, so no
+// request through this gateway ever waits on a news feed.
+app.get("/intel-feed", (_req, res) => forward(res, "/intel-feed"));
+app.post("/intel-feed/ingest", (req, res) =>
+  forward(res, "/intel-feed/ingest", { method: "POST", body: req.body ?? {} })
+);
+app.post("/intel-feed/undo", (_req, res) =>
+  forward(res, "/intel-feed/undo", { method: "POST" })
+);
+app.post("/intel-feed/reset", (_req, res) =>
+  forward(res, "/intel-feed/reset", { method: "POST" })
+);
+
 // ---- Financial-institution B2B surface (X-API-Key passed through) ----
 app.post("/institution/screen-account", (req, res) =>
   forward(res, "/institution/screen-account", { method: "POST", body: req.body ?? {}, headers: apiKeyHeader(req) })

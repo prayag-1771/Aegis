@@ -1,0 +1,7 @@
+# Ingest working files — fetched articles, unreviewed candidates, corpus backups.
+# These are pipeline scratch, not deliverables: only the reviewed records that
+# reach data/fir_corpus.json belong in git.
+#
+# Self-contained so the root .gitignore (a shared file) needs no edit.
+*
+!.gitignore
