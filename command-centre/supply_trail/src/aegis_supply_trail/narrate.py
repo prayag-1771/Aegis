@@ -237,7 +237,7 @@ class GroqRouteNarrator:
 
 
 class GeminiRouteNarrator:
-    name = "gemini-2.0-flash"
+    name = "gemini-3.6-flash"
 
     def __init__(self) -> None:
         self._key = os.environ["GEMINI_API_KEY"]
@@ -247,7 +247,7 @@ class GeminiRouteNarrator:
 
         r = httpx.post(
             "https://generativelanguage.googleapis.com/v1beta/models/"
-            f"gemini-2.0-flash:generateContent?key={self._key}",
+            f"gemini-3.6-flash:generateContent?key={self._key}",
             json={
                 "system_instruction": {"parts": [{"text": SYSTEM_PROMPT + _JSON_INSTRUCTION}]},
                 "contents": [{"parts": [{"text": "FACTS:\n" + _facts_block(facts)}]}],

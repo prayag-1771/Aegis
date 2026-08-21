@@ -85,7 +85,7 @@ def _gemini(b64: str) -> dict:
     import httpx
 
     r = httpx.post(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
         headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]},
         json={
             "contents": [{"parts": [
@@ -110,7 +110,7 @@ def vision_review_safe(img: Image.Image) -> dict | None:
         if os.environ.get("ANTHROPIC_API_KEY"):
             chain.append(("claude-opus-4-8", _claude))
         if os.environ.get("GEMINI_API_KEY"):
-            chain.append(("gemini-2.0-flash", _gemini))
+            chain.append(("gemini-3.6-flash", _gemini))
         if not chain:
             return None
         b64 = _jpeg_b64(img)

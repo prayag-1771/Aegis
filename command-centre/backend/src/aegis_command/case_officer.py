@@ -251,7 +251,7 @@ def _gemini(dossier: dict) -> dict:
     import httpx
 
     r = httpx.post(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
         headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]},
         json={
             "system_instruction": {"parts": [{"text": _SYSTEM}]},
@@ -278,7 +278,7 @@ def write_case_file_safe(dossier: dict) -> tuple[dict, str]:
     if os.environ.get("GROQ_API_KEY"):
         chain.append(("groq/llama-3.3-70b", _groq))
     if os.environ.get("GEMINI_API_KEY"):
-        chain.append(("gemini-2.0-flash", _gemini))
+        chain.append(("gemini-3.6-flash", _gemini))
     # Spare Groq keys last: separate daily token budgets, used only once the
     # primary key and Gemini are exhausted.
     for slot, label in (("GROQ_API_KEY_2", "groq#2/llama-3.3-70b"),
