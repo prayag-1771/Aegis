@@ -1,12 +1,10 @@
 """Serial layer: format validation, registry dedup, and the cap-only rule —
 serial/vision findings may block a genuine certification, never convict."""
 
-import cv2
-import jsonschema
 import json
-import numpy as np
+
+import jsonschema
 import pytest
-from PIL import Image
 
 from aegis_counterfeit.analyze import analyze_image
 from aegis_counterfeit.config import CONTRACT_SCHEMA
@@ -166,25 +164,79 @@ def test_bad_serial_never_acquits_or_convicts():
     assert ok["verdict"] == "genuine"
 
 
-def test_vision_findings_cap_only():
-    for finding in (
-        {"portrait_is_gandhi": False},
-        {"specimen_overprint": True},
-        {"header_correct": False},
-    ):
-        payload = {"verdict": "genuine", "confidence": 0.95,
-                   "vision_review": {"engine": "x", **finding}}
-        cap_verdict_for_vision(payload)
-        assert payload["verdict"] == "uncertain", finding
-    fake = {"verdict": "fake", "confidence": 0.95,
-            "vision_review": {"engine": "x", "portrait_is_gandhi": False}}
+def _review(**findings):
+    base = {"engine": "x", "status": "ok", "available": True,
+            "portrait_is_gandhi": None, "specimen_overprint": None,
+            "header_correct": None, "printed_denomination": None}
+    return {**base, **findings}
+
+
+@pytest.mark.parametrize("finding", [
+    {"portrait_is_gandhi": False},
+    {"header_correct": False},
+])
+def test_wrong_content_convicts(finding):
+    """Content findings CONVICT. A note whose portrait is not Gandhi, or whose
+    header does not read RESERVE BANK OF INDIA, is not a genuine Indian
+    banknote — that is a fact about what is printed, not a fragile measurement
+    of the surface, so it does not carry the false-positive risk that keeps the
+    optical checks from convicting. This layer capping to `uncertain` was why a
+    face pasted over Gandhi could still be reported genuine."""
+    payload = {"verdict": "genuine", "confidence": 0.95, "denomination": "500",
+               "vision_review": _review(**finding)}
+    cap_verdict_for_vision(payload)
+    assert payload["verdict"] == "fake", finding
+    assert payload["semantic_failures"]
+
+
+def test_specimen_caps_only():
+    """SPECIMEN is not counterfeit — genuine RBI specimen notes exist. It means
+    'not legal tender', so: manual check."""
+    payload = {"verdict": "genuine", "confidence": 0.95, "denomination": "500",
+               "vision_review": _review(specimen_overprint=True)}
+    cap_verdict_for_vision(payload)
+    assert payload["verdict"] == "uncertain"
+
+
+def test_denomination_mismatch_caps_only():
+    payload = {"verdict": "genuine", "confidence": 0.95, "denomination": "100",
+               "vision_review": _review(printed_denomination="500")}
+    cap_verdict_for_vision(payload)
+    assert payload["verdict"] == "uncertain"
+
+
+def test_vision_never_acquits():
+    fake = {"verdict": "fake", "confidence": 0.95, "denomination": "500",
+            "vision_review": _review(portrait_is_gandhi=True, header_correct=True)}
     cap_verdict_for_vision(fake)
     assert fake["verdict"] == "fake"
 
 
-def test_vision_review_absent_without_keys():
+def test_unavailable_review_changes_nothing():
+    """A review nobody performed must not move the verdict in either direction
+    — but it must still be PRESENT, so the payload cannot imply a check that
+    never happened."""
+    payload = {"verdict": "genuine", "confidence": 0.95, "denomination": "500",
+               "vision_review": {"engine": "none", "status": "unavailable_no_key",
+                                 "available": False, "portrait_is_gandhi": None}}
+    cap_verdict_for_vision(payload)
+    assert payload["verdict"] == "genuine"
+
+
+def test_vision_review_reports_its_own_absence(monkeypatch):
+    """Without a key this used to return None and the payload was byte-identical
+    to a build without the module — an unchecked note was indistinguishable from
+    a cleared one. It now says so."""
+    import aegis_counterfeit.vision_agent as vision_mod
+
+    for key in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setattr(vision_mod, "load_env", lambda force=False: None)
+
     img = render_note(NoteSpec(denomination="500", seed=3))
-    assert vision_review_safe(img) is None
+    review = vision_review_safe(img)
+    assert review["available"] is False
+    assert review["status"] == "unavailable_no_key"
 
 
 # ── payload integration (fast path — model untouched) ───────────────────────
@@ -207,4 +259,8 @@ def test_serial_block_in_contract_payload(tmp_path, monkeypatch):
     jsonschema.validate(instance=payload, schema=schema)
     assert payload["serial"]["value"] == "4CB738291"
     assert payload["serial"]["status"] == "valid"
-    assert "vision_review" not in payload  # keyless => layer entirely absent
+    assert payload["serial"]["source"] == "manual"
+    # The layer is PRESENT and declares itself unavailable. It used to be
+    # omitted entirely, which made "nothing read this note" look identical to
+    # "this note passed the content check".
+    assert payload["vision_review"]["available"] is False

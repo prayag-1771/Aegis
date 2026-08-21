@@ -24,8 +24,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
 from PIL import Image
+from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision import models, transforms
 
@@ -34,6 +34,18 @@ from .config import MODELS_DIR, TrainConfig
 WEIGHTS_FILE = MODELS_DIR / "counterfeit_cnn.pt"
 META_FILE = MODELS_DIR / "counterfeit_cnn.meta.json"
 REPORT_FILE = MODELS_DIR / "train_report.json"
+
+# Minimum width of the manual-review band between genuine_threshold and
+# fake_threshold. The PR-curve search is free to widen it, never to close it.
+#
+# The shipped weights were calibrated to fake=0.50 / genuine=0.45 — a band 0.05
+# wide, meaning anything scoring under 0.45 was CERTIFIED genuine and only
+# p_fake in [0.45, 0.50) ever reached a human. That silently discarded the
+# module's stated "a note is money, mid-probability scans go to manual check"
+# design: on a 0.05 band it is a coin flip with extra steps. Tellingly, the one
+# metric that would have shown this — `uncertain_rate` — was missing from the
+# shipped training report.
+MIN_UNCERTAIN_BAND = 0.20
 
 # class index convention: 0 = genuine, 1 = fake
 CLASSES = ["genuine", "fake"]
@@ -165,7 +177,9 @@ class CounterfeitModel:
             x = tf(img.convert("RGB")).unsqueeze(0)
             x.requires_grad_(True)
             logits = self.net(x)
-            p_fake = float(torch.softmax(logits, dim=1)[0, 1])
+            # detach for the scalar read: `logits` is on the autograd graph for
+            # the backward pass below, and float() on a grad-tracking tensor warns.
+            p_fake = float(torch.softmax(logits, dim=1)[0, 1].detach())
             self.net.zero_grad()
             logits[0, 1].backward()  # gradient of the FAKE logit
 
@@ -220,20 +234,37 @@ class CounterfeitModel:
         finally:
             h.remove()
 
-    def decide_verdict(self, p_fake: float, n_failed_features: int) -> str:
-        """The CNN — trained on REAL photos of real notes vs REAL photos of
-        counterfeit notes (98% genuine / 95% fake accuracy, AUC 0.994) — is the
-        verdict authority. The OpenCV security-feature checks are advisory only:
-        their fixed-geometry region scans are calibrated to the synthetic note
-        layout and mis-fire on real-world photos (varied angle/lighting/
-        denomination), so they are reported as `missing_features` for the "why"
-        explanation but MUST NOT flip the CNN's decision. `n_failed_features` is
-        accepted for signature compatibility and no longer gates the verdict."""
+    def decide_verdict(self, p_fake: float, n_failed_features: int = 0,
+                       blocks_certification: bool | None = None) -> str:
+        """Fuse the CNN score with the security-feature checks.
+
+        The CNN (EfficientNet-B0 on real photos of real and counterfeit notes)
+        owns the fake/genuine call: only it may CONVICT. The OpenCV feature
+        checks are fixed-geometry scans that mis-fire on awkward real-world
+        framing, so they may not convict either — but they are allowed to do the
+        one thing that is safe in both directions: **block a certification**.
+        Two or more failed security features on a note the CNN called genuine
+        means "a human looks at this", not "clear it".
+
+        `blocks_certification` is `CheckSet.blocks_certification`: a single
+        failed STRUCTURAL feature (thread, watermark) or any two failures. When
+        omitted it falls back to `n_failed_features >= 2`. Either way the count
+        must be the ACTIONABLE one — failures from a properly located note (see
+        `features.CheckSet.actionable_failures`). Passing raw failures from an
+        unlocated frame reintroduces the false positives this signature was
+        gutted over.
+
+        A previous revision accepted `n_failed_features` and ignored it, which
+        left the CNN as the only thing in the entire module capable of affecting
+        a verdict — no cross-check could contradict it however wrong it was.
+        """
         if p_fake >= self.fake_threshold:
             return "fake"
         if p_fake <= self.genuine_threshold:
-            return "genuine"
-        # Only the narrow CNN mid-band is uncertain (manual inspection).
+            # Certification requires the feature layer's assent too.
+            blocked = (n_failed_features >= 2 if blocks_certification is None
+                       else blocks_certification)
+            return "uncertain" if blocked else "genuine"
         return "uncertain"
 
     def save(self) -> Path:
@@ -250,17 +281,23 @@ class CounterfeitModel:
         return WEIGHTS_FILE
 
     @staticmethod
-    def load() -> "CounterfeitModel":
+    def load() -> CounterfeitModel:
         meta = json.loads(META_FILE.read_text(encoding="utf-8"))
         net = build_model(meta["backbone"])
         net.load_state_dict(torch.load(WEIGHTS_FILE, map_location="cpu", weights_only=True))
         net.eval()
+        fake_thr = float(meta["fake_threshold"])
+        genuine_thr = float(meta["genuine_threshold"])
+        # Applied at LOAD, not just at calibration, so weights already on disk
+        # (which shipped with a 0.05 band) get the review band back without a
+        # retrain. See MIN_UNCERTAIN_BAND.
+        genuine_thr = max(min(genuine_thr, fake_thr - MIN_UNCERTAIN_BAND), 0.0)
         return CounterfeitModel(
             net=net,
             backbone=meta["backbone"],
             img_size=meta["img_size"],
-            fake_threshold=meta["fake_threshold"],
-            genuine_threshold=meta["genuine_threshold"],
+            fake_threshold=fake_thr,
+            genuine_threshold=genuine_thr,
             trained_at=meta["trained_at"],
         )
 
@@ -311,8 +348,12 @@ def _pick_thresholds(y_true: np.ndarray, y_prob: np.ndarray,
         if low_band.mean() <= 0.05:
             genuine_thr = float(sorted_prob[i])
             break
-    genuine_thr = min(genuine_thr, fake_thr - 0.05)
-    return fake_thr, genuine_thr
+    # Never let the search close the manual-review band. Lowering the genuine
+    # side (rather than raising the fake side) keeps fake precision exactly
+    # where the PR curve put it and moves the newly-uncertain scans out of the
+    # "certified genuine" bucket, which is the safe direction for currency.
+    genuine_thr = min(genuine_thr, fake_thr - MIN_UNCERTAIN_BAND)
+    return fake_thr, max(genuine_thr, 0.0)
 
 
 def train(data_dir: Path, cfg: TrainConfig | None = None) -> tuple[CounterfeitModel, TrainReport]:

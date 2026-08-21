@@ -26,17 +26,21 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from .config import DATA_DIR, NOTE_SIZE, SynthConfig
 
-# Feature names must match the contract enum (contracts/counterfeit.schema.json).
-SECURITY_THREAD = "security_thread"
-WATERMARK = "watermark"
-MICROPRINT = "microprint"
-CHECKABLE_FEATURES = [SECURITY_THREAD, WATERMARK, MICROPRINT]
-
-# Geometry as fractions of note width/height (thread position matches the
-# real ₹500/₹2000 layout: windowed thread left of centre).
-THREAD_X = 0.42
-WATERMARK_X = 0.80
-MICROPRINT_Y = 0.84
+# Feature names and note geometry are OWNED BY features.py — the module that
+# describes the real Mahatma Gandhi (New) Series layout. The renderer follows
+# the real layout; the checks must never follow the renderer. (They used to:
+# features.py imported these coordinates from here, which made "is the thread
+# where a real note's thread is" mean "does this look like our own drawing".)
+from .features import (
+    CHECKABLE_FEATURES,
+    MICROPRINT,
+    MICROPRINT_Y,
+    SECURITY_THREAD,
+    THREAD_X,
+    WATERMARK,
+    WATERMARK_X,
+    WATERMARK_Y,
+)
 
 _BASE_COLOR = {
     "500": (152, 150, 140),   # stone grey
@@ -75,9 +79,15 @@ def render_note(spec: NoteSpec) -> Image.Image:
         delta = int(6 * np.sin(y / 17.0))
         draw.line([(0, y), (w, y)], fill=tuple(c + delta for c in base))
 
-    # Border + ornament block (left of watermark area).
+    # Border + ornament block. Kept CLEAR of all three inspected regions: the
+    # watermark window (x 0.105-0.335), the thread band (x 0.34-0.50) and the
+    # microprint band (y 0.84). On a real note the watermark area is unprinted,
+    # and an ornament drawn across it darkens the check's comparison ring — a
+    # removed watermark then still measures a positive brightness lift and goes
+    # undetected. (It used to sit at x 0.06-0.30, which was "left of the
+    # watermark area" only while the watermark was mis-placed at x=0.80.)
     draw.rectangle([4, 4, w - 5, h - 5], outline=(60, 60, 60), width=2)
-    draw.rectangle([int(w * 0.06), int(h * 0.18), int(w * 0.30), int(h * 0.70)],
+    draw.rectangle([int(w * 0.60), int(h * 0.20), int(w * 0.78), int(h * 0.66)],
                    outline=(90, 85, 70), width=3)
 
     # --- security thread (dashed dark-green vertical stripe) ---
@@ -88,7 +98,7 @@ def render_note(spec: NoteSpec) -> Image.Image:
 
     # --- watermark (subtle bright oval, right side) ---
     if WATERMARK not in spec.missing_features:
-        wx, wy = int(w * WATERMARK_X), int(h * 0.45)
+        wx, wy = int(w * WATERMARK_X), int(h * WATERMARK_Y)
         overlay = Image.new("L", (w, h), 0)
         odraw = ImageDraw.Draw(overlay)
         odraw.ellipse([wx - 38, wy - 52, wx + 38, wy + 52], fill=85)
@@ -110,7 +120,12 @@ def render_note(spec: NoteSpec) -> Image.Image:
     font_serial = ImageFont.load_default(size=12)
     draw.text((int(w * 0.87), int(h * 0.06)), spec.denomination, fill=(40, 40, 40), font=font_big)
     draw.text((int(w * 0.05), int(h * 0.05)), spec.denomination, fill=(40, 40, 40), font=font_big)
-    serial = f"{rng.choice('ABCDEFGH')}{rng.choice('ABCDEFGH')}{rng.randint(100000, 999999)}"
+    # Real RBI format: digit + 2 letters + 6 digits, never I or O in the prefix
+    # (serials.validate enforces exactly this). The renderer used to draw
+    # "<letter><letter><6 digits>", which its own validator then classified as
+    # `nonsense` — every rendered demo note flagged itself as a prop.
+    serial = (f"{rng.randint(1, 9)}{rng.choice('ABCDEFGH')}{rng.choice('ABCDEFGH')}"
+              f"{rng.randint(100000, 999999)}")
     draw.text((int(w * 0.62), int(h * 0.90)), serial, fill=(30, 30, 60), font=font_serial)
 
     # Blur the microprint band only — how cheap counterfeits actually fail.

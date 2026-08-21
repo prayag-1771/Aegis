@@ -5,5 +5,9 @@
   "val_roc_auc": 0.9943,
   "fake_precision": 0.9763,
   "fake_recall": 0.9635,
-  "n_train": 3508
+  "n_train": 3508,
+  "uncertain_rate": null,
+  "n_val": null,
+  "provenance": "PARTIAL / NOT REPRODUCIBLE FROM THIS CODE. TrainReport.to_dict() in model.py emits backbone, val_accuracy, val_roc_auc, fake_precision, fake_recall, uncertain_rate, n_train and n_val. This file is missing uncertain_rate and n_val and carries an extra 'dataset' key that TrainReport does not define, so it was not written by save_report() as it now stands. The accuracy figures are retained because the shipped weights are the ones they describe, but they have not been re-verified against this pipeline. Re-run `python -m aegis_counterfeit.cli train --force` on the real dataset to replace this file with a complete, reproducible report.",
+  "note_on_uncertain_rate": "The missing metric was the diagnostic one: the shipped thresholds (fake 0.50 / genuine 0.45) left a manual-review band 0.05 wide, so uncertain_rate would have been near zero and the 'a note is money, send mid-probability scans to a human' design was not in effect. model.py now enforces MIN_UNCERTAIN_BAND at load, which widens the band on these same weights without a retrain."
 }

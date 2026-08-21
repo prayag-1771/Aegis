@@ -77,3 +77,11 @@ tsconfig.tsbuildinfo
 # cannot regenerate it — same reason the counterfeit weights are committed).
 # The .gz is a build convenience; web servers negotiate encoding themselves.
 fraud-shield-nlp/src/aegis_fraud_shield/edge/scam_model.json.gz
+# local dev venv for counterfeit-vision
+counterfeit-vision/.venv/
+
+# py3.14 venv used to verify sibling modules
+.venv314/
+
+# throwaway venv used to verify a clean deployment build
+counterfeit-vision/.venv-deploy/

@@ -406,7 +406,7 @@ select.btn {
     <div class="placeholder-msg">
       No scan yet.<br>
       Enable the camera or upload a note image to start.<br><br>
-      The AI will classify the note and generate a <strong style="color:var(--blue)">Grad-CAM heatmap</strong><br>
+      The AI will classify the note and generate a <strong style="color:var(--blue)">class-activation heatmap</strong><br>
       showing exactly which regions look suspicious.
     </div>
   </div>
@@ -516,7 +516,7 @@ function render(r, relayed, uploadDataUrl) {
         <div class="conf-track"><div class="conf-fill" style="width:${pct}%;background:${col}"></div></div>
         <span class="conf-num" style="color:${col}">${pct}%</span>
       </div>
-      <span class="verdict-denom">₹${esc(r.denomination)}</span>
+      <span class="verdict-denom"${r.denomination_source === "vision" ? ' title="Read from the printed numeral by the semantic layer — optical hue cannot separate Rs10/Rs20/Rs200."' : ''}>${r.denomination === "unknown" ? "denom. unknown" : "₹" + esc(r.denomination)}</span>
     </div>`;
 
   /* ── 2. Details row ── */
@@ -524,7 +524,12 @@ function render(r, relayed, uploadDataUrl) {
   if (relayed) chips += `<span class="detail-chip pass-chip">⇢ command centre ✓</span>`;
   if (r.missing_features && r.missing_features.length) {
     r.missing_features.forEach(f => {
-      chips += `<span class="detail-chip fail">✗ ${esc(f.replace(/_/g,' '))}</span>`;
+      const label = esc(f.replace(/_/g,' '));
+      // On an `uncertain`, a failed check is why a human is being asked to look
+      // — say that, rather than showing a bare red cross that reads as "fake".
+      chips += r.verdict === "uncertain"
+        ? `<span class="detail-chip" style="border-color:var(--orange-border);color:var(--orange)" title="This security feature did not verify, so the note was NOT certified genuine. It is not evidence the note is counterfeit.">⚠ ${label} unverified</span>`
+        : `<span class="detail-chip fail">✗ ${label}</span>`;
     });
   } else if (r.verdict === "genuine") {
     chips += `<span class="detail-chip pass-chip">✓ all features present</span>`;
@@ -539,11 +544,37 @@ function render(r, relayed, uploadDataUrl) {
     const t = r.triage.narrative || r.triage.decision.replace(/_/g, " ");
     chips += `<span class="detail-chip fail" title="${esc(t)}">⚡ pre-check: ${esc(r.triage.decision.replace(/_/g, " "))}</span>`;
   }
-  /* vision-LLM second look (only present when a key is configured) */
+  /* semantic review — the only layer that reads what is PRINTED on the note.
+     Its absence must be visible: a note nothing read the content of looked
+     exactly like a fully-checked one before this chip existed. */
   if (r.vision_review) {
-    if (r.vision_review.portrait_is_gandhi === false) chips += `<span class="detail-chip fail">✗ portrait not Gandhi</span>`;
-    if (r.vision_review.specimen_overprint === true) chips += `<span class="detail-chip fail">⚠ SPECIMEN overprint</span>`;
-    if (r.vision_review.header_correct === false) chips += `<span class="detail-chip fail">✗ header text wrong</span>`;
+    if (r.vision_review.available) {
+      if (r.vision_review.portrait_is_gandhi === false) chips += `<span class="detail-chip fail">✗ portrait not Gandhi</span>`;
+      if (r.vision_review.specimen_overprint === true) chips += `<span class="detail-chip fail">⚠ SPECIMEN overprint</span>`;
+      if (r.vision_review.header_correct === false) chips += `<span class="detail-chip fail">✗ header text wrong</span>`;
+      // Informational, NOT a failure chip: tampering_signs is free-text the
+      // vision model volunteers and nothing in the verdict acts on it. Styling
+      // it red made a genuine note look convicted by evidence that carried no
+      // weight. Hover shows what it actually said.
+      if (r.vision_review.tampering_signs && r.vision_review.tampering_signs.length) {
+        chips += `<span class="detail-chip" title="${esc(r.vision_review.tampering_signs.join('; '))}">👁 ${r.vision_review.tampering_signs.length} visual note(s)</span>`;
+      }
+      if (r.vision_review.portrait_is_gandhi === true && r.vision_review.header_correct === true) {
+        chips += `<span class="detail-chip pass-chip">✓ content verified</span>`;
+      }
+    } else {
+      chips += `<span class="detail-chip" title="Set ANTHROPIC_API_KEY or GEMINI_API_KEY in counterfeit-vision/.env. Print quality was checked; the note&#39;s printed content was not, so tampering that preserves print quality would not be detected.">⚠ content not checked</span>`;
+    }
+  }
+  /* content-level reasons: no missing_features enum name describes these */
+  if (r.semantic_failures) {
+    r.semantic_failures.forEach(f => {
+      chips += `<span class="detail-chip fail">✗ ${esc(f)}</span>`;
+    });
+  }
+  /* localisation honesty: fixed-geometry checks mean nothing on an unlocated frame */
+  if (r.analysis && r.analysis.note_located === false) {
+    chips += `<span class="detail-chip" title="No note outline was found, so the whole frame was analysed. The security-feature checks were not applied.">⚠ note not isolated</span>`;
   }
   detailsRow.innerHTML = `<div class="details-row">${chips}</div>`;
 
@@ -565,7 +596,11 @@ function render(r, relayed, uploadDataUrl) {
 
   gradcamBox.innerHTML = `
     <div class="gradcam-header">
-      <div class="gradcam-title"><span class="fire">🔥</span> Grad-CAM Analysis</div>
+      <div class="gradcam-title"><span class="fire">🔥</span> ${
+        r.analysis && r.analysis.heatmap_method === "eigen_cam"
+          ? '<span title="Forward-only, class-agnostic: where the model looked. Used on low-memory hosts.">Eigen-CAM Analysis</span>'
+          : '<span title="Class-specific: which regions drove the FAKE score.">Grad-CAM Analysis</span>'
+      }</div>
       ${heatmapUrl ? `
       <div class="view-tabs" id="viewTabs">
         <button class="view-tab active" data-v="compare">Compare</button>

@@ -4,19 +4,48 @@
   "title": "Counterfeit Detection Result (Counterfeit Vision -> Command Centre)",
   "description": "Output emitted by the Counterfeit Vision CV model (Adharshan) for a single note image. The command centre consumes this to render the note-scan card and feed the fusion LLM.",
   "type": "object",
-  "required": ["schema_version", "event_id", "timestamp", "verdict", "confidence", "denomination"],
+  "required": [
+    "schema_version",
+    "event_id",
+    "timestamp",
+    "verdict",
+    "confidence",
+    "denomination"
+  ],
   "properties": {
-    "schema_version": { "type": "string", "const": "1.0" },
-    "event_id": { "type": "string", "description": "Unique id for this scanned note." },
-    "timestamp": { "type": "string", "format": "date-time" },
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Unique id for this scanned note."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
     "denomination": {
       "type": "string",
-      "enum": ["100", "200", "500", "2000", "unknown"],
-      "description": "Detected note denomination."
+      "enum": [
+        "10",
+        "20",
+        "50",
+        "100",
+        "200",
+        "500",
+        "2000",
+        "unknown"
+      ],
+      "description": "Detected note denomination. Widened from [100,200,500,2000] \u2014 the optical layer can distinguish Rs10/20/50 too, and forcing them to 'unknown' (or, before the hue windows were fixed, mislabelling a lavender Rs100 as a Rs2000) lost real information on a seizure record."
     },
     "verdict": {
       "type": "string",
-      "enum": ["fake", "genuine", "uncertain"],
+      "enum": [
+        "fake",
+        "genuine",
+        "uncertain"
+      ],
       "description": "Top-level classification."
     },
     "confidence": {
@@ -27,7 +56,7 @@
     },
     "missing_features": {
       "type": "array",
-      "description": "Security features found absent/failed (feature-level detection). Powers the 'why fake' explanation.",
+      "description": "Security features found absent/failed (feature-level detection). Powers the 'why fake' explanation. ACTIONABLE failures only \u2014 measurements taken on an unlocated note are excluded, since the verdict was not permitted to use them either. Reported on genuine verdicts too: a genuine already implies fewer than two actionable failures, so a non-empty list here reads as 'cleared, with one soft flag' rather than hidden evidence.",
       "items": {
         "type": "string",
         "enum": [
@@ -42,78 +71,336 @@
         ]
       }
     },
-    "image_ref": { "type": ["string", "null"], "description": "Path/URL to the captured note image for the UI." },
-    "heatmap_ref": { "type": ["string", "null"], "description": "Path/URL to the Grad-CAM heatmap overlay image — highlights which regions drove the fake/genuine decision." },
+    "image_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Path/URL to the captured note image for the UI."
+    },
+    "heatmap_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Path/URL to the class-activation heatmap overlay \u2014 highlights which regions drove the decision. See analysis.heatmap_method for which method produced it."
+    },
     "location_hint": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "description": "Optional seizure location for the crime map (cross-domain overlap).",
       "properties": {
-        "district": { "type": "string" },
-        "lat": { "type": "number" },
-        "lon": { "type": "number" }
+        "district": {
+          "type": "string"
+        },
+        "lat": {
+          "type": "number"
+        },
+        "lon": {
+          "type": "number"
+        }
       }
     },
     "triage": {
-      "type": ["object", "null"],
-      "description": "Pre-CNN deterministic triage. decision 'obvious_fake' or 'unscannable' means the CNN was never consulted — the verdict came from these measurements alone. Additive evidence like fraud-shield's `verification`; never contradicts the pipeline.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Pre-CNN deterministic triage. decision 'obvious_fake' or 'unscannable' means the CNN was never consulted \u2014 the verdict came from these measurements alone. Additive evidence like fraud-shield's `verification`; never contradicts the pipeline.",
       "properties": {
-        "decision": { "type": "string", "enum": ["pass", "obvious_fake", "unscannable"] },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "obvious_fake",
+            "unscannable"
+          ]
+        },
         "checks": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "name": { "type": "string" },
-              "passed": { "type": "boolean" },
-              "measurement": { "type": "number" },
-              "evidence": { "type": "string" }
+              "name": {
+                "type": "string"
+              },
+              "passed": {
+                "type": "boolean"
+              },
+              "measurement": {
+                "type": "number"
+              },
+              "evidence": {
+                "type": "string"
+              },
+              "convicts": {
+                "type": "boolean",
+                "description": "True only when the measurement reached the strict threshold a genuine note cannot reach. A failed check with convicts=false is recorded evidence that the verdict was NOT allowed to act on."
+              },
+              "conclusive": {
+                "type": "boolean",
+                "description": "A single conclusive tell convicts on its own (e.g. zero ink colour)."
+              }
             },
-            "required": ["name", "passed", "evidence"],
+            "required": [
+              "name",
+              "passed",
+              "evidence"
+            ],
             "additionalProperties": false
           }
         },
-        "narrative": { "type": ["string", "null"], "description": "LLM-written 'why' over the failed checks (Claude -> Groq -> Gemini -> template chain). Null when triage passed." },
-        "engine": { "type": ["string", "null"], "description": "Which narrator produced `narrative`." }
+        "narrative": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "LLM-written 'why' over the failed checks (Claude -> Groq -> Gemini -> template chain). Null when triage passed."
+        },
+        "engine": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Which narrator produced `narrative`."
+        }
       },
-      "required": ["decision", "checks"],
+      "required": [
+        "decision",
+        "checks"
+      ],
       "additionalProperties": false
     },
     "serial": {
-      "type": ["object", "null"],
-      "description": "Serial-number layer (manual/UI-entered serial). nonsense = impossible RBI format; suspicious = classic prop pattern (fancy genuine numbers exist); duplicate = same serial sighted before in the registry — a counterfeit printing run or a rescan. Any non-valid status blocks a genuine certification (caps to uncertain), never convicts.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Serial-number layer (manual/UI-entered serial). nonsense = impossible RBI format; suspicious = classic prop pattern (fancy genuine numbers exist); duplicate = same serial sighted before in the registry \u2014 a counterfeit printing run or a rescan. Any non-valid status blocks a genuine certification (caps to uncertain), never convicts.",
       "properties": {
-        "value": { "type": "string" },
-        "status": { "type": "string", "enum": ["valid", "suspicious", "nonsense", "duplicate"] },
-        "detail": { "type": "string" },
+        "value": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "valid",
+            "suspicious",
+            "nonsense",
+            "duplicate"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        },
         "prior_sightings": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "event_id": { "type": "string" },
-              "timestamp": { "type": "string" },
-              "district": { "type": ["string", "null"] }
+              "event_id": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string"
+              },
+              "district": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
             },
-            "required": ["event_id", "timestamp"],
+            "required": [
+              "event_id",
+              "timestamp"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "vision"
+          ],
+          "description": "Where the serial came from. 'vision' means the semantic layer read it off the note."
+        }
+      },
+      "required": [
+        "value",
+        "status",
+        "detail"
+      ],
+      "additionalProperties": false
+    },
+    "vision_review": {
+      "type": "object",
+      "description": "Semantic review \u2014 the only layer that reads what is PRINTED on the note, as opposed to measuring its print physics. ALWAYS present: `available` false with a `status` of unavailable_no_key/unavailable_error/disabled means no model looked, which is why a `genuine` reached without it carries a capped confidence and a caveat. A wrong portrait or header CONVICTS (this is a fact about the note's content, not a fragile surface measurement); a SPECIMEN overprint or denomination mismatch caps to uncertain. Never acquits.",
+      "properties": {
+        "portrait_is_gandhi": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "specimen_overprint": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "header_correct": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "engine": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "unavailable_no_key",
+            "unavailable_error",
+            "unavailable_rate_limited",
+            "disabled"
+          ]
+        },
+        "available": {
+          "type": "boolean",
+          "description": "True only when a vision model actually inspected the note."
+        },
+        "printed_denomination": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "10",
+            "20",
+            "50",
+            "100",
+            "200",
+            "500",
+            "2000",
+            null
+          ]
+        },
+        "serial_text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Serial read off the note; feeds the sighting registry when no serial was typed."
+        },
+        "tampering_signs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Visible edit artefacts: pasted regions, mismatched fonts, cut-and-paste edges."
+        }
+      },
+      "required": [
+        "engine",
+        "status",
+        "available"
+      ],
+      "additionalProperties": false
+    },
+    "analysis": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "How the scan was actually performed \u2014 the provenance a verdict needs to be auditable.",
+      "properties": {
+        "note_located": {
+          "type": "boolean",
+          "description": "True when a note outline was found and perspective-corrected. False means the whole frame was resized instead, so every fixed-geometry measurement was reading background and none of them were allowed to affect the verdict."
+        },
+        "feature_checks_applied": {
+          "type": "boolean",
+          "description": "Whether the security-feature checks were trusted enough to influence the verdict."
+        },
+        "heatmap_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "grad_cam",
+            "eigen_cam",
+            null
+          ],
+          "description": "Which method produced heatmap_ref. grad_cam is class-specific ('what drove FAKE'); eigen_cam is class-agnostic ('where the model looked') and is substituted on low-memory hosts. These are different explanations and the payload previously called both Grad-CAM."
+        },
+        "feature_scores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "feature": {
+                "type": "string"
+              },
+              "passed": {
+                "type": "boolean"
+              },
+              "score": {
+                "type": "number"
+              },
+              "threshold": {
+                "type": "number"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "feature",
+              "passed"
+            ],
             "additionalProperties": false
           }
         }
       },
-      "required": ["value", "status", "detail"],
+      "required": [
+        "note_located"
+      ],
       "additionalProperties": false
     },
-    "vision_review": {
-      "type": ["object", "null"],
-      "description": "Vision-LLM second look (portrait / SPECIMEN overprint / header text). Additive: absent without an API key; a failing question blocks a genuine certification, never produces a fake verdict.",
-      "properties": {
-        "portrait_is_gandhi": { "type": ["boolean", "null"] },
-        "specimen_overprint": { "type": ["boolean", "null"] },
-        "header_correct": { "type": ["boolean", "null"] },
-        "observations": { "type": "array", "items": { "type": "string" } },
-        "engine": { "type": "string" }
+    "semantic_failures": {
+      "type": "array",
+      "items": {
+        "type": "string"
       },
-      "required": ["engine"],
-      "additionalProperties": false
+      "description": "Content-level reasons for the verdict (wrong portrait, wrong header, SPECIMEN overprint, denomination mismatch). No missing_features enum value describes these \u2014 that list names security features, not content."
+    },
+    "caveats": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "What this verdict did NOT check. Present on a `genuine` reached without the semantic layer."
+    },
+    "denomination_source": {
+      "type": "string",
+      "enum": [
+        "optical",
+        "vision"
+      ],
+      "description": "Present when the denomination did not come from the optical hue windows. 'vision' means the semantic layer read the printed numeral \u2014 optical hue cannot separate Rs10/Rs20/Rs200, which share one warm colour band."
     }
   },
   "additionalProperties": false
