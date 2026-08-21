@@ -481,3 +481,47 @@ def test_committed_corpus_still_matches_firentry_shape(temp_corpus):
         for field in ("ref", "district", "lat", "lon", "date", "source", "text",
                       "places", "crime_types"):
             assert field in entry, f"{field} missing — engine.load_fir_corpus would break"
+
+
+# ── deployed-environment fallback ───────────────────────────────────────────
+
+def test_staged_candidates_falls_back_to_committed_seed(tmp_path, monkeypatch):
+    """A deployed backend has no staging dir (it is gitignored), so the review
+    page would render empty for every teammate. The committed seed covers it."""
+    from aegis_supply_trail.ingest import service as service_mod
+
+    seed = tmp_path / "candidates.seed.json"
+    seed.write_text(json.dumps([{"ref": "SEED-1", "district": "Ajmer"}]), encoding="utf-8")
+
+    monkeypatch.setattr(service_mod, "SEED_CANDIDATES", seed)
+    monkeypatch.setattr(service_mod, "load_candidates", lambda *a, **k: [])
+
+    rows = service_mod.staged_candidates()
+    assert [r["ref"] for r in rows] == ["SEED-1"]
+
+
+def test_real_staging_overrides_the_seed(tmp_path, monkeypatch):
+    """A machine that actually ran `fetch` must not be overridden by the seed."""
+    from aegis_supply_trail.ingest import service as service_mod
+
+    seed = tmp_path / "candidates.seed.json"
+    seed.write_text(json.dumps([{"ref": "SEED-1"}]), encoding="utf-8")
+
+    monkeypatch.setattr(service_mod, "SEED_CANDIDATES", seed)
+    monkeypatch.setattr(service_mod, "load_candidates", lambda *a, **k: [{"ref": "LIVE-1"}])
+
+    assert [r["ref"] for r in service_mod.staged_candidates()] == ["LIVE-1"]
+
+
+def test_shipped_seed_file_is_valid_and_unapproved():
+    """The seed that actually ships must be loadable and contain nothing
+    pre-approved — a deployed page must never auto-commit to the corpus."""
+    from aegis_supply_trail.ingest import service as service_mod
+
+    assert service_mod.SEED_CANDIDATES.exists(), "seed must be committed for deployments"
+    rows = json.loads(service_mod.SEED_CANDIDATES.read_text(encoding="utf-8"))
+    assert rows, "seed must not be empty"
+    for row in rows:
+        assert row.get("approved") is not True, f"{row.get('ref')} is pre-approved"
+        assert row.get("district")
+        assert row.get("ref")

@@ -1,0 +1,180 @@
+[
+  {
+    "ref": "NEWS-TN-2026-E50C44",
+    "district": "Chennai",
+    "state": "Tamil Nadu",
+    "lat": 13.083,
+    "lon": 80.271,
+    "date": "2026-07-21",
+    "source": "Organiser, 2026-07-21",
+    "text": "Tamil Nadu: Counterfeit currency syndicate with Malaysia, Pakistan links busted in Chennai; terror angle investigated.",
+    "places": [
+      "Chennai"
+    ],
+    "crime_types": [
+      "counterfeit_currency"
+    ],
+    "approved": false,
+    "_review": {
+      "extractor": "deterministic",
+      "confidence": "low",
+      "link": "https://news.google.com/rss/articles/CBMi9AFBVV95cUxNV0ZJOG1td1lNbld6VFZCeVpEMWtvTjZDWUpiNWliNmJoM2d2blJzMFhQMWZFSnVweU5rY1N2ampqSS1idG9kNGpmSmxndi1vai1GVnBKdnRaRTNTVlJITjdOWHRUVG9CRVd3TzBoR0dPaWVaNlRGYlMyZHlYS3FRbVFYU2w3Uy0tckJjQ3d6bTFIMnU3MkdUOE5oR1EwOEN3WDljQlRDekhvOUVHVzg2NkJpSnV0TUFCeG5lS0RhVncxa0NwR1BpSWN5NndSbVlZd3V2dHlNTDY2eDd6VmFkQzJWbEQxcHdWN2RDT09ZanJVYlpx0gH6AUFVX3lxTE9BSVYxQzU5Mm91MGRRQzRuNVhnRnlPaHk1ckJoMnprcGJZYTFEQS10eWZfdmVKNElrNjhwR0tCanRpSXZ1TnlpTUZSZTJoWUg3dDhxQlJKR21FallvbU9sal90NnZidFctcG85STFfaGc4dk5ZaThiU0R1VU0ydVN6SUdyS0owTTBZVzQtUDhXalNYYlIzRF9kVUt6bDVMNW41dHpQQ1dZSUNxNmFGSjZiUGVMbWxmUHgwNEVfQlBhVldtdlJiNENZMDhyVjZrYkx1SFhhY2dWeGxpZEkxSXlXRGVXQW5FWXdRRUFOVUVQNlE1Rmhvc0JLVEE?oc=5",
+      "headline": "Tamil Nadu: Counterfeit currency syndicate with Malaysia, Pakistan links busted in Chennai; terror angle investigated",
+      "places_unresolved": [],
+      "notes": "District inferred as the first resolvable place mentioned — verify it is the SEIZURE location, not a destination or an unrelated place in the same sentence."
+    }
+  },
+  {
+    "ref": "NEWS-GJ-2026-40AA6B",
+    "district": "Ahmedabad",
+    "state": "Gujarat",
+    "lat": 23.0225,
+    "lon": 72.5714,
+    "date": "2026-03-20",
+    "source": "India Today, 2026-03-20",
+    "text": "Ahmedabad Crime Branch busts fake currency racket, 7 arrested.",
+    "places": [
+      "Ahmedabad"
+    ],
+    "crime_types": [
+      "counterfeit_currency",
+      "distribution"
+    ],
+    "approved": false,
+    "_review": {
+      "extractor": "deterministic",
+      "confidence": "low",
+      "link": "https://news.google.com/rss/articles/CBMi0wFBVV95cUxNejVpMjUtOHFhWmxTUlBLeThGLUhGT2hFWjhzRVdZY0VLTklILWhQNkgtREdkbEJORzhKMEVpVENfSmQ5VzBZNVFRUkJTUmdGRE50aGlxYTNWTVRfMXBMZEpmeVVxeHJxNEtobDkycUtRai11Qm1qcml2SUJhN2g5OEZGU0F1cmR2UUgwcm9jUS1XQnNSNmEtZm05MHk5ZG9sOWZGSkV1Wkk1VUpTYkk1MGF5Y0FLTTRuYkhEUldUSU9GbnpHSzFGaG1GM0l1ZXNCbUxz0gHYAUFVX3lxTFBMdks4RTdmcEYyemEzTUV0RnYyTUNkOVZHNGFtOTdZQWE3WkVZUGJqOVZJaHhzQkF2RUU4UUR5cU4ySzZueFNDQXVhbVpQWS1SbjZaYzV0cDhGR2ttbXI4MmhFMWJJZmxreF9qeDdKWk1MQ2FNRUExOExBUFMxcEd0bU9ER0ZYTnZveEJ1R2ZPWjdSaThmbnFTNDVnZXppOVd1OVY0SWg2NXUzNU5SV3A4UGlweGF3ZWZWTnRDMlVqZ0h1UlR0VXVQSUxDTzBjWGhPaXVKTF9EZw?oc=5",
+      "headline": "Ahmedabad Crime Branch busts fake currency racket, 7 arrested",
+      "places_unresolved": [],
+      "notes": "District inferred as the first resolvable place mentioned — verify it is the SEIZURE location, not a destination or an unrelated place in the same sentence."
+    }
+  },
+  {
+    "ref": "NEWS-GJ-2026-F4EAF6",
+    "district": "Ahmedabad",
+    "state": "Gujarat",
+    "lat": 23.0225,
+    "lon": 72.5714,
+    "date": "2026-03-19",
+    "source": "NDTV, 2026-03-19",
+    "text": "Ashram-Based Fake Currency Racket Busted In Ahmedabad, Rs 2 Crore Seized.",
+    "places": [
+      "Ahmedabad"
+    ],
+    "crime_types": [
+      "counterfeit_currency",
+      "distribution"
+    ],
+    "approved": false,
+    "_review": {
+      "extractor": "deterministic",
+      "confidence": "low",
+      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPODhrM1ZKa2FJUEVjTks1dlZMS0RNOTNCYkUwMThjWUdlV0MyWDJiQTBZQUlUWVJEaWx4aDBvZU1XNzYyeU5HdFN4WWxwUkFqU2lsSEhJMllSQnF0akFsT3U5NllCOTRSeHg5Q1dsdGJQMnhkdGQwMmdyTG5pNHVnNS01c0hkTFlBUnNEb01DM2hnaVVaclNtTkc5NmZlNmduRHFRWTMwaGFLTVdNSDhhVFlB0gG6AUFVX3lxTE9ueDZMYV9kaUt0WUhVQ1JZSERLb0tzeVRJSEdaNUFIV1FSTFFLLVdIOC1wLXFObkNFMExucUhfc3FsYkxtOUY3QzNGV09GLXA0LU5TTFlqMlRSS1ZJU21wcUxraDBwUzdzX2x6bmdqMDN3Qkl0MTV2MVhoNXc3emxveU1LeEI2N2ZFYWptc1RtTGxiS0p0NXljZkZCUk5kaERLV0V1dzhYV3J1QkZNOW9oNXJrTXEzQ2ktZw?oc=5",
+      "headline": "Ashram-Based Fake Currency Racket Busted In Ahmedabad, Rs 2 Crore Seized",
+      "places_unresolved": [],
+      "notes": "District inferred as the first resolvable place mentioned — verify it is the SEIZURE location, not a destination or an unrelated place in the same sentence."
+    }
+  },
+  {
+    "ref": "NEWS-GJ-2026-4B9811",
+    "district": "Ahmedabad",
+    "state": "Gujarat",
+    "lat": 23.0225,
+    "lon": 72.5714,
+    "date": "2026-03-19",
+    "source": "Bhaskar English, 2026-03-19",
+    "text": "Yoga guru’s counterfeit note nexus busted: Disciples transporting FICN worth over ₹2 cr nabbed in Ahmedabad.",
+    "places": [
+      "Ahmedabad"
+    ],
+    "crime_types": [
+      "counterfeit_currency"
+    ],
+    "approved": false,
+    "_review": {
+      "extractor": "deterministic",
+      "confidence": "low",
+      "link": "https://news.google.com/rss/articles/CBMi1gFBVV95cUxNQndOc2JUeWlLTGxra0dHZXFTU1RLeUpUT01wUDYtRnlfZ0U0c3NNT3Y5UGdCSEMwWXhiMnU5ZUdhR0U0ejgzNlFWbmV6a01qRlBIRFQ4cE9XeEZWZ0FfQXBybzhuelJfcm85eWhpeU41ZVVaMnJmY2k1aWRfeXBBRWJuckZxMVZuOVdnUGNBOWdFSHRFa3lDTlJCN0FVU0JWVGhIV3pDczdhNE5VOERIbVBYTHZFekUtU0E0dmNmbGk2TzVzc1hMenQ4WlZEMmtheGRVN0dn0gHbAUFVX3lxTE0yRXM3M2E3UnhoUDFSSFlqWTRQVlZGRy0xamk2Zi1VNEVwak16dG82VXhKanByQWtEdXdOREtXRjMtdk8xM2dtbXFPVmpjSnFlU0c2QUk0R3ZNYjQ0eDgwTlVFVUVVQ0N0akgzRlBzTzlnUnNubmdmVWVVQS1iend6Y2xNODR0bl9reEJPX1FHQnZuWENQS3NIc01lendleG1BdjVjdDMyWm4zRjUwbVUxMmlmZkJLN20zQ0ppd3FNd3FPeW1ra280bEVTMmN2LVRGcFBJT3FNNlBhNA?oc=5",
+      "headline": "Yoga guru’s counterfeit note nexus busted: Disciples transporting FICN worth over ₹2 cr nabbed in Ahmedabad...",
+      "places_unresolved": [],
+      "notes": "District inferred as the first resolvable place mentioned — verify it is the SEIZURE location, not a destination or an unrelated place in the same sentence."
+    }
+  },
+  {
+    "ref": "NEWS-DELHI-2026-0C21E6",
+    "district": "Delhi",
+    "state": "Delhi",
+    "lat": 28.5562,
+    "lon": 77.1,
+    "date": "2026-06-22",
+    "source": "The Tribune, 2026-06-22",
+    "text": "Delhi: Fake Indian currency notes of Rs 3 lakh face value seized, 3 arrested.",
+    "places": [
+      "Delhi"
+    ],
+    "crime_types": [
+      "counterfeit_currency"
+    ],
+    "approved": false,
+    "_review": {
+      "extractor": "deterministic",
+      "confidence": "low",
+      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNNVUyVkNsT0ZWZ1JxU2hDNHBBWDBYSmNMdFNDdEwxdDlNSG0wRmpjQzhCYk1mMUpnOXNzOUJKNU1VcWQ0Z1J1RmhFWWdOUlpBRl81WGVoUXZHVnNiZkdlaHVJUVRHSmJxQVJsY0JIZWZKdTJ2ZThxZlExZUcxcFpzX0JhY2VEUFdudDg5Q3hERGpSVzFVczZlTWRZMGdFTndub2FpVEE1TXpDSzRmbDZKY2Y4a0tQd9IBugFBVV95cUxNbFd6UmtSSHhxYXdsajB2MlVsN1dRZTNaeWFtelRhR3hvbF8xS1IyclZNOFMtOWtlWExmUWoySjl4T3c3em12eXdyNkZpU3N0WWVBM2ptZnFKNEZLMFNtQW1namlHaS1NVHM5bXJHTk1jRTg1djdjMWNkcmZaVVpyYzlYcFBvTEpHTWVuNmJoZnFfeElqa0xWb2xwMHE2Zk5CWWdfaEhVQ00xZm5XUG5KelpOdEJDcFZFYlE?oc=5",
+      "headline": "Delhi: Fake Indian currency notes of Rs 3 lakh face value seized, 3 arrested",
+      "places_unresolved": [],
+      "notes": "District inferred as the first resolvable place mentioned — verify it is the SEIZURE location, not a destination or an unrelated place in the same sentence."
+    }
+  },
+  {
+    "ref": "NEWS-DELHI-2026-CEF7AD",
+    "district": "Delhi",
+    "state": "Delhi",
+    "lat": 28.5562,
+    "lon": 77.1,
+    "date": "2026-07-17",
+    "source": "NDTV, 2026-07-17",
+    "text": "Delhi Police Bust Fake Currency Racket, Kingpin Among 3 Arrested.",
+    "places": [
+      "Delhi"
+    ],
+    "crime_types": [
+      "counterfeit_currency",
+      "distribution"
+    ],
+    "approved": false,
+    "_review": {
+      "extractor": "deterministic",
+      "confidence": "low",
+      "link": "https://news.google.com/rss/articles/CBMipwFBVV95cUxPYmVoS1M2N0toVThrcnpYYktpQTN0TWpxb2Y2aXdzeWR0RnkxR1BHY3N6T19Fbnc4dkxEdDVrODJveTN0LXZ6T2JQRVNibk81MndQSDVTRGluMjBTTWZJRXBzMDhwcjROY1Q1RFhFbTVUdkxRX1FuNlQ2M09NZk1OejlWZ0dHdlpCVzlNVk91WU1Pb2dXQk1NSkstU3dhTEdwd0NrRWxwZ9IBrwFBVV95cUxOQ0J5UWxGTm5zZDlpOXA1QjhZTkhFOHBmR2ExVkVkNzcxNFRIUER0bXJWOUNOY29UeTg1cWw2S3J1dVZwa3ZaWnJmOENlc2lneEtuMWhVelNMWXlwQ2N6NmZJNWJ2WTdMRktkRGp3MFpfTEIyaTZaRTBNenhTTmpBUTRBUktnQXZTVUlUeFlwZmNFckFQQ0luWWlZR2drTmItNjVfSkdIWTUyYXBEZVlN?oc=5",
+      "headline": "Delhi Police Bust Fake Currency Racket, Kingpin Among 3 Arrested",
+      "places_unresolved": [],
+      "notes": "District inferred as the first resolvable place mentioned — verify it is the SEIZURE location, not a destination or an unrelated place in the same sentence."
+    }
+  },
+  {
+    "ref": "NEWS-RJ-2026-9695EF",
+    "district": "Ajmer",
+    "state": "Rajasthan",
+    "lat": 26.4499,
+    "lon": 74.6399,
+    "date": "2026-07-13",
+    "source": "ANI News, 2026-07-13",
+    "text": "Man arrested with fake Rs 500 notes worth Rs 13 lakh in Ajmer; sent to one-day police remand.",
+    "places": [
+      "Ajmer"
+    ],
+    "crime_types": [
+      "counterfeit_currency"
+    ],
+    "approved": false,
+    "_review": {
+      "extractor": "deterministic",
+      "confidence": "low",
+      "link": "https://news.google.com/rss/articles/CBMi6wFBVV95cUxPbzFLckc2SEtpdExMXy1qeWV3Q3FTSGI1ZGhvYkozcnFLZDYweDFPMmhfd3B0aHVVejFraXZCMlZEaF9SVGtDamJPMWJtNGdaWWpIZGVzZGMwOWRPOTVjTUwzekVsa0o1X2ZRWlRseWRkVmlSM2RLUDdVWGd5RG5waHh2bVI3aHhNZXJKUlZsSE1ocEVMam14ZVVVMjN1WVRDeDN3RDg2bjB6NjM2Q1p0aHFCajBXeXVrMnlER2o5alhLV0J0UzF0WTRIZWNldlVCZEdXRDI4dU9SRTdjSGxLVXMwdFJKSENGbk1j?oc=5",
+      "headline": "Man arrested with fake Rs 500 notes worth Rs 13 lakh in Ajmer; sent to one-day police remand",
+      "places_unresolved": [],
+      "notes": "District inferred as the first resolvable place mentioned — verify it is the SEIZURE location, not a destination or an unrelated place in the same sentence."
+    }
+  }
+]
