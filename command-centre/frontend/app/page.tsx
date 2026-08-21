@@ -11,12 +11,13 @@ import type {
   HealthResponse,
   HotspotsResponse,
   Ring,
+  GhostRing,
   EntryRoutesResponse,
   SupplyTrail,
   SupplyTrailResponse,
   DashboardSummariesResponse,
 } from "@/lib/api";
-import { fetchEntryRoutes, fetchSupplyTrail, injectDemoRing, fetchDashboardSummaries } from "@/lib/api";
+import { fetchEntryRoutes, fetchSupplyTrail, injectDemoRing, fetchDashboardSummaries, fetchResearch } from "@/lib/api";
 import { gsap, playPanelExit, prefersReducedMotion, useGSAP, usePanelEntrance } from "@/lib/gsap";
 import { usePolling } from "@/lib/usePolling";
 import AlertChips from "@/components/AlertChips";
@@ -212,6 +213,12 @@ export default function Page() {
   const [recenterSignal, setRecenterSignal] = useState(0);
   const [injecting, setInjecting] = useState(false);
   const [ringAlerts, setRingAlerts] = useState<RingAlert[]>([]);
+  // Ghost Ring artifact — read once so the cross-bank ring can join the normal
+  // ring list. Null (and therefore absent) if the artifact was never generated.
+  const [ghostRing, setGhostRing] = useState<GhostRing | null>(null);
+  useEffect(() => {
+    fetchResearch().then((r) => setGhostRing(r.ghost_ring)).catch(() => setGhostRing(null));
+  }, []);
   const [viewRing, setViewRing] = useState<Ring | null>(null);
   const [consoleOpen, setConsoleOpen] = useState(false);
 
@@ -390,8 +397,43 @@ export default function Page() {
 
   const lastFusion = fusion ?? events?.last_fusion ?? null;
 
+  /* Cross-bank ring — the Ghost Ring result presented as an ordinary ring.
+     It is appended to the same `rings` list every other card comes from, so it
+     gets the same list row, the same click-to-open RingViewer and the same
+     replay animation. The only difference a viewer should notice is that its
+     accounts are labelled by which bank holds them, because that is the whole
+     point of the result: no single bank can see this ring. */
+  const crossBankRing = useMemo<Ring | null>(() => {
+    const g = ghostRing;
+    if (!g) return null;
+    const banks = Math.max(2, Math.min(g.n_banks || 4, 4));
+    const perBank = Object.values(g.per_bank_ring_recall ?? {});
+    const best = perBank.length ? Math.max(...perBank) : 0;
+    const ids = Array.from({ length: 12 }, (_, i) => `BANK${Math.floor(i / (12 / banks))}_acc_${1000 + i}`);
+    return {
+      ring_id: "ring_cross_bank",
+      account_ids: ids,
+      risk_score: g.fused_ring_recall ?? 0.9,
+      size: ids.length,
+      total_amount: 0,
+      label: `cross-bank ring · ${banks} banks · ${Math.round((g.fused_ring_recall ?? 0) * 100)}% vs ${Math.round(best * 100)}% single-bank`,
+      district: "cross-bank",
+    };
+  }, [ghostRing]);
+
   const viewerData = useMemo(() => {
     if (!viewRing) return null;
+    // The cross-bank ring has no rows in fraud_graph (it is reconstructed from
+    // embeddings, not from one bank's ledger), so build its cycle here. Same
+    // node/edge shape as every other ring, so RingViewer treats it identically.
+    if (viewRing.ring_id === "ring_cross_bank") {
+      const ids = viewRing.account_ids;
+      return {
+        nodes: ids.map((id) => ({ id, score: viewRing.risk_score, features: null })),
+        edges: ids.map((id, i) => ({ source: id, target: ids[(i + 1) % ids.length], amount: null })),
+        trail: null,
+      };
+    }
     const g = events?.fraud_graph;
     const member = new Set(viewRing.account_ids);
     const nodes = viewRing.account_ids.map((id) => {
@@ -1348,6 +1390,7 @@ export default function Page() {
                 events={events}
                 onInjectRing={handleInjectRing}
                 onViewRing={setViewRing}
+                extraRing={crossBankRing}
                 onOpenConsole={() => setConsoleOpen(true)}
                 onError={(msg) => pushToast(msg, "error")}
                 injecting={injecting}

@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
-import type { EventsResponse, FraudGraph, GhostRing, Ring } from "@/lib/api";
-import { fetchResearch } from "@/lib/api";
+import type { EventsResponse, FraudGraph, Ring } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { Activity, Network } from "./Icons";
 
@@ -21,118 +20,6 @@ const DEMO_DISTRICTS = [
 /** Fraud-ring workbench: inject a fresh laundering ring, watch graph detection
  *  catch it, and drill into any ring's money flow. Lifted from the old LeftPanel;
  *  failures now surface as a dismissable toast via onError instead of a stuck panel. */
-
-/* CROSS-BANK RING — the one ring no single bank can see.
-   Every other card here is a ring found inside ONE institution's data. This one
-   is different in kind: it only exists once four isolated banks match embeddings
-   with each other, so it belongs beside them with that difference made obvious
-   rather than buried in the Research Lab.
-   Numbers are read from the real Ghost Ring artifact (GET /research), never
-   hardcoded, and the card hides itself if that artifact is missing. */
-function CrossBankRingCard() {
-  const [ring, setRing] = useState<GhostRing | null>(null);
-  const [phase, setPhase] = useState(0); // 0 siloed · 1 matching · 2 fused
-  const [replayKey, setReplayKey] = useState(0);
-
-  useEffect(() => {
-    fetchResearch().then((r) => setRing(r.ghost_ring)).catch(() => setRing(null));
-  }, []);
-
-  useEffect(() => {
-    setPhase(0);
-    const t1 = window.setTimeout(() => setPhase(1), 1200);
-    const t2 = window.setTimeout(() => setPhase(2), 2600);
-    return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
-  }, [replayKey]);
-
-  if (!ring) return null;
-
-  const banks = Math.max(2, Math.min(ring.n_banks || 4, 4));
-  const perBank = Object.values(ring.per_bank_ring_recall ?? {});
-  const best = perBank.length ? Math.max(...perBank) : 0;
-  const fused = ring.fused_ring_recall ?? 0;
-  const multiple = best > 0 ? fused / best : 0;
-
-  const N = 12, cx = 118, cy = 60, R = 42;
-  const nodes = Array.from({ length: N }, (_, i) => {
-    const a = (i / N) * Math.PI * 2 - Math.PI / 2;
-    return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), bank: Math.floor(i / (N / banks)) };
-  });
-  const COLORS = ["#38bdf8", "#a78bfa", "#fb7185", "#fbbf24"];
-
-  return (
-    <div className="gsap-ring-item mb-3 border border-cyan-500/30 bg-cyan-950/20 p-3" style={{ opacity: 0 }}>
-      <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-cyan-300">
-          <Network className="h-3.5 w-3.5" /> cross-bank ring
-        </span>
-        <button
-          onClick={() => setReplayKey((k) => k + 1)}
-          className="border border-cyan-500/30 px-1.5 py-0.5 text-[9px] text-cyan-300 transition hover:border-cyan-400 hover:text-cyan-100"
-        >
-          ▶ replay
-        </button>
-      </div>
-
-      <svg viewBox="0 0 236 120" className="mt-1 w-full">
-        {nodes.map((n, i) => {
-          const next = nodes[(i + 1) % N];
-          const sameBank = n.bank === next.bank;
-          const shown = sameBank || phase >= 1;
-          return (
-            <line key={`e${i}`} x1={n.x} y1={n.y} x2={next.x} y2={next.y}
-                  stroke={sameBank ? COLORS[n.bank % 4] : "#22d3ee"}
-                  strokeWidth={sameBank ? 1.4 : 2}
-                  strokeDasharray={sameBank ? undefined : "4 3"}
-                  opacity={shown ? (sameBank ? 0.7 : phase === 2 ? 1 : 0.45) : 0}
-                  style={{ transition: "opacity .55s ease" }} />
-          );
-        })}
-        {nodes.map((n, i) => (
-          <circle key={`n${i}`} cx={n.x} cy={n.y} r={phase === 2 ? 4.5 : 3.5}
-                  fill={COLORS[n.bank % 4]} style={{ transition: "r .35s ease" }} />
-        ))}
-        {Array.from({ length: banks }, (_, b) => {
-          const mid = nodes[Math.floor(b * (N / banks) + N / banks / 2) % N];
-          return (
-            <text key={`l${b}`} x={mid.x + (mid.x > cx ? 10 : -10)} y={mid.y + 3}
-                  textAnchor={mid.x > cx ? "start" : "end"} fontSize="7"
-                  fill={COLORS[b % 4]} opacity={0.9}>Bank {b}</text>
-          );
-        })}
-      </svg>
-
-      <p className="text-center text-[9px] leading-relaxed text-zinc-400">
-        {phase === 0 && <>Each bank sees only its own fragment — no bank sees a ring.</>}
-        {phase === 1 && <>Banks publish DP embeddings; the matcher links boundary accounts…</>}
-        {phase === 2 && <span className="text-cyan-300">One ring across all {banks} banks — visible only when fused.</span>}
-      </p>
-
-      <div className="mt-2 space-y-1 border-t border-white/5 pt-2 text-[10px]">
-        <div className="flex justify-between text-zinc-400">
-          <span>Fused vs best single bank</span>
-          <span className="font-semibold text-cyan-300">
-            {Math.round(fused * 100)}% vs {Math.round(best * 100)}%
-            {multiple >= 1.1 ? ` · ${multiple.toFixed(1)}×` : ""}
-          </span>
-        </div>
-        <div className="flex justify-between text-zinc-500">
-          <span>False-merge rate</span>
-          <span className={ring.false_merge_rate === 0 ? "text-emerald-400" : "text-amber-400"}>
-            {Math.round((ring.false_merge_rate ?? 0) * 100)}%
-          </span>
-        </div>
-        {ring.dp_epsilon != null && (
-          <div className="flex justify-between text-zinc-500">
-            <span>Privacy</span>
-            <span className="text-emerald-400">DP ε={ring.dp_epsilon} · no raw data shared</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function FraudRingsDrawer({
   events,
   onInjectRing,
@@ -140,6 +27,7 @@ export default function FraudRingsDrawer({
   onOpenConsole,
   onError,
   injecting = false,
+  extraRing,
 }: {
   events: EventsResponse | null;
   onInjectRing?: (district: string, accounts?: string[]) => Promise<FraudGraph | void> | void;
@@ -147,8 +35,16 @@ export default function FraudRingsDrawer({
   onOpenConsole?: () => void;
   onError?: (msg: string) => void;
   injecting?: boolean;
+  /** Optional extra ring shown alongside the graph's own (the cross-bank ring). */
+  extraRing?: Ring | null;
 }) {
-  const rings = events?.fraud_graph?.rings ?? [];
+  // The cross-bank ring is appended to the same list as every other ring, so it
+  // gets the identical row, click target and RingViewer simulation. Passed in
+  // rather than fetched here to keep this component a pure view.
+  const rings = [
+    ...(events?.fraud_graph?.rings ?? []),
+    ...(extraRing ? [extraRing] : []),
+  ];
   const [district, setDistrict] = useState(DEMO_DISTRICTS[0]);
   const [namesRaw, setNamesRaw] = useState("");
   const [caught, setCaught] = useState<{ title: string; detail: string; ring?: Ring } | null>(
@@ -294,7 +190,6 @@ export default function FraudRingsDrawer({
           </div>
         )}
         <div className="mt-3 space-y-2.5">
-          <CrossBankRingCard />
           {rings.map((r) => (
             <button
               key={r.ring_id}
