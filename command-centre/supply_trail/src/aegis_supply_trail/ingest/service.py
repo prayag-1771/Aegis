@@ -31,6 +31,14 @@ from .corpus import BACKUP_DIR, STAGING_DIR, commit, load_candidates, save_candi
 BASELINE_FILE = STAGING_DIR / "baseline_fir_corpus.json"
 BASELINE_CANDIDATES = STAGING_DIR / "baseline_candidates.json"
 
+# Committed fallback queue. Staging (data/ingest/) is gitignored working state,
+# so a DEPLOYED backend has none of it and the review page would render empty
+# for every teammate — it only ever worked on a machine that had run `fetch`.
+# This seed ships in git so the page works everywhere; a local run that has
+# actually fetched overrides it. Same idea as store.seed_demo_data() loading
+# contracts/samples/ so the dashboard is never blank.
+SEED_CANDIDATES = FIR_FILE.parent / "candidates.seed.json"
+
 
 # ── baseline / history ──────────────────────────────────────────────────────
 
@@ -46,7 +54,7 @@ def ensure_baseline() -> Path:
     if not BASELINE_FILE.exists():
         shutil.copy2(FIR_FILE, BASELINE_FILE)
     if not BASELINE_CANDIDATES.exists():
-        save_candidates(load_candidates(), BASELINE_CANDIDATES)
+        save_candidates(staged_candidates(), BASELINE_CANDIDATES)
     return BASELINE_FILE
 
 
@@ -128,9 +136,22 @@ def _candidate_view(record: dict) -> dict:
     }
 
 
+def staged_candidates() -> list[dict]:
+    """Working queue, falling back to the committed seed when staging is empty."""
+    staged = load_candidates()
+    if staged:
+        return staged
+    if SEED_CANDIDATES.exists():
+        try:
+            return json.loads(SEED_CANDIDATES.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return []
+    return []
+
+
 def feed_state() -> dict:
     """Everything the review page renders in one call."""
-    candidates = [c for c in load_candidates() if c.get("approved") is not True]
+    candidates = [c for c in staged_candidates() if c.get("approved") is not True]
     return {
         "corpus": corpus_stats(),
         "candidates": [_candidate_view(c) for c in candidates],
@@ -162,7 +183,7 @@ def ingest(refs: list[str]) -> dict:
         return {"committed": 0, "error": "no records selected"}
 
     wanted = set(refs)
-    candidates = load_candidates()
+    candidates = staged_candidates()
     selected = [c for c in candidates if c.get("ref") in wanted]
     if not selected:
         return {"committed": 0, "error": "none of the selected refs are staged"}

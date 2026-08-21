@@ -24,11 +24,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-// The gateway is the public entry point the dashboard already uses; fall back to
-// the backend directly so the page still works if only :8000 is running.
-const API_BASE =
-  process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://127.0.0.1:4000";
-const FALLBACK_BASE = "http://127.0.0.1:8000";
+// Use the SAME base the rest of the dashboard resolves (lib/api.ts): env var
+// first, then the deployed Render host in production and localhost only in dev.
+// This page previously hardcoded 127.0.0.1, which on a deployed frontend means
+// the VISITOR's own machine — so it worked only for whoever was running the
+// stack locally. lib/api.ts documents that exact failure; do not reintroduce it.
+import { API_BASE } from "@/lib/api";
 
 type Candidate = {
   ref: string;
@@ -66,23 +67,18 @@ type FeedState = {
   disclaimer: string;
 };
 
-/** Try the gateway, then the backend — whichever is up. */
+/** One request against the shared API base. Locally that is the gateway on
+ *  :4000 (which proxies /intel-feed); deployed it is the backend, which serves
+ *  the same routes directly. */
 async function call(path: string, init?: RequestInit) {
-  for (const base of [API_BASE, FALLBACK_BASE]) {
-    try {
-      const res = await fetch(`${base}${path}`, {
-        ...init,
-        headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
-      });
-      if (res.ok) return res.json();
-      // A 4xx is a real answer, not a dead host — surface it rather than retrying.
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.detail ?? `${res.status} ${res.statusText}`);
-    } catch (err) {
-      if (base === FALLBACK_BASE) throw err;
-    }
-  }
-  throw new Error("unreachable");
+  const res = await fetch(`${API_BASE}${path}`, {
+    cache: "no-store",
+    ...init,
+    headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
+  });
+  if (res.ok) return res.json();
+  const body = await res.json().catch(() => ({}));
+  throw new Error(body.detail ?? `${res.status} ${res.statusText}`);
 }
 
 const CONFIDENCE_STYLE: Record<string, string> = {
