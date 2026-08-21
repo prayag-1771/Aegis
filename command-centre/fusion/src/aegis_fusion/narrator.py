@@ -237,7 +237,7 @@ class GroqNarrator:
 class GeminiNarrator:
     """Google Gemini via the Generative Language REST API."""
 
-    GEMINI_MODEL = "gemini-3.6-flash"
+    GEMINI_MODEL = "gemini-flash-lite-latest"
     name = f"gemini/{GEMINI_MODEL}+prompt-v{PROMPT_VERSION}"
 
     def __init__(self) -> None:

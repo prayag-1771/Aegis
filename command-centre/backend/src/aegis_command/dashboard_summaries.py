@@ -221,7 +221,7 @@ def _claude(data: dict) -> dict:
     # and a cap that expires mid-generation turns every provider into a timeout
     # and silently pins the panel to the template floor. That is what 10s was
     # doing to Groq and Gemini — measured, not theorised.
-    client = anthropic.Anthropic(timeout=45.0)
+    client = anthropic.Anthropic(timeout=25.0)
     r = client.messages.create(
         model="claude-opus-4-8",
         max_tokens=2000,
@@ -245,7 +245,7 @@ def _groq(data: dict, env_key: str = "GROQ_API_KEY") -> dict:
                 {"role": "user", "content": "SYSTEM DATA:\n" + json.dumps(data, default=str)},
             ],
         },
-        timeout=45.0,
+        timeout=25.0,
     )
     r.raise_for_status()
     return _parse_json_reply(r.json()["choices"][0]["message"]["content"])
@@ -253,14 +253,14 @@ def _groq(data: dict, env_key: str = "GROQ_API_KEY") -> dict:
 def _gemini(data: dict) -> dict:
     import httpx
     r = httpx.post(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
         headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]},
         json={
             "system_instruction": {"parts": [{"text": _SYSTEM}]},
             "contents": [{"parts": [{"text": "SYSTEM DATA:\n" + json.dumps(data, default=str)}]}],
             "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"},
         },
-        timeout=45.0,
+        timeout=25.0,
     )
     r.raise_for_status()
     return _parse_json_reply(r.json()["candidates"][0]["content"]["parts"][0]["text"])
@@ -282,7 +282,7 @@ def generate_summaries(data: dict) -> dict:
     if os.environ.get("GROQ_API_KEY"):
         chain.append(("groq/llama-3.3-70b", _groq))
     if os.environ.get("GEMINI_API_KEY"):
-        chain.append(("gemini-3.6-flash", _gemini))
+        chain.append(("gemini-flash-lite-latest", _gemini))
     for slot, label in (("GROQ_API_KEY_2", "groq#2/llama-3.3-70b"),
                         ("GROQ_API_KEY_3", "groq#3/llama-3.3-70b")):
         if os.environ.get(slot):

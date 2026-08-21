@@ -180,7 +180,7 @@ def _gemini(b64: str) -> dict:
 # LLM chain — dead Gemini model and timeouts that expired mid-generation").
 # Named here so the id lives in ONE place: it was previously repeated in the URL
 # and in the chain entry, which is how the two drifted apart in the first place.
-GEMINI_VISION_MODEL = os.environ.get("COUNTERFEIT_GEMINI_VISION_MODEL", "gemini-3.6-flash")
+GEMINI_VISION_MODEL = os.environ.get("COUNTERFEIT_GEMINI_VISION_MODEL", "gemini-flash-lite-latest")
 # A vision request carries an image and can take far longer than a text call.
 # 10-12s expired mid-generation and looked like a provider outage.
 PROVIDER_TIMEOUT = 45.0

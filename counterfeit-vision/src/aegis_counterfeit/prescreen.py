@@ -378,7 +378,7 @@ def _load_env_keys() -> None:
 def _claude_narrate(facts: str) -> str:
     import anthropic
 
-    client = anthropic.Anthropic(timeout=45.0)
+    client = anthropic.Anthropic(timeout=25.0)
     r = client.messages.create(
         model="claude-opus-4-8",
         max_tokens=200,
@@ -406,7 +406,7 @@ def _groq_narrate(facts: str) -> str:
                 {"role": "user", "content": "FACTS:\n" + facts},
             ],
         },
-        timeout=45.0,
+        timeout=25.0,
     )
     r.raise_for_status()
     text = r.json()["choices"][0]["message"]["content"].strip()
@@ -419,14 +419,14 @@ def _gemini_narrate(facts: str) -> str:
     import httpx
 
     r = httpx.post(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
         headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]},
         json={
             "system_instruction": {"parts": [{"text": _NARRATE_SYSTEM}]},
             "contents": [{"parts": [{"text": "FACTS:\n" + facts}]}],
             "generationConfig": {"temperature": 0.2},
         },
-        timeout=45.0,
+        timeout=25.0,
     )
     r.raise_for_status()
     text = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -447,7 +447,7 @@ def narrate_triage_safe(result: TriageResult) -> tuple[str, str]:
     if os.environ.get("GROQ_API_KEY"):
         chain.append(("groq/llama-3.3-70b", _groq_narrate))
     if os.environ.get("GEMINI_API_KEY"):
-        chain.append(("gemini-3.6-flash", _gemini_narrate))
+        chain.append(("gemini-flash-lite-latest", _gemini_narrate))
     for name, fn in chain:
         try:
             return fn(facts), name  # type: ignore[operator]
