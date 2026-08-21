@@ -14,6 +14,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
@@ -125,14 +126,28 @@ app.include_router(intel_feed_router)
 @app.get("/health")
 async def health() -> dict:
     """Own liveness + probe each detection module."""
-    modules = {}
-    async with httpx.AsyncClient(timeout=1.5) as client:
-        for name, base in MODULES.items():
-            try:
-                r = await client.get(f"{base}/health")
-                modules[name] = "up" if r.status_code == 200 else f"error({r.status_code})"
-            except httpx.HTTPError:
-                modules[name] = "down"
+    # Probe every module CONCURRENTLY, with a timeout sized for a real network.
+    #
+    # 1.5s sequential was tuned against localhost, where a sibling answers in
+    # ~50ms. In deployment each module is a separate host, so every probe is a
+    # full HTTPS round trip: measured 3.5s for fraud-shield and 2.6s for
+    # fraud-graph, both healthy. The probe gave up first and the dashboard
+    # showed them offline while they were serving fine.
+    #
+    # Concurrency matters as much as the timeout: sequentially, three modules
+    # at 8s each is a 24s /health call when they are genuinely down. Gathered,
+    # the worst case stays 8s.
+    async def _probe(client: httpx.AsyncClient, base: str) -> str:
+        try:
+            r = await client.get(f"{base}/health")
+            return "up" if r.status_code == 200 else f"error({r.status_code})"
+        except httpx.HTTPError:
+            return "down"
+
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        names = list(MODULES)
+        results = await asyncio.gather(*(_probe(client, MODULES[n]) for n in names))
+    modules = dict(zip(names, results))
     return {
         "status": "ok",
         "service": "command-centre",
