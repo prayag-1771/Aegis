@@ -83,7 +83,7 @@ def _open_image(raw: bytes) -> Image.Image:
         raise HTTPException(status_code=413, detail="image too large (15 MB max)")
     try:
         return Image.open(io.BytesIO(raw))
-    except Exception as exc:  # noqa: BLE001 — unreadable/bomb images are a 400
+    except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Not a readable image: {exc}") from exc
 
 
@@ -138,7 +138,7 @@ async def analyze_upload(file: UploadFile = File(...),
 def analyze_b64(req: AnalyzeB64Request) -> dict:
     try:
         raw = base64.b64decode(req.image_b64.split(",", 1)[-1])  # tolerate data: URLs
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Bad base64 image: {exc}") from exc
     return _analyze_pil(_open_image(raw), req.location_hint, req.serial_number)
 

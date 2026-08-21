@@ -20,13 +20,30 @@ Quality gate -> "unscannable" (the CNN would only produce noise on this input):
 - blur: Laplacian variance collapse on the located note
 - exposure: frame nearly black or blown out
 
-Obvious-fake tells -> "obvious_fake" when TWO OR MORE fire (any single tell
-can have an innocent explanation; two independent ones on one note cannot):
+Obvious-fake tells -> "obvious_fake" when a CONCLUSIVE tell fires, or when TWO
+OR MORE tells fire at their conviction threshold:
 - photocopy: saturation collapse — a B&W / laser-copied note has no ink colour
 - flat_print: no high-frequency intaglio texture anywhere on the note face
 - geometry: located note outline far outside any real note's aspect ratio
 - unknown_colour: healthy saturation but a dominant hue no circulating
   denomination uses (novelty / joke / toy notes)
+
+**Two thresholds per tell, and why.** An earlier build convicted on the single
+advisory threshold and branded real phone-shot notes counterfeit — warm indoor
+light collapses saturation, JPEG compression collapses face texture, and one
+genuine note trips two tells at once. The fix then was to delete the conviction
+path entirely: `prescreen` returned only "pass" or "unscannable", which left the
+CNN as the sole authority over every verdict and let anything with real print
+physics through, however tampered. Neither extreme is right.
+
+So each tell now reports at TWO levels: an `advisory` threshold that records
+evidence in the triage block, and a much stricter `convicts` threshold that a
+genuine note cannot reach under any lighting. Only the strict level counts
+toward a verdict. Conviction additionally requires the note to have been
+LOCATED — the tells measure the note, and on a failed localisation they are
+measuring somebody's desk.
+
+Set COUNTERFEIT_TRIAGE_CONVICTS=0 to force the advisory-only behaviour back.
 
 Agentic narration (additive, mirrors fusion's narrate_safe): an LLM writes the
 two-line "why" over these deterministic findings, Claude -> Groq -> Gemini ->
@@ -42,7 +59,8 @@ from dataclasses import dataclass, field
 import cv2
 import numpy as np
 
-from .synth import MICROPRINT
+from .env import load_env
+from .features import MICROPRINT
 
 # Contract enum names (contracts/counterfeit.schema.json) that only the triage
 # layer maps to — the synth renderer doesn't model these two features.
@@ -53,12 +71,25 @@ INTAGLIO = "intaglio_print"
 MIN_WIDTH, MIN_HEIGHT = 200, 90     # below this no security feature is resolvable
 BLUR_MIN_LAPVAR = 40.0              # genuine renders ~1500+; heavy defocus < 40
 EXPOSURE_DARK, EXPOSURE_BRIGHT = 35.0, 235.0
-PHOTOCOPY_MAX_SAT = 14.0            # genuine ₹500 (greyest note) median sat ~21+
-PHOTOCOPY_BW_SAT = 5.0              # truly zero colour — conclusive alone: every INR note is colour-printed
-FLAT_PRINT_MIN_LAPVAR = 100.0       # full-face texture; genuine renders measure 130+
-ASPECT_MIN, ASPECT_MAX = 1.70, 3.10 # real notes span 2.15 (₹100) – 2.52 (₹2000)
-KNOWN_HUE_WINDOWS = [(0, 40), (110, 179)]  # olive/stone + magenta families (OpenCV 0-179)
-UNKNOWN_COLOUR_MIN_SAT = 45.0       # only claim "wrong colour" when colour is vivid
+
+# Each tell: ADVISORY records evidence, CONVICTS is the level a genuine note
+# cannot reach under any lighting. Only CONVICTS influences a verdict.
+PHOTOCOPY_MAX_SAT = 14.0            # advisory: genuine ₹500 (greyest note) median sat ~21+
+PHOTOCOPY_BW_SAT = 5.0              # convicts, and CONCLUSIVE alone: every INR note is colour-printed
+FLAT_PRINT_MIN_LAPVAR = 100.0       # advisory: genuine renders measure 130+
+FLAT_PRINT_CONVICTS_LAPVAR = 25.0   # convicts: below this the face carries no print structure at all
+ASPECT_MIN, ASPECT_MAX = 1.70, 3.10           # advisory: real notes span 2.15 (₹100) – 2.52 (₹2000)
+ASPECT_CONVICTS_MIN, ASPECT_CONVICTS_MAX = 1.40, 3.60  # convicts: not a banknote shape at all
+
+# Hue families of every circulating Mahatma Gandhi (New) Series note
+# (OpenCV hue, 0-179):  ₹10 brown ~13 and ₹200 yellow ~22 and ₹20 ~30 -> (0,50);
+# ₹50 fluorescent blue ~96 -> (80,120); ₹100 lavender ~135 and ₹2000 magenta
+# ~160 -> (120,179). ₹500 is near-neutral and excluded by the saturation gate.
+# The old windows were [(0,40),(110,179)], which left ₹50's blue in the gap: a
+# genuine ₹50 tripped "matches no circulating denomination".
+KNOWN_HUE_WINDOWS = [(0, 50), (80, 120), (120, 179)]
+UNKNOWN_COLOUR_MIN_SAT = 45.0       # advisory: only claim "wrong colour" when colour is vivid
+UNKNOWN_COLOUR_CONVICTS_SAT = 90.0  # convicts: vivid, unambiguous novelty-note colour
 
 
 @dataclass
@@ -71,6 +102,9 @@ class TriageCheck:
     evidence: str
     maps_to: list[str] = field(default_factory=list)  # contract missing_features names
     conclusive: bool = False  # a single conclusive tell convicts on its own
+    # True only at the strict threshold a genuine note cannot reach. `passed`
+    # False with `convicts` False means "recorded as evidence, not acted on".
+    convicts: bool = False
 
 
 @dataclass
@@ -82,10 +116,20 @@ class TriageResult:
     def failed(self) -> list[TriageCheck]:
         return [c for c in self.checks if not c.passed]
 
+    @property
+    def convicting(self) -> list[TriageCheck]:
+        """Failed tells that reached the strict conviction threshold."""
+        return [c for c in self.checks if not c.passed and c.convicts]
+
     def mapped_features(self) -> list[str]:
-        """Contract-enum feature names implied by the failed tells, deduped."""
+        """Contract-enum feature names implied by the CONVICTING tells, deduped.
+
+        Advisory-only failures are deliberately excluded: `missing_features` is
+        what the officer is shown as the reason for a verdict, so it must not
+        carry measurements the verdict itself refused to act on.
+        """
         out: list[str] = []
-        for c in self.failed:
+        for c in self.convicting:
             for f in c.maps_to:
                 if f not in out:
                     out.append(f)
@@ -132,6 +176,7 @@ def check_photocopy(warped_bgr: np.ndarray) -> TriageCheck:
         # A truly colourless "note" cannot be genuine under any lighting —
         # every circulating INR note is colour-printed.
         conclusive=sat < PHOTOCOPY_BW_SAT,
+        convicts=sat < PHOTOCOPY_BW_SAT,
     )
 
 
@@ -146,6 +191,9 @@ def check_flat_print(warped_bgr: np.ndarray) -> TriageCheck:
         "flat_print", lapvar >= FLAT_PRINT_MIN_LAPVAR, round(lapvar, 1),
         f"face texture {lapvar:.0f} (intaglio print stays >= {FLAT_PRINT_MIN_LAPVAR:.0f})",
         maps_to=[INTAGLIO, MICROPRINT],
+        # Soft focus and JPEG compression routinely push a genuine note under
+        # the advisory 100; nothing with real print on it reaches under 25.
+        convicts=lapvar < FLAT_PRINT_CONVICTS_LAPVAR,
     )
 
 
@@ -181,6 +229,9 @@ def check_geometry(img_bgr: np.ndarray) -> TriageCheck:
         "geometry", ok, round(aspect, 2),
         f"note outline aspect {aspect:.2f} (real notes {ASPECT_MIN}-{ASPECT_MAX})",
         maps_to=[] if ok else [INTAGLIO],
+        # A partly-occluded or creased note can sit just outside the advisory
+        # band; nothing shaped like a banknote lands outside the wide one.
+        convicts=not (ASPECT_CONVICTS_MIN <= aspect <= ASPECT_CONVICTS_MAX),
     )
 
 
@@ -198,36 +249,55 @@ def check_unknown_colour(warped_bgr: np.ndarray) -> TriageCheck:
         "unknown_colour", ok, round(hue, 1),
         f"dominant hue {hue:.0f} ({'matches' if ok else 'matches no'} circulating denomination)",
         maps_to=[] if ok else [COLOR_SHIFTING_INK],
+        # Colour casts from tungsten/LED light can drift a genuine note's hue
+        # out of its window; a vividly saturated wrong hue is a novelty note.
+        convicts=(not ok) and sat >= UNKNOWN_COLOUR_CONVICTS_SAT,
     )
 
 
 # ── decision ────────────────────────────────────────────────────────────────
 
-def prescreen(img_bgr: np.ndarray, warped_bgr: np.ndarray) -> TriageResult:
-    """Run the full triage. `img_bgr` is the original frame (geometry needs the
-    background), `warped_bgr` the perspective-corrected note."""
+def convictions_enabled() -> bool:
+    """Whether triage may return `obvious_fake`. Default on; set
+    COUNTERFEIT_TRIAGE_CONVICTS=0 to fall back to advisory-only triage."""
+    return os.environ.get("COUNTERFEIT_TRIAGE_CONVICTS", "1").strip().lower() not in (
+        "0", "false", "no", "off",
+    )
+
+
+def prescreen(img_bgr: np.ndarray, warped_bgr: np.ndarray,
+              located: bool = True) -> TriageResult:
+    """Run the full triage.
+
+    `img_bgr` is the original frame (geometry needs the background), `warped_bgr`
+    the perspective-corrected note, and `located` whether that warp came from a
+    real note outline. When `located` is False the "note" being measured is a
+    resize of the whole photograph — the tells are recorded as evidence but can
+    never convict, because they are measuring background.
+    """
     gate = [check_resolution(img_bgr), check_blur(warped_bgr), check_exposure(img_bgr)]
     if any(not c.passed for c in gate):
         return TriageResult("unscannable", gate)
 
-    # Advisory tells ONLY — never a conviction. These are calibrated against the
-    # synth renderer and mis-fire on real phone photos of genuine notes: dim or
-    # warm light collapses saturation (photocopy tell) and soft focus / JPEG
-    # compression collapses face texture (flat_print tell), so a real ₹note trips
-    # two tells at once and used to be branded "fake" before the CNN ever ran —
-    # the "false note for almost every note" regression. That is exactly the
-    # failure mode model.decide_verdict warns about for the OpenCV feature checks:
-    # synth-geometry measurements MUST NOT flip the verdict on real-world input.
-    # The CNN (EfficientNet-B0, AUC 0.994 on REAL photos) is the sole genuine/fake
-    # authority. The tells still run and are recorded as evidence for the triage
-    # block, but the decision here is only ever "unscannable" (above) or "pass".
     tells = [
         check_photocopy(warped_bgr),
         check_flat_print(warped_bgr),
         check_geometry(img_bgr),
         check_unknown_colour(warped_bgr),
     ]
-    return TriageResult("pass", gate + tells)
+    result = TriageResult("pass", gate + tells)
+
+    # Conviction needs (a) the strict thresholds, (b) a genuinely located note,
+    # and (c) either one conclusive tell or two independent ones. A single
+    # non-conclusive tell always has an innocent explanation; two at the strict
+    # level on one located note do not. See the module docstring for the history
+    # of this gate being too loose, then deleted outright.
+    if not (located and convictions_enabled()):
+        return result
+    convicting = result.convicting
+    if any(c.conclusive for c in convicting) or len(convicting) >= 2:
+        result.decision = "obvious_fake"
+    return result
 
 
 def triage_block(result: TriageResult, narrative: str | None = None,
@@ -300,22 +370,9 @@ def _template_narrative(result: TriageResult) -> str:
 
 
 def _load_env_keys() -> None:
-    """Reuse the shared fusion .env (and a module-local one) for provider keys."""
-    from pathlib import Path
-
-    module_root = Path(__file__).resolve().parents[2]        # counterfeit-vision/
-    candidates = [
-        module_root / ".env",
-        module_root.parent / "command-centre" / "fusion" / ".env",
-    ]
-    for env_file in candidates:
-        if not env_file.exists():
-            continue
-        for line in env_file.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, _, value = line.partition("=")
-                os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+    """Provider keys from the module/shared .env. Thin alias over `env.load_env`
+    — kept as a name so existing callers and test monkeypatches keep working."""
+    load_env()
 
 
 def _claude_narrate(facts: str) -> str:

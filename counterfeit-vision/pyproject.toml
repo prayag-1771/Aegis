@@ -8,7 +8,12 @@ requires-python = ">=3.10"
 dependencies = [
     "torch>=2.4",
     "torchvision>=0.19",
-    "opencv-python>=4.10",
+    # HEADLESS, not plain opencv-python: the GUI build links libGL, which is
+    # absent from slim Linux containers, so `import cv2` dies at boot with
+    # "libGL.so.1: cannot open shared object file". This module never calls
+    # imshow/waitKey (verified), so the GUI build buys nothing and costs a
+    # deployment.
+    "opencv-python-headless>=4.10",
     "pillow>=10.4",
     "numpy>=1.26",
     "scipy>=1.13",
@@ -23,12 +28,25 @@ dependencies = [
     # — the registry falls back to its JSON file.
     "pymongo>=4.9",
     "dnspython>=2.6",
+    # REQUIRED, not optional: the Gemini and Groq legs of both the semantic
+    # review (vision_agent) and the triage narrator (prescreen) import httpx.
+    # It was undeclared and only present locally as a transitive/manual install,
+    # so on a clean deploy every one of those calls raised ImportError straight
+    # into a broad `except Exception` — the semantic layer would have reported
+    # itself "unavailable" forever, silently, with a valid API key configured.
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3",
     "ruff>=0.8",
+]
+# Only needed to use Claude as the semantic reviewer. Gemini and Groq need
+# nothing beyond httpx above, and with no key at all the layer reports itself
+# unavailable rather than failing.
+llm = [
+    "anthropic>=0.40",
 ]
 
 [build-system]

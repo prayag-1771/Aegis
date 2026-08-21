@@ -35,7 +35,7 @@ def test_payload_matches_contract(model, schema):
                             location_hint={"district": "Jamtara", "lat": 23.79, "lon": 86.81})
     jsonschema.validate(instance=payload, schema=schema)
     assert payload["verdict"] in {"fake", "genuine", "uncertain"}
-    assert payload["denomination"] in {"100", "200", "500", "2000", "unknown"}
+    assert payload["denomination"] in {"10", "20", "50", "100", "200", "500", "2000", "unknown"}
     assert 0.0 <= payload["confidence"] <= 1.0
 
 
@@ -59,6 +59,11 @@ def test_low_memory_mode_same_verdict_forward_only_heatmap(model, schema, monkey
     # A heatmap is produced in BOTH modes — the free tier keeps its 'why' overlay.
     assert lean["heatmap_ref"] is not None
     assert full["heatmap_ref"] is not None
+    # ...and the payload SAYS which method produced it. Grad-CAM is
+    # class-specific, Eigen-CAM is class-agnostic; they are different
+    # explanations and the contract used to call both of them Grad-CAM.
+    assert full["analysis"]["heatmap_method"] == "grad_cam"
+    assert lean["analysis"]["heatmap_method"] == "eigen_cam"
 
 
 def test_fake_note_reports_missing_features(model, schema):
@@ -66,18 +71,92 @@ def test_fake_note_reports_missing_features(model, schema):
                                missing_features=["security_thread"], seed=778))
     payload = analyze_image(img, model)
     jsonschema.validate(instance=payload, schema=schema)
-    # Whatever the CNN says, the feature layer must surface the missing thread
-    # unless the note was (wrongly) certified genuine — and a note with a
-    # missing thread must never be certified genuine.
+    # The security thread is STRUCTURAL — printed into the note or not — so a
+    # single clean failure blocks certification on its own. The CNN may still
+    # decline to convict; it may not certify.
     assert payload["verdict"] != "genuine"
     assert "security_thread" in payload["missing_features"]
 
 
-def test_genuine_verdict_reports_no_missing_features(model):
+def test_feature_evidence_survives_a_genuine_verdict(model):
+    """`missing_features` used to be force-emptied whenever the verdict was
+    `genuine`, deleting the only hint that anything was off from exactly the
+    payloads where it mattered. A genuine now implies certification was not
+    blocked, so anything left in the list is an honest soft flag."""
+    from aegis_counterfeit.features import SECURITY_THREAD, WATERMARK
+
     img = render_note(NoteSpec(denomination="2000", seed=779))
     payload = analyze_image(img, model)
     if payload["verdict"] == "genuine":
-        assert payload["missing_features"] == []
+        assert SECURITY_THREAD not in payload["missing_features"]
+        assert WATERMARK not in payload["missing_features"]
+
+
+def test_unverified_genuine_is_capped_and_says_so(model, schema):
+    """With no vision key the semantic channel never runs. The payload must
+    say so and cap the confidence: a note nothing read the content of is not
+    a fully vetted note. This is the face-swapped-portrait hole — the CNN
+    measures print physics and returned ~0.95 'genuine' on a tampered note."""
+    img = render_note(NoteSpec(denomination="500", seed=781))
+    payload = analyze_image(img, model)
+    jsonschema.validate(instance=payload, schema=schema)
+
+    review = payload["vision_review"]
+    assert review["available"] is False
+    assert review["status"] == "unavailable_no_key"
+    if payload["verdict"] == "genuine":
+        assert payload["confidence"] <= 0.80
+        assert any("semantic" in c for c in payload["caveats"])
+
+
+def test_wrong_portrait_convicts(model):
+    """The semantic layer's whole reason to exist: a note whose portrait is not
+    Gandhi is not a genuine Indian banknote, whatever its print quality says."""
+    from aegis_counterfeit.vision_agent import apply_vision_review
+
+    payload = {"verdict": "genuine", "confidence": 0.95, "denomination": "500",
+               "vision_review": {"engine": "test", "status": "ok", "available": True,
+                                 "portrait_is_gandhi": False, "specimen_overprint": None,
+                                 "header_correct": True, "printed_denomination": "500"}}
+    apply_vision_review(payload)
+    assert payload["verdict"] == "fake"
+    assert "portrait is not Mahatma Gandhi" in payload["semantic_failures"]
+
+
+def test_unsure_portrait_never_convicts(model):
+    """`null` means 'cannot tell'. Only an explicit false may convict."""
+    from aegis_counterfeit.vision_agent import apply_vision_review
+
+    payload = {"verdict": "genuine", "confidence": 0.95, "denomination": "500",
+               "vision_review": {"engine": "test", "status": "ok", "available": True,
+                                 "portrait_is_gandhi": None, "specimen_overprint": None,
+                                 "header_correct": None, "printed_denomination": None}}
+    apply_vision_review(payload)
+    assert payload["verdict"] == "genuine"
+
+
+def test_specimen_caps_but_does_not_convict(model):
+    """Genuine RBI specimen notes exist — 'not legal tender', not 'counterfeit'."""
+    from aegis_counterfeit.vision_agent import apply_vision_review
+
+    payload = {"verdict": "genuine", "confidence": 0.95, "denomination": "500",
+               "vision_review": {"engine": "test", "status": "ok", "available": True,
+                                 "portrait_is_gandhi": True, "specimen_overprint": True,
+                                 "header_correct": True, "printed_denomination": "500"}}
+    apply_vision_review(payload)
+    assert payload["verdict"] == "uncertain"
+
+
+def test_semantic_layer_never_acquits(model):
+    """No layer may turn a fake into a genuine."""
+    from aegis_counterfeit.vision_agent import apply_vision_review
+
+    payload = {"verdict": "fake", "confidence": 0.93, "denomination": "500",
+               "vision_review": {"engine": "test", "status": "ok", "available": True,
+                                 "portrait_is_gandhi": True, "specimen_overprint": False,
+                                 "header_correct": True, "printed_denomination": "500"}}
+    apply_vision_review(payload)
+    assert payload["verdict"] == "fake"
 
 
 def test_validate_payload_rejects_bad_verdict(model):

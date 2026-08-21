@@ -3,9 +3,11 @@ against a sighting registry.
 
 Two independent signals, both deterministic:
 
-1. **Format** — Mahatma Gandhi (New) Series serials are `<digit><2 letters>`
-   + 6 digits (e.g. `4CB 123456`); RBI avoids I and O in prefixes (they read
-   as 1/0). A serial that can't exist is a prop/photocopy tell.
+1. **Format** — two patterns are in circulation and both are legal tender:
+   Mahatma Gandhi (New) Series is `<digit><2 letters>` + 6 digits (e.g.
+   `4CB 123456`); the older Mahatma Gandhi Series is `<2 digits><letter>` +
+   6 digits (e.g. `93G 319504`). RBI avoids I and O in prefixes (they read as
+   1/0). A serial that can't exist is a prop/photocopy tell.
    All-identical or straight-run digit blocks (000000, 123456) are the classic
    movie-money serials, but genuine "fancy number" notes do exist — so they
    mark `suspicious` (blocks a genuine certification) rather than convicting.
@@ -34,6 +36,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 
+from .env import load_env
+
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 REGISTRY_FILE = DATA_DIR / "serial_registry.json"
 
@@ -54,34 +58,12 @@ _MONGO_TIMEOUT_MS = 2500
 
 _mongo_client = None  # cached across SerialRegistry instances (one per scan)
 _mongo_unavailable = False
-_env_loaded = False
 
 
 def _load_env() -> None:
-    """Read counterfeit-vision/.env (and the shared fusion one) so MONGODB_URI
-    works without exporting it by hand. Mirrors prescreen's loader; `setdefault`
-    means a real environment variable always wins over the file."""
-    global _env_loaded
-    if _env_loaded:
-        return
-    _env_loaded = True
-    module_root = Path(__file__).resolve().parents[2]  # counterfeit-vision/
-    for env_file in (
-        module_root / ".env",
-        module_root.parent / "command-centre" / "fusion" / ".env",
-    ):
-        try:
-            if not env_file.exists():
-                continue
-            for line in env_file.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, _, value = line.partition("=")
-                    os.environ.setdefault(
-                        key.strip(), value.strip().strip('"').strip("'")
-                    )
-        except OSError:
-            continue
+    """Thin alias over `env.load_env` — MONGODB_URI from the module/shared .env.
+    Was a third near-identical copy of the same loader."""
+    load_env()
 
 
 def _mongo_collection(uri: str | None):
@@ -114,7 +96,14 @@ def _mongo_collection(uri: str | None):
     except Exception:
         return None
 
-_FORMAT = re.compile(r"^\d[A-Z]{2}\d{6}$")
+# TWO serial formats are in circulation, and rejecting either flags real money
+# as a prop:
+#   Mahatma Gandhi NEW Series (2016-)  digit + 2 letters + 6 digits   e.g. 4CB 123456
+#   Mahatma Gandhi Series (1996-2015)  2 digits + 1 letter + 6 digits e.g. 93G 319504
+# Only the first was accepted, so a genuine older note ("93G 319504") was
+# classified `nonsense` — "does not match the RBI pattern" — and blocked its own
+# certification.
+_FORMAT = re.compile(r"^(?:\d[A-Z]{2}|\d{2}[A-Z])\d{6}$")
 _FORBIDDEN_PREFIX_LETTERS = set("IO")
 
 # Precedence when several signals fire at once.
@@ -131,8 +120,13 @@ def validate(serial: str) -> tuple[str, str]:
     if not s:
         return "nonsense", "empty serial"
     if not _FORMAT.match(s):
-        return "nonsense", f"'{s}' does not match the RBI pattern digit + 2 letters + 6 digits"
-    if _FORBIDDEN_PREFIX_LETTERS & set(s[1:3]):
+        return "nonsense", (
+            f"'{s}' matches no RBI serial pattern (new series: digit + 2 letters + "
+            "6 digits, e.g. 4CB123456; older series: 2 digits + letter + 6 digits, "
+            "e.g. 93G319504)"
+        )
+    # Check only the LETTERS of the prefix, whichever position they occupy.
+    if _FORBIDDEN_PREFIX_LETTERS & {c for c in s[:3] if c.isalpha()}:
         return "nonsense", f"prefix '{s[:3]}' uses I/O — never issued by RBI"
     digits = s[3:]
     if len(set(digits)) == 1:
