@@ -318,7 +318,7 @@ def _call_llm(article_text: str, *, timeout: float = 30.0) -> dict | None:
         try:
             response = httpx.post(
                 "https://generativelanguage.googleapis.com/v1beta/models/"
-                "gemini-2.0-flash:generateContent",
+                "gemini-flash-lite-latest:generateContent",
                 headers={"x-goog-api-key": gemini_key},
                 json={
                     "system_instruction": {"parts": [{"text": _SYSTEM_PROMPT}]},
