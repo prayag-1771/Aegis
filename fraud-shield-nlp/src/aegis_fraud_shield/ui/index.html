@@ -497,8 +497,8 @@ async function send() {
       <div class="riskbar"><div style="width:${pct}%;background:${color}"></div></div>
       <div class="meta">risk ${pct}% · type: ${esc(r.scam_type)} · ${esc(r.event_id)}${relayed ? " · ⇢ command centre" : ""}</div>
       ${r.engine === "on-device"
-        ? `<div class="privacy-badge on-device" title="The message was classified in this browser. It was never uploaded — only the verdict was.">🔒 Scored on your device${r.score_ms ? ` · ${r.score_ms.toFixed(1)} ms` : ""} · message never left this browser</div>`
-        : `<div class="privacy-badge server" title="Non-Latin script: translated and scored on the server, because the on-device model is English-only.">☁️ Scored on the server (translation needed for this script)</div>`}
+        ? `<div class="privacy-badge on-device" title="The message was classified in this browser. It was never uploaded — only the verdict was.">🔒 edgeAI answer</div>`
+        : ""}
       ${r.markers.length ? `<div class="chips">${r.markers.map(m => `<span class="chip">${esc(m)}</span>`).join("")}</div>` : ""}
       <div class="explain">${esc(r.explanation)}</div>
       ${isScammy ? `
