@@ -93,7 +93,28 @@ def _validated(kind: str, event: dict) -> dict:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     store.seed_demo_data()
+    # Seed the fusion too, not just the events.
+    #
+    # /events returns `last_fusion`, and the dashboard's money-trail card reads
+    # money_trails off it. Until someone POSTed /fuse that field was null, so on
+    # every fresh start the strongest cross-module result in the product — the
+    # victim's payment traced into a mule-ring account — was invisible, and the
+    # only way to see it was to know to press a button. The demo data is seeded;
+    # the fusion over that data should be too.
+    #
+    # Runs in a thread so a slow narrator cannot delay startup, and failure is
+    # swallowed: an unfused dashboard is the old behaviour, not a broken one.
+    import asyncio as _asyncio
+
+    async def _seed_fusion() -> None:
+        try:
+            await _asyncio.to_thread(fuse_now)
+        except Exception:
+            pass
+
+    task = _asyncio.create_task(_seed_fusion())
     yield
+    task.cancel()
 
 
 app = FastAPI(title="Aegis Command Centre", version=__version__, lifespan=lifespan)
