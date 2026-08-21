@@ -118,7 +118,7 @@ No training needed — the trained model ships inside the repo.
 Each service page shows a web address at the top, like:
 
 ```
-https://aegis-fraud-shield.onrender.com
+https://aegis-fraud-shield-21e3.onrender.com
 ```
 
 **Write all three down.** You need them in the next part.
@@ -146,9 +146,9 @@ Go to the **Environment** tab and add these. Click **Add Environment Variable** 
 **Required — the three addresses from Part 3:**
 
 ```
-FRAUD_SHIELD_URL = https://aegis-fraud-shield.onrender.com
-COUNTERFEIT_URL  = https://aegis-counterfeat.onrender.com
-FRAUD_GRAPH_URL  = https://aegis-fraud-graph.onrender.com
+FRAUD_SHIELD_URL = https://aegis-fraud-shield-21e3.onrender.com
+COUNTERFEIT_URL  = https://aegis-counterfeat-n6ct.onrender.com
+FRAUD_GRAPH_URL  = https://aegis-fraud-graph-viay.onrender.com
 ```
 
 *(Use YOUR addresses, not these — they must match exactly, no trailing slash.)*
@@ -176,7 +176,7 @@ Click **Save Changes**. Render redeploys automatically (~3 minutes).
 
 ### Check it worked
 
-Open `https://aegis-backend-xxxx.onrender.com/health`
+Open `https://aegis-backend-rtk1.onrender.com/health`
 
 You want to see all three modules saying **"up"**:
 
@@ -195,13 +195,13 @@ minute and refresh.
 Go back to **aegis-fraud-shield** → **Environment**, and add:
 
 ```
-COMMAND_CENTRE_URL = https://aegis-backend-xxxx.onrender.com
+COMMAND_CENTRE_URL = https://aegis-backend-rtk1.onrender.com
 ```
 
 Do the same for **aegis-counterfeat**, and also add:
 
 ```
-COUNTERFEIT_PUBLIC_URL = https://aegis-counterfeat.onrender.com
+COUNTERFEIT_PUBLIC_URL = https://aegis-counterfeat-n6ct.onrender.com
 ```
 
 *(That is its own address — it needs it so scanned images display correctly.)*
@@ -221,9 +221,9 @@ Save each. They redeploy on their own.
 6. Open **Environment Variables** and add these three:
 
 ```
-NEXT_PUBLIC_API_BASE            = https://aegis-backend-xxxx.onrender.com
-NEXT_PUBLIC_FRAUD_SHIELD_BASE   = https://aegis-fraud-shield.onrender.com
-NEXT_PUBLIC_COUNTERFEIT_BASE    = https://aegis-counterfeat.onrender.com
+NEXT_PUBLIC_API_BASE            = https://aegis-backend-rtk1.onrender.com
+NEXT_PUBLIC_FRAUD_SHIELD_URL    = https://aegis-fraud-shield-21e3.onrender.com
+NEXT_PUBLIC_COUNTERFEIT_URL     = https://aegis-counterfeat-n6ct.onrender.com
 ```
 
 7. Click **Deploy**
@@ -245,9 +245,9 @@ Open your Vercel address and confirm:
 - [ ] **Modules** tab — all three modules show as up
 - [ ] **Research Lab** tab — three cards with charts
 - [ ] **Alerts & Analytics** — cards appear
-- [ ] Open `https://aegis-fraud-shield.onrender.com/` — paste a scam message,
+- [ ] Open `https://aegis-fraud-shield-21e3.onrender.com/` — paste a scam message,
       you should get a verdict with a green **🔒 edgeAI answer** badge
-- [ ] Open `https://aegis-counterfeat.onrender.com/` — upload a note photo, get a verdict
+- [ ] Open `https://aegis-counterfeat-n6ct.onrender.com/` — upload a note photo, get a verdict
 
 **If the first page load is slow or shows errors: that is normal.** The free services
 are asleep. Refresh after a minute.
@@ -259,10 +259,10 @@ are asleep. Refresh after a minute.
 **15 minutes before you present:**
 
 1. Open all four Render `/health` pages once, to wake them:
-   - `https://aegis-fraud-shield.onrender.com/health`
-   - `https://aegis-counterfeat.onrender.com/health`
-   - `https://aegis-fraud-graph.onrender.com/health`
-   - `https://aegis-backend-xxxx.onrender.com/health`
+   - `https://aegis-fraud-shield-21e3.onrender.com/health`
+   - `https://aegis-counterfeat-n6ct.onrender.com/health`
+   - `https://aegis-fraud-graph-viay.onrender.com/health`
+   - `https://aegis-backend-rtk1.onrender.com/health`
 2. Open your Vercel site and click through each tab once (this warms the caches
    and downloads the on-device model).
 3. Leave the tab open. Do not close it.

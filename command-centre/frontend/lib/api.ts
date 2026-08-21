@@ -9,9 +9,9 @@
  *  once. Defaulting production to the real hosts makes the env vars an override
  *  rather than a requirement. */
 const DEPLOYED = {
-  api: "https://aegis-backend-5oaw.onrender.com",
-  fraudShield: "https://aegis-fraud-shield.onrender.com",
-  counterfeit: "https://aegis-counterfeat.onrender.com", // Render's spelling, not a typo
+  api: "https://aegis-backend-rtk1.onrender.com",
+  fraudShield: "https://aegis-fraud-shield-21e3.onrender.com",
+  counterfeit: "https://aegis-counterfeat-n6ct.onrender.com", // Render's spelling, not a typo
 } as const;
 
 const LOCAL = {
