@@ -210,6 +210,31 @@ def config_js() -> Response:
     )
 
 
+@app.get("/edge-scorer.js")
+def edge_scorer_js() -> FileResponse:
+    """The on-device scorer (docs/privacy.md P3/P4/P6). Served from this service
+    so the citizen UIs can score locally instead of POSTing the message here."""
+    return FileResponse(UI_DIR / "edge-scorer.js", media_type="application/javascript")
+
+
+@app.get("/edge-model.json")
+def edge_model_json() -> FileResponse:
+    """Vocabularies, coefficients, thresholds, marker regexes and playbooks.
+    ~3.3 MB, cached hard: it only changes when the model is retrained, and the
+    browser must not refetch it per message."""
+    path = Path(__file__).parent / "edge" / "scam_model.json"
+    if not path.exists():
+        raise HTTPException(
+            status_code=503,
+            detail="edge model not exported. Run: python -m aegis_fraud_shield.edge.export_model",
+        )
+    return FileResponse(
+        path,
+        media_type="application/json",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
 @app.get("/live-call")
 def live_call_ui() -> FileResponse:
     return FileResponse(UI_DIR / "live-call.html", media_type="text/html")

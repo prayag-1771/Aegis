@@ -6,6 +6,7 @@
 <title>Aegis Fraud Shield — live scam check</title>
 <link rel="icon" type="image/png" href="/favicon.png">
 <script src="/config.js"></script>
+<script src="/edge-scorer.js"></script>
 <style>
   :root {
     --bg: #09090b;
@@ -268,6 +269,11 @@
   textarea:focus { outline: none; border-color: var(--accent); }
   .send { padding: 0 22px; cursor: pointer; background: var(--accent); color: #fff; border: none; font-weight: 600; }
   .send:disabled { opacity: .5; cursor: wait; }
+
+.privacy-badge { margin-top: 6px; font-size: 11px; padding: 4px 8px; border-radius: 6px;
+  display: inline-block; font-weight: 500; letter-spacing: .01em; }
+.privacy-badge.on-device { background: rgba(16,185,129,.12); color: #10b981; border: 1px solid rgba(16,185,129,.3); }
+.privacy-badge.server { background: rgba(148,163,184,.12); color: #94a3b8; border: 1px solid rgba(148,163,184,.28); }
 </style>
 </head>
 <body>
@@ -306,6 +312,71 @@
 </footer>
 
 <script>
+/* ── on-device scoring ──────────────────────────────────────────────────────
+   Loads the exported model once, then scores locally. `edgeReady` resolves to
+   true only if the asset actually parsed, so a failure degrades to the server
+   path (visibly) instead of pretending the message stayed on the device. */
+let edgeReady = null;
+function ensureEdge() {
+  if (edgeReady) return edgeReady;
+  edgeReady = fetch("/edge-model.json")
+    .then((r) => { if (!r.ok) throw new Error("edge model unavailable"); return r.text(); })
+    .then((t) => { AegisEdge.load(t); return true; })
+    .catch((e) => { console.warn("[aegis] on-device scoring unavailable:", e.message); return false; });
+  return edgeReady;
+}
+
+/** Contract-valid scam_detection payload, produced without uploading the text. */
+function edgePayload(local, text, source, location_hint) {
+  const id = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random())).replace(/-/g, "").slice(0, 12);
+  return {
+    schema_version: "1.0",
+    event_id: `scam_${id}`,
+    source: source,
+    timestamp: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+    verdict: local.verdict,
+    risk_score: Math.round(local.risk_score * 1e4) / 1e4,
+    scam_type: local.scam_type || (local.verdict === "legit" ? "none" : "other"),
+    markers: local.markers,
+    explanation: local.markers.length
+      ? `Scored on-device. Markers: ${local.markers.join(", ")}.`
+      : "Scored on-device. No markers matched.",
+    // raw_text is DELIBERATELY absent — it is optional in the contract, and
+    // omitting it is the entire point of scoring here.
+    phone_number: null,
+    location_hint: location_hint,
+    verification: null,
+  };
+}
+
+/* Non-Latin scripts (Devanagari, Tamil, Perso-Arabic, Ol Chiki, Meetei Mayek).
+   Mirrors _NON_LATIN_SCRIPT in api.py — the same test the server uses to decide
+   whether a message needs translating. The on-device model is English-only, so
+   these MUST keep going to the server, which translates before scoring. Routing
+   them locally would silently drop a real Hindi scam from 0.96 to 0.07. */
+const NON_LATIN = /[ऀ-෿؀-ۿ᱐-᱿ꯀ-꯿]/;
+
+async function scoreMessage(text, source, location_hint) {
+  if (!NON_LATIN.test(text) && (await ensureEdge())) {
+    const t0 = performance.now();
+    const local = AegisEdge.score(text);
+    const ms = performance.now() - t0;
+    const payload = edgePayload(local, text, source, location_hint);
+    payload.engine = "on-device";
+    payload.score_ms = ms;
+    return payload;
+  }
+  const resp = await fetch("/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, source, location_hint }),
+  });
+  if (!resp.ok) throw new Error((await resp.json()).detail || resp.statusText);
+  const r = await resp.json();
+  r.engine = "server";
+  return r;
+}
+
 const SAMPLES = [
   ["🚨 Digital-arrest call", "call_transcript", "This is Inspector Sharma from CBI. An FIR has been registered against your Aadhaar for money laundering. Stay on this video call and do not disconnect. Transfer the verification amount in USDT immediately or a warrant will be issued."],
   ["📱 KYC scam SMS", "sms", "Dear customer your SBI account KYC has expired. Account will be blocked within 24 hours. Update immediately at bit.ly/kyc-upd8 to avoid suspension."],
@@ -396,13 +467,14 @@ async function send() {
     if (gpsLat.value && gpsLon.value) {
       location_hint = { district: gpsDistrict.value, lat: parseFloat(gpsLat.value), lon: parseFloat(gpsLon.value) };
     }
-    const resp = await fetch("/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, source: sourceSel.value, location_hint }),
-    });
-    if (!resp.ok) throw new Error((await resp.json()).detail || resp.statusText);
-    const r = await resp.json();
+    // ON-DEVICE SCORING (docs/privacy.md P3/P4/P6). The message is classified
+    // here, in the browser, by the same model the server runs — verified
+    // score-for-score by tests/test_edge_parity.py. It is never uploaded, so
+    // there is no message to leak, log, or subpoena. It is also faster: ~0.75 ms
+    // versus a round trip that may include a 50-90s free-tier cold start.
+    // Falls back to the server only if the model asset cannot be loaded, and
+    // says so in the UI rather than downgrading silently.
+    const r = await scoreMessage(text, sourceSel.value, location_hint);
     // Fire-and-forget hand-off: the dashboard + fusion see this detection
     // live. Failure is non-fatal — the local demo keeps working regardless.
     let relayed = false;
@@ -424,6 +496,9 @@ async function send() {
       <span class="verdict ${r.verdict}">${r.verdict}</span>
       <div class="riskbar"><div style="width:${pct}%;background:${color}"></div></div>
       <div class="meta">risk ${pct}% · type: ${esc(r.scam_type)} · ${esc(r.event_id)}${relayed ? " · ⇢ command centre" : ""}</div>
+      ${r.engine === "on-device"
+        ? `<div class="privacy-badge on-device" title="The message was classified in this browser. It was never uploaded — only the verdict was.">🔒 Scored on your device${r.score_ms ? ` · ${r.score_ms.toFixed(1)} ms` : ""} · message never left this browser</div>`
+        : `<div class="privacy-badge server" title="Non-Latin script: translated and scored on the server, because the on-device model is English-only.">☁️ Scored on the server (translation needed for this script)</div>`}
       ${r.markers.length ? `<div class="chips">${r.markers.map(m => `<span class="chip">${esc(m)}</span>`).join("")}</div>` : ""}
       <div class="explain">${esc(r.explanation)}</div>
       ${isScammy ? `

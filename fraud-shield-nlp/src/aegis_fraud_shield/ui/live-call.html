@@ -104,6 +104,10 @@
   #overlaycard p { font-size: 14.5px; margin-bottom: 8px; }
   #overlaycard .reasons { font-size: 13px; color: var(--muted); margin: 10px 0 16px; }
   #overlaycard .advice { text-align: left; display: inline-block; font-size: 14px; margin-bottom: 18px; }
+
+.privacy-badge { margin-top:8px; font-size:11px; padding:4px 8px; border-radius:6px; display:inline-block; }
+.privacy-badge.on-device { background:rgba(16,185,129,.12); color:#10b981; border:1px solid rgba(16,185,129,.3); }
+.privacy-badge.server { background:rgba(148,163,184,.12); color:#94a3b8; border:1px solid rgba(148,163,184,.28); }
 </style>
 </head>
 <body>
@@ -131,6 +135,7 @@
       <div id="riskpct">0%</div>
       <span id="verdict">waiting</span>
       <div id="scamtype"></div>
+      <div id="privacybadge"></div>
       <div class="riskbar"><div id="riskfill"></div></div>
     </div>
     <div class="paneltitle">Detected markers</div>
@@ -160,6 +165,7 @@
   </div>
 </div>
 
+<script src="/edge-scorer.js"></script>
 <script>
 // Demo script tuned against the trained model: cumulative scores walk
 // 12% legit → 46% suspicious → 94% SCAM (intercept) → 99% → 100%,
@@ -190,6 +196,7 @@ const TYPE_LABEL = {
 
 const feed = document.getElementById("feed");
 const events = document.getElementById("events");
+const privacyEl = document.getElementById("privacybadge");
 const riskpct = document.getElementById("riskpct");
 const riskfill = document.getElementById("riskfill");
 const verdictEl = document.getElementById("verdict");
@@ -238,17 +245,54 @@ function callerBubble(text, interim = false) {
 // ---- shared scoring loop --------------------------------------------------
 // One in-flight request at a time; the newest pending text always wins, so a
 // fast talker can never queue up stale rescores.
+/* On-device scoring for the live transcript (docs/privacy.md P3/P6).
+   A call transcript is the most sensitive text in the product, and it used to be
+   POSTed to the server on every utterance — several times a minute. Scored here,
+   the conversation never leaves the browser.
+   It is also what makes the demo survive a bad venue network: no round trip, and
+   no 50-90s cold start on a sleeping free-tier instance.
+   Non-Latin scripts still fall back to the server, which translates first — the
+   on-device model is English-only, and routing Hindi locally would silently miss
+   real scams. */
+const NON_LATIN = /[ऀ-෿؀-ۿ᱐-᱿ꯀ-꯿]/;
+let edgeReady = null;
+function ensureEdge() {
+  if (edgeReady) return edgeReady;
+  edgeReady = fetch("/edge-model.json")
+    .then((r) => { if (!r.ok) throw new Error("unavailable"); return r.text(); })
+    .then((t) => { AegisEdge.load(t); return true; })
+    .catch(() => false);
+  return edgeReady;
+}
+
 async function score(text) {
   if (!text.trim()) return;
   if (scoring) { pendingText = text; return; }
   scoring = true;
   try {
-    const resp = await fetch("/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, source: "call_transcript" }),
-    });
-    if (resp.ok) render(await resp.json());
+    if (!NON_LATIN.test(text) && (await ensureEdge())) {
+      const t0 = performance.now();
+      const local = AegisEdge.score(text);
+      const ms = performance.now() - t0;
+      render({
+        verdict: local.verdict,
+        risk_score: local.risk_score,
+        scam_type: local.scam_type || "other",
+        markers: local.markers,
+        explanation: local.markers.length
+          ? `Scored on-device. Markers: ${local.markers.join(", ")}.`
+          : "Scored on-device. No markers matched yet.",
+        engine: "on-device",
+        score_ms: ms,
+      });
+    } else {
+      const resp = await fetch("/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, source: "call_transcript" }),
+      });
+      if (resp.ok) render(await resp.json());
+    }
   } catch { /* api hiccup — next utterance rescores everything anyway */ }
   scoring = false;
   if (pendingText) { const t = pendingText; pendingText = null; score(t); }
@@ -271,6 +315,17 @@ function render(r) {
   verdictEl.textContent = r.verdict;
   verdictEl.className = r.verdict;
   scamtypeEl.textContent = r.scam_type !== "none" ? "pattern: " + (TYPE_LABEL[r.scam_type] || r.scam_type) : "";
+
+  // Make the privacy property visible while the call is running, not a claim
+  // buried in a slide: the audience watches the transcript being scored with no
+  // request leaving the browser.
+  if (privacyEl) {
+    const onDevice = r.engine === "on-device";
+    privacyEl.className = "privacy-badge " + (onDevice ? "on-device" : "server");
+    privacyEl.textContent = onDevice
+      ? `🔒 Scored on your device${r.score_ms ? ` · ${r.score_ms.toFixed(1)} ms` : ""} · transcript never left this browser`
+      : "☁️ Scored on the server";
+  }
 
   for (const m of r.markers) {
     if (!prevMarkers.includes(m)) {
