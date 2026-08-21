@@ -255,22 +255,33 @@ function callerBubble(text, interim = false) {
    on-device model is English-only, and routing Hindi locally would silently miss
    real scams. */
 const NON_LATIN = /[ऀ-෿؀-ۿ᱐-᱿ꯀ-꯿]/;
+/* Preloaded at page load, NOT on the first utterance. The model is ~3.3 MB, and
+   awaiting that download inside score() held the `scoring` lock for the whole
+   fetch — so every utterance that arrived meanwhile hit `if (scoring) return`
+   and was dropped. The transcript visibly stalled and fell out of sync with the
+   speaker. The download now happens while the operator is still reading the
+   page, and score() only ever consults the resolved flag. */
 let edgeReady = null;
+let edgeLoaded = false;
 function ensureEdge() {
   if (edgeReady) return edgeReady;
   edgeReady = fetch("/edge-model.json")
     .then((r) => { if (!r.ok) throw new Error("unavailable"); return r.text(); })
-    .then((t) => { AegisEdge.load(t); return true; })
-    .catch(() => false);
+    .then((t) => { AegisEdge.load(t); edgeLoaded = true; return true; })
+    .catch(() => { edgeLoaded = false; return false; });
   return edgeReady;
 }
+ensureEdge();   // warm on page load, before any speech arrives
 
 async function score(text) {
   if (!text.trim()) return;
   if (scoring) { pendingText = text; return; }
   scoring = true;
   try {
-    if (!NON_LATIN.test(text) && (await ensureEdge())) {
+    // Synchronous check — no await inside the lock. If the model has not
+    // finished loading yet, this utterance goes to the server and the next one
+    // picks up the local path; nothing is ever queued behind a download.
+    if (!NON_LATIN.test(text) && edgeLoaded) {
       const t0 = performance.now();
       const local = AegisEdge.score(text);
       const ms = performance.now() - t0;
@@ -300,7 +311,11 @@ async function score(text) {
 
 function throttledScore(text) {
   const now = Date.now();
-  if (now - lastScoreAt < 900) return;
+  // 900ms existed to spare the server a request per syllable. On-device scoring
+  // costs ~0.8ms, so that budget is meaningless locally and only makes the risk
+  // meter lag behind the caller.
+  const gap = edgeLoaded ? 200 : 900;
+  if (now - lastScoreAt < gap) return;
   lastScoreAt = now;
   score(text);
 }

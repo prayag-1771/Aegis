@@ -235,6 +235,40 @@ export default function AlertsDrawer({
         </div>
       )}
 
+      {/* MONEY TRAIL — the scam-to-ring link, in orange.
+          Fusion already traces a victim's reported payment into a mule-ring
+          collection account (correlator.py: amount match within 1%, inside the
+          time window) and publishes it as `money_trails`. Until now the only
+          sign of it was a small "traced" chip on the pipeline arrow above, so
+          the single strongest cross-module result in the product — "the money
+          you lost landed HERE" — had no card of its own.
+          Orange deliberately: this is money leaving the victim, distinct from
+          the violet ring-discovery cards below. */}
+      {trails.map((t) => (
+        <div
+          key={`${t.scam_event_id}-${t.ring_id}-${t.account_id}`}
+          className="gsap-alert-item w-full border border-orange-500/40 bg-orange-950/40 p-3 text-left"
+        >
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-orange-300">
+              <ArrowUpRight className="h-3.5 w-3.5" /> money trail traced
+            </span>
+            <span className="text-[10px] font-semibold text-orange-200">{inr(t.amount)}</span>
+          </div>
+          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-orange-100/90">
+            <Phone className="h-3 w-3 shrink-0 text-orange-400" />
+            <span>victim paid</span>
+            <span className="animate-pulse text-orange-400">→</span>
+            <Network className="h-3 w-3 shrink-0 text-orange-400" />
+            <span className="font-medium">{t.ring_id}</span>
+          </div>
+          <div className="mt-1 text-[9px] leading-relaxed text-orange-300/70">
+            landed in collection account {t.account_id}
+            {t.district ? ` · ring based in ${t.district}` : ""} · traced from {t.scam_event_id}
+          </div>
+        </div>
+      ))}
+
       {/* ring alerts */}
       {ringAlerts.map((a) => (
         <button
@@ -341,7 +375,7 @@ export default function AlertsDrawer({
       )}
 
       {/* empty state */}
-      {scams.length === 0 && notes.length === 0 && !fusion && ringAlerts.length === 0 && crossHubs.length === 0 && (
+      {scams.length === 0 && notes.length === 0 && !fusion && ringAlerts.length === 0 && crossHubs.length === 0 && trails.length === 0 && (
         <div className="gsap-alert-item flex items-center gap-2 text-[11px] text-zinc-600">
           <AlertTriangle className="h-3.5 w-3.5" />
           no active warnings

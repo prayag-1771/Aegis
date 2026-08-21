@@ -95,6 +95,78 @@ function pct(x: number) {
 
 /* ── 1. Ghost Ring ─────────────────────────────────────────────────────── */
 
+/* Cross-bank ring animation.
+   The Ghost Ring numbers are the proof, but they do not SHOW the idea: four
+   banks each holding a fragment of one ring, none able to see the whole thing,
+   until the embeddings are matched and the ring closes. This draws exactly that
+   — the fragments each bank can see, then the cross-bank links appearing — so
+   an audience understands the result before reading a single percentage.
+   Pure SVG + CSS: no library, no layout cost, and it degrades to a static
+   picture if animations are disabled. */
+function CrossBankRingViz({ nBanks }: { nBanks: number }) {
+  const [phase, setPhase] = useState(0); // 0 = siloed, 1 = matching, 2 = fused
+  useEffect(() => {
+    const t = window.setInterval(() => setPhase((p) => (p + 1) % 3), 2200);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const banks = Math.max(2, Math.min(nBanks || 4, 4));
+  const cx = 150, cy = 74, R = 52;
+  // Ring members, evenly spaced; each bank owns a contiguous arc of them.
+  const N = 12;
+  const nodes = Array.from({ length: N }, (_, i) => {
+    const a = (i / N) * Math.PI * 2 - Math.PI / 2;
+    return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), bank: Math.floor(i / (N / banks)) };
+  });
+  const BANK_COLORS = ["#38bdf8", "#a78bfa", "#fb7185", "#fbbf24"];
+
+  return (
+    <div className="mb-3">
+      <svg viewBox="0 0 300 148" className="w-full" role="img"
+           aria-label="Four banks each see part of one fraud ring; matching embeddings reveals the whole ring.">
+        {nodes.map((n, i) => {
+          const next = nodes[(i + 1) % N];
+          const sameBank = n.bank === next.bank;
+          // Within-bank edges are always visible — that is what each bank can
+          // see alone. Cross-bank edges only exist after matching.
+          const shown = sameBank || phase >= 1;
+          return (
+            <line
+              key={`e${i}`}
+              x1={n.x} y1={n.y} x2={next.x} y2={next.y}
+              stroke={sameBank ? BANK_COLORS[n.bank % 4] : "#22d3ee"}
+              strokeWidth={sameBank ? 1.6 : 2.2}
+              strokeDasharray={sameBank ? undefined : "4 3"}
+              opacity={shown ? (sameBank ? 0.75 : phase === 2 ? 0.95 : 0.5) : 0}
+              style={{ transition: "opacity .6s ease" }}
+            />
+          );
+        })}
+        {nodes.map((n, i) => (
+          <circle key={`n${i}`} cx={n.x} cy={n.y} r={phase === 2 ? 5 : 4}
+                  fill={BANK_COLORS[n.bank % 4]}
+                  opacity={0.95} style={{ transition: "r .4s ease" }} />
+        ))}
+        {Array.from({ length: banks }, (_, b) => {
+          const mid = nodes[Math.floor(b * (N / banks) + N / banks / 2) % N];
+          return (
+            <text key={`l${b}`} x={mid.x + (mid.x > cx ? 12 : -12)} y={mid.y + 3}
+                  textAnchor={mid.x > cx ? "start" : "end"}
+                  fontSize="8" fill={BANK_COLORS[b % 4]} opacity={0.85}>
+              Bank {b}
+            </text>
+          );
+        })}
+      </svg>
+      <p className="text-center text-[10px] leading-relaxed text-zinc-500">
+        {phase === 0 && <>Each bank sees only its own fragment — no bank sees a ring.</>}
+        {phase === 1 && <>Banks publish embeddings; the matcher links boundary accounts…</>}
+        {phase === 2 && <span className="text-cyan-300">One ring, spanning all {banks} banks — visible only once fused.</span>}
+      </p>
+    </div>
+  );
+}
+
 function GhostRingCard({ ring }: { ring: ResearchResponse["ghost_ring"] }) {
   return (
     <Card
@@ -105,6 +177,7 @@ function GhostRingCard({ ring }: { ring: ResearchResponse["ghost_ring"] }) {
         <Empty what="Ghost Ring result" />
       ) : (
         <>
+          <CrossBankRingViz nBanks={ring.n_banks} />
           {(() => {
             const perBank = Object.entries(ring.per_bank_ring_recall).sort();
             const max = Math.max(ring.fused_ring_recall, ...perBank.map(([, v]) => v), 0.01);
@@ -542,8 +615,21 @@ function AudioButtons({
       const now = ctx.currentTime;
       const master = ctx.createGain();
       master.gain.value = 0.0001;
-      master.connect(ctx.destination);
-      master.gain.exponentialRampToValueAtTime(0.4, now + 0.05);
+      // Compressor between master and output: up to 40 partials sum together,
+      // and at the higher level needed for a room that would clip into a buzz.
+      // This keeps it loud without distorting the very spectral difference the
+      // demo is asking people to listen for.
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -18;
+      comp.ratio.value = 12;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.25;
+      master.connect(comp);
+      comp.connect(ctx.destination);
+      // Loud enough to carry a room. 0.4 was set on headphones; through a
+      // laptop speaker on a stage it is barely audible, and the whole point of
+      // the sonification is that an audience HEARS the ring sound different.
+      master.gain.exponentialRampToValueAtTime(1.0, now + 0.05);
       master.gain.exponentialRampToValueAtTime(0.0001, now + dur);
 
       const n = Math.min(evals.length, sed.length, 40);
@@ -557,7 +643,9 @@ function AudioButtons({
         const g = ctx.createGain();
         osc.frequency.value = freq;
         osc.type = "sine";
-        g.gain.value = amp * 0.5;
+        // Per-partial level. Raised with the master; the summed partials are
+        // kept in check by the compressor below rather than by running quiet.
+        g.gain.value = amp * 0.9;
         osc.connect(g);
         g.connect(master);
         osc.start(now);
