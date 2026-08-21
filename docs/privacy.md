@@ -22,8 +22,8 @@ answer, written before anyone asks.
 | [P3](#p3) | Full message text sent to Anthropic by the verification agent | 🔴 High | ✅ **Fixed** |
 | [P4](#p4) | Full message text sent to Sarvam AI for translation | 🔴 High  | — |
 | [P5](#p5) | Scanned note images served publicly with no auth | 🔴 High | 🟡 Partial |
-| [P6](#p6) | Message text stored server-side and shown on the dashboard | 🔴 High | 🟡 Partial |
-| [P7](#p7) | Live-call audio streamed to Google by the browser | 🔴 High  | — |
+| [P6](#p6) | Message text stored server-side and shown on the dashboard | 🔴 High | ✅ **Fixed (English)** |
+| [P7](#p7) | Live-call audio streamed to Google by the browser | 🔴 High | 🟡 Partial |
 | [P8](#p8) | GPS coordinates travel and persist with every scan | 🟠 Medium-High  | — |
 | [P9](#p9) | WhatsApp message body + sender number transit Twilio | 🟠 Medium-High  | — |
 | [P10](#p10) | Every place search is sent to OpenStreetMap (Nominatim) | 🟠 Medium  | — |
@@ -31,7 +31,7 @@ answer, written before anyone asks.
 | [P12](#p12) | FIR case references sent to third-party LLMs | 🟠 Medium  | — |
 | [P13](#p13) | Backend fetches attacker-controlled URLs (IP disclosure + SSRF) | 🟠 Medium  | — |
 | [P14](#p14) | IFSC codes sent to Razorpay | 🟡 Low  | — |
-| [P15](#p15) | Message text transits the Express gateway | 🟡 Low  | — |
+| [P15](#p15) | Message text transits the Express gateway | 🟡 Low | ✅ Moot (English) |
 
 ---
 
@@ -185,6 +185,12 @@ the dashboard as `sample_text`
 **Why it matters.** Operators see citizens' actual messages. Combined with **P1** so does
 everyone else.
 
+**Status: fixed for English (d1ac3af).** English messages and live-call transcripts are
+now scored in the browser and never uploaded; only an anonymised verdict is ingested, with
+`raw_text` absent (it is optional in the contract). Verified with the network disabled.
+Non-Latin scripts still route to the server, because the on-device model is English-only —
+closing that needs the multilingual retrain under P4.
+
 **Solution — metadata-only ingestion.** The crime map, fraud rings, hotspots and campaign
 clustering need `verdict`, `scam_type`, `district`, `timestamp` and marker names. They do
 **not** need the message. Drop `raw_text` at the ingest boundary. Campaign clustering
@@ -201,6 +207,11 @@ In Chrome this API streams the microphone to Google's speech service.
 
 **Why it matters.** This is the *voice* of a citizen mid-scam, plus the scammer's — the most
 sensitive payload in the system, and it leaves before Aegis sees a single token.
+
+**Status: partially fixed (d1ac3af).** The scam ANALYSIS now runs on the device, so Aegis
+never receives the call transcript — previously it was POSTed on every utterance. The audio
+still reaches Google, because Chrome's SpeechRecognition is what transcribes it. The UI badge
+states which half is local rather than implying both are.
 
 **Solution.** Honest short term: disclose it in the UI ("speech recognition is provided by
 your browser") and keep the scripted-replay demo as the default path. Real fix: on-device
