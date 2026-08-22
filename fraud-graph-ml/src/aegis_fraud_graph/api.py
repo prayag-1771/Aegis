@@ -369,8 +369,12 @@ def demo_reset() -> dict:
     """Drop all injected rings: reload the base dataset and rerun detection."""
     global _CURRENT_DATASET, _CURRENT_OUTPUT
 
+    # load/run_detection are no longer module-level imports (see the note at the
+    # top: importing pandas et al. at boot cost 148 MB on a 512 MB instance).
+    from .data import load
+
     base = load("synthetic")
-    output = run_detection(ds=base)
+    output = _run_detection(base)
 
     with _STATE_LOCK:
         _CURRENT_DATASET = base
