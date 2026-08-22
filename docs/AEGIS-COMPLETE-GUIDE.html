@@ -81,6 +81,9 @@
   <li><strong>Counterfeit Vision</strong> — spotting fake banknotes from a photo</li>
   <li><strong>The Dashboard and GenAI</strong> — fusion, the money trail, and the AI Case Officer</li>
   <li><strong>Everything else</strong> — contracts, privacy, supply trail, deployment</li>
+  <li><strong>What is genuinely new</strong> — the thirteen contributions, separated from what was assembled</li>
+  <li><strong>The market</strong> — what exists today and where Aegis goes further</li>
+  <li><strong>Limitations and roadmap</strong> — what is real, what is simulated, what comes next</li>
   <li><strong>Achievements</strong> — every capability, how it was built, and the bugs found along the way</li>
   <li><strong>References</strong> — the published research each method comes from</li>
   <li><strong>Presentation preparation</strong> — the questions you will be asked, and how to answer</li>
@@ -91,6 +94,65 @@
 <h2 class="first">1 · The Big Picture</h2>
 
 <p class="lead">Before any technical detail, understand the problem Aegis is trying to solve — because every design decision follows from it.</p>
+
+<h3>1.0 The scale of the problem</h3>
+
+<p>Every design decision in Aegis follows from these numbers. They are from government sources, and they are worth memorising for a presentation.</p>
+
+<table>
+<tr><th style="width:26%">Figure</th><th style="width:24%">What it measures</th><th>Source / meaning</th></tr>
+<tr><td class="big">1.14 million</td><td>Cybercrime complaints in India, 2023</td><td>Up <strong>60%</strong> on 2022, and the curve has steepened since</td></tr>
+<tr><td class="big">&#8377;1,776 crore</td><td>Lost to <strong>digital-arrest scams</strong> in just the first 9 months of 2024</td><td>Ministry of Home Affairs. One scam type, nine months.</td></tr>
+<tr><td class="big">2.47 million</td><td>Layer-1 <strong>mule accounts</strong> flagged</td><td>I4C. The scale of the money-movement layer.</td></tr>
+<tr><td class="big">&#8377;17,000+ crore</td><td>Reported cyber-fraud losses since 2023</td><td>The money actually lost by citizens</td></tr>
+<tr><td><strong>Record FICN seizures</strong></td><td>Fake Indian Currency Notes</td><td>RBI Annual Report 2025 &mdash; &#8377;500 fakes good enough to defeat manual checks in routine banking</td></tr>
+</table>
+
+<div class="box">
+<span class="t">What these numbers actually tell you</span>
+This is not opportunistic crime. It is <strong>industrialised</strong> &mdash; run from fraud compounds, often across borders, using spoofed numbers, AI-generated voices and fake government portals. You are not up against a lone fraudster with a phone; you are up against an operation with staff, scripts and infrastructure.
+</div>
+
+<h3>1.0.1 The real gap</h3>
+
+<p>India already has a helpline (1930), a complaint portal (cybercrime.gov.in), and reporting systems. So what is missing?</p>
+
+<p><strong>What law enforcement lacks is not evidence after the fact. It is intelligence before mass victimisation</strong> &mdash; and tools at the <em>point of contact</em> rather than the point of complaint.</p>
+
+<table>
+<tr><th style="width:42%">Today</th><th>The consequence</th></tr>
+<tr><td>A scam call is reported <em>after</em> the victim has paid</td><td>The money is already gone and layered</td></tr>
+<tr><td>A fake note is found <em>after</em> it has circulated</td><td>The trail to the printer is cold</td></tr>
+<tr><td>A mule ring is unwound <em>months later</em>, by hand</td><td>The accounts are long since abandoned</td></tr>
+<tr><td><strong>No system connects the three</strong></td><td>Police see three unrelated cases where there is one operation</td></tr>
+</table>
+
+<h3>1.0.2 The pipeline thesis &mdash; why one platform is legitimate</h3>
+
+<p>This is the intellectual core of Aegis, and the thing to be able to explain in one breath. The three "separate" crimes are <strong>three stages of one money pipeline</strong>:</p>
+
+<div class="flow">  &#9312; TAKE                  &#9313; MOVE                    &#9314; CASH OUT
+  scam calls /           mule-account rings        the cash economy
+  digital arrest   ──▶   (collect, layer,    ──▶   (where counterfeit
+  phishing                round-trip)                notes circulate)</div>
+
+<table>
+<tr><th style="width:18%">Stage</th><th>The documented link to the next stage</th></tr>
+<tr><td><strong>Take → Move</strong></td><td>Scam proceeds land <strong>immediately</strong> in mule accounts &mdash; this is the RBI's own definition of a mule account, and the reason I4C has flagged 2.47 million of them.</td></tr>
+<tr><td><strong>Move → Cash out</strong></td><td>Laundered digital money must eventually <strong>exit into cash</strong>. The criminal cash layer is precisely where fake notes circulate &mdash; the NIA runs a dedicated Terror Funding and Fake Currency Cell because FICN distribution is itself a trafficked network.</td></tr>
+<tr><td><strong>Shared geography</strong></td><td>The same districts host multiple crime types because the <em>enabling infrastructure</em> is shared: rented mule accounts, farmed SIM cards, forged KYC, local agent networks. The Jamtara and Mewat belts are the documented examples.</td></tr>
+</table>
+
+<div class="box">
+<span class="t">The consequence &mdash; and the sentence to say out loud</span>
+Because it is <strong>infrastructure</strong> that clusters geographically, not crime type, <strong>two independent detections converging on one district is real evidence of an organised hub &mdash; not a coincidence.</strong><br><br>
+That single sentence is the justification for the entire fusion layer. Without it, correlating a scam call with a fake note looks arbitrary. With it, it is the whole point.
+</div>
+
+<div class="qa box">
+<span class="t">External validation worth quoting</span>
+The government is moving the same way. The RBI built <strong>MuleHunter.ai</strong> to flag mule accounts, and signed an I4C&ndash;RBI Innovation Hub MoU in May 2026. <strong>The state's own roadmap validates this architecture</strong> &mdash; Aegis builds the next step: joining the mule ring back to the scam that fed it, and the district where the cash surfaces.
+</div>
 
 <h3>1.1 The real-world problem</h3>
 
@@ -194,7 +256,136 @@ No single transaction looks suspicious. ₹48,000 moving between two ordinary ac
 On Facebook, each person is a node and each friendship is an edge. You can ask questions like "who has the most friends?" or "which people form a tight cluster who all know each other?" <strong>Aegis asks exactly those questions about bank accounts and money.</strong> A mule ring is simply a tight cluster where the money goes round in a circle.
 </div>
 
-<h3>2.3 How Aegis finds the rings — step by step</h3>
+<h3>2.3 Graph vocabulary you need first</h3>
+
+<p>Before the detection steps, learn six words. Every one of them appears in the code and on the dashboard, and each one describes something a criminal actually does.</p>
+
+<h4>a) Direction — money has a direction</h4>
+
+<p>A friendship on Facebook goes both ways. <strong>A payment does not.</strong> If A pays B, that is not the same as B paying A. So the transaction graph is a <strong>directed graph</strong>: every edge is an arrow, drawn from the payer to the receiver.</p>
+
+<div class="flow">   A ──────▶ B          A paid B.  B did NOT pay A.</div>
+
+<p>In the data, every transaction row has a <code>source</code> (who paid) and a <code>target</code> (who received). That single distinction is what makes it possible to talk about where money enters a network and where it leaves.</p>
+
+<h4>b) Degree — how many connections a node has</h4>
+
+<p>The <strong>degree</strong> of a node is simply how many edges touch it. Because our edges are arrows, it splits in two:</p>
+
+<table>
+<tr><th style="width:22%">Term</th><th style="width:30%">Meaning</th><th>What a high value suggests</th></tr>
+<tr><td><strong>in-degree</strong></td><td>How many different accounts paid <em>into</em> this one</td><td>Money is being <em>gathered</em> here. Typical of a collector.</td></tr>
+<tr><td><strong>out-degree</strong></td><td>How many different accounts this one paid <em>out</em> to</td><td>Money is being <em>scattered</em> from here. Typical of a distributor.</td></tr>
+</table>
+
+<div class="analogy box">
+<span class="t">Analogy — a post office</span>
+Count the letters arriving at a building (in-degree) and the letters leaving it (out-degree). A normal house has a few of each. A building receiving 200 letters a day and sending 200 straight back out isn't a house — it's a sorting office. <strong>In a bank network, that pattern is a mule.</strong>
+</div>
+
+<h4>c) Source and sink</h4>
+
+<p>These two words come from thinking of money as water flowing through pipes.</p>
+
+<table>
+<tr><th style="width:20%">Term</th><th style="width:34%">Definition</th><th>In a laundering network</th></tr>
+<tr><td><strong>Source</strong></td><td>A node where money <em>enters</em> the network — much flows out, little or nothing flows in</td><td>Usually the <strong>victim's account</strong>, or the first account the stolen money lands in</td></tr>
+<tr><td><strong>Sink</strong></td><td>A node where money <em>leaves</em> — much flows in, little flows back out</td><td>The <strong>collector</strong> or cash-out point: the last account before the money becomes cash or goes abroad</td></tr>
+</table>
+
+<div class="analogy box">
+<span class="t">Analogy — a river system</span>
+A <strong>source</strong> is the spring where the river begins. A <strong>sink</strong> is the sea where it ends. Everything in between is just channels moving water along. In a mule network the middle accounts are the channels — <strong>and finding the sink is what an investigator actually wants</strong>, because that is where the money stopped and where an arrest becomes possible.
+</div>
+
+<div class="box">
+<span class="t">Why this matters for the money trail</span>
+Section 5.1 describes tracing a victim's ₹49,999 into account <code>acc_02033</code>. In graph terms: the victim's account is the <strong>source</strong>, and Aegis followed the arrow to the <strong>sink</strong> — the collector inside a detected ring. That is exactly what "the money you lost went here" means.
+</div>
+
+<h4>d) Hub</h4>
+
+<p>A <strong>hub</strong> is a node with an unusually high degree — it touches far more accounts than a normal one. In a laundering ring the hub is nearly always the collector, because dozens of mules all pay into it.</p>
+
+<div class="analogy box">
+<span class="t">Analogy — an airport</span>
+Most airports serve a handful of routes. A hub airport connects to hundreds. You can spot a hub without knowing anything about aviation — just by counting connections. <strong>Aegis spots collector accounts the same way</strong>, via the <code>degree_centrality</code> feature.
+</div>
+
+<h4>e) Throughput — the mule's signature</h4>
+
+<p>The single most telling number. <strong>Throughput ratio</strong> = how much of what came in went straight back out.</p>
+
+<ul>
+  <li>A normal person receives a salary and <em>spends it gradually</em>. Money accumulates and drains. Ratio well below 1.</li>
+  <li>A mule receives ₹50,000 and forwards ₹49,000 within minutes, keeping a small fee. <strong>Ratio close to 1.</strong></li>
+</ul>
+
+<p>Two related features sharpen the picture, and the code comments explain them exactly this way:</p>
+
+<table>
+<tr><th style="width:24%">Feature</th><th style="width:32%">Approaches 1 when…</th><th>Meaning</th></tr>
+<tr><td><code>fan_in_ratio</code></td><td>many senders, one or few receivers</td><td><strong>Collector</strong> — the sink of the ring</td></tr>
+<tr><td><code>fan_out_ratio</code></td><td>one or few senders, many receivers</td><td><strong>Distributor</strong> — the splitter</td></tr>
+</table>
+
+<h4>f) Path, cycle and component</h4>
+
+<table>
+<tr><th style="width:22%">Term</th><th>Meaning</th></tr>
+<tr><td><strong>Path</strong></td><td>A route following arrows from one account to another: A → B → C. This is how money is traced.</td></tr>
+<tr><td><strong>Cycle</strong></td><td>A path that returns to where it started: A → B → C → A. <strong>Money going in a circle is almost never innocent</strong> — legitimate payments have a purpose and an endpoint.</td></tr>
+<tr><td><strong>Connected component</strong></td><td>A group of accounts reachable from each other, with no links to the rest. A ring is usually a small, tight component.</td></tr>
+</table>
+
+<h3>2.4 The three shapes a laundering network takes</h3>
+
+<p>Aegis can inject any of three topologies live during a demo, and the evaluation reports accuracy <em>per shape</em> — because each one hides money differently.</p>
+
+<h4>Shape 1 — Fan-in (the collector)</h4>
+
+<div class="flow">  mule ──┐
+  mule ──┤
+  mule ──┼──▶ COLLECTOR ──▶ cash out
+  mule ──┤     (a SINK: high in-degree, low out-degree)
+  mule ──┘</div>
+
+<p>Many accounts pay into one. That one account is the <strong>sink</strong>. Easiest shape to spot — its in-degree is glaringly abnormal — which is exactly why sophisticated criminals avoid it.</p>
+
+<h4>Shape 2 — Chain (layering)</h4>
+
+<div class="flow">  A ──▶ B ──▶ C ──▶ D ──▶ E ──▶ cash out
+        each hop keeps a small fee: 100% → 97% → 94% → 91% …</div>
+
+<p>Money passes hand to hand. <strong>No single account looks unusual</strong> — each has in-degree 1 and out-degree 1, exactly like a normal person. The crime is only visible in the <em>sequence</em>: the same money moving repeatedly within minutes, shrinking slightly at each step. This is called <strong>layering</strong>, and it is the hardest shape to detect.</p>
+
+<div class="box">
+<span class="t">This is why graph analysis is necessary</span>
+Look at any single account in a chain and it is unremarkable. Traditional rule-based systems examine accounts one at a time — which is precisely why chains defeat them. <strong>Only by looking at the shape of the whole network does the chain appear.</strong>
+</div>
+
+<h4>Shape 3 — Cycle (the ring)</h4>
+
+<div class="flow">        ┌──▶ B ──▶ C ──┐
+        │              ▼
+        A ◀── E ◀───── D
+     money returns to where it began</div>
+
+<p>Money moves in a closed loop, sometimes several times, creating a false trail of "business activity" before exiting. The tell is that <strong>every account transacts with every other</strong> — a high <code>clustering_coefficient</code>, which almost never happens naturally between unrelated people.</p>
+
+<h4>How real laundering combines all three</h4>
+
+<div class="flow">victim ──▶ FAN-OUT ──▶ CHAINS (layering) ──▶ FAN-IN ──▶ cash out
+ SOURCE     split it      hide the trail       gather it      SINK</div>
+
+<p>This is the pattern the adversarial simulator in section 2.7 actually generates: <strong>fan-out → mule chain → fan-in</strong>. The evolving "criminal" tunes how many splits, how many hops and how long the delays are — searching for the combination that escapes detection.</p>
+
+<div class="qa box">
+<span class="t">A strong sentence for your presentation</span>
+"A mule network is money entering at a <strong>source</strong>, being split, layered through <strong>chains</strong> so no individual account looks suspicious, then gathered at a <strong>sink</strong> for cash-out. Rule-based systems examine one account at a time, so the chain is invisible to them. We analyse the <em>shape</em> — which is where the crime actually lives."
+</div>
+
+<h3>2.5 How Aegis finds the rings — step by step</h3>
 
 <h4>Step 1: Measure each account (feature extraction)</h4>
 
@@ -234,7 +425,7 @@ High-risk accounts + the transactions between them
     v
 Ring 1 (9 accounts)   Ring 2 (8 accounts)   Ring 3 (11 accounts) ...</div>
 
-<h3>2.4 The measured results</h3>
+<h3>2.6 The measured results</h3>
 
 <p>These are real numbers from the trained model, not estimates.</p>
 
@@ -270,7 +461,7 @@ Those numbers come from <strong>synthetic (simulated) data</strong> — a genera
 This is one of your strongest slides. "We didn't only test on our own simulated data — we ran the same approach on 265,000 real Bitcoin wallets from a published academic dataset and got 0.9945 AUC." That single sentence answers the "is this just a toy?" objection.
 </div>
 
-<h3>2.5 The Research Lab — three experiments</h3>
+<h3>2.7 The Research Lab — three experiments</h3>
 
 <p>The Research Lab is a tab in the dashboard showing three deeper experiments. Each explores a question the basic system cannot answer. <strong>Each is displayed with its honest result, including where it fell short</strong> — which is deliberate, and worth pointing out.</p>
 
@@ -343,7 +534,7 @@ Tap a solid bell and a cracked bell. Both are bells, but they <em>sound</em> dif
 The panel says openly that comparing communities of <em>different sizes</em> is unreliable — a bigger community naturally scores differently for reasons unrelated to fraud. So the validated claim is narrow: <strong>a matched pair</strong> (a ring compared to a clean community of similar size) shows a consistent shift. Stating that limit yourself is a strength.
 </div>
 
-<h3>2.6 Where you see this in the website</h3>
+<h3>2.8 Where you see this in the website</h3>
 
 <table>
 <tr><th style="width:28%">Screen</th><th>What it shows</th></tr>
@@ -355,6 +546,22 @@ The panel says openly that comparing communities of <em>different sizes</em> is 
 </table>
 
 <!-- ==================== PART 3 ==================== -->
+<h3>2.9 The Fraud Console — let the audience try to beat it</h3>
+
+<p>A demo where the presenter clicks a button and the system succeeds proves little — the audience assumes it was rigged. The Fraud Console inverts that: <strong>you hand the audience the criminal's job.</strong></p>
+
+<p>They design the transactions by hand — who pays whom, how much, and whether it happens over <em>minutes</em> or <em>days</em> — and the engine scores what they built. It reports which accounts it flagged, whether they form a ring, and the risk score.</p>
+
+<div class="qa box">
+<span class="t">Why this is the strongest possible demo</span>
+Invite a judge to design a laundering pattern that escapes detection. If they succeed, you learn something real. If they fail, <strong>they have proved your system works using their own adversarial input</strong> — which no scripted demo can match. It also teaches the "minutes vs days" lesson: speed is the giveaway, because the burst pattern is what humans don't produce.
+</div>
+
+<div class="box">
+<span class="t">A neat design detail</span>
+A ring the console <em>catches</em> is kept on the live map; activity it doesn't catch is discarded. So repeated experimenting never pollutes the demo state with junk.
+</div>
+
 <h2>3 · Scam Detection (Fraud Shield)</h2>
 
 <p class="lead">The part a citizen actually touches — and the part with the strongest privacy story.</p>
@@ -537,6 +744,54 @@ This is the single best demonstration that you tested your system rather than as
 </div>
 
 <!-- ==================== PART 4 ==================== -->
+<h3>3.8 The agentic verifier — AI that checks, not guesses</h3>
+
+<p>Everything so far judges the message by <em>how it is written</em>. This layer does something different: it <strong>acts on what the message contains</strong>.</p>
+
+<p>When a message is flagged, an AI agent extracts the concrete things a scammer relies on and <strong>goes and checks them in the real world</strong>:</p>
+
+<table>
+<tr><th style="width:26%">Tool</th><th style="width:36%">What it checks</th><th>Why a scammer can't fake it</th></tr>
+<tr><td><strong>Link resolver</strong></td><td>Follows the short link and reports where it really lands — and whether the page asks for an OTP or card details</td><td>The displayed text can lie; the destination cannot</td></tr>
+<tr><td><strong>Typosquat detector</strong></td><td>Compares the domain against real brands (SBI, HDFC, ICICI, Paytm, RBI, NPCI) by edit distance</td><td>Catches <code>sbi-verify.co</code> pretending to be SBI</td></tr>
+<tr><td><strong>IFSC validator</strong></td><td>Checks the bank code's format, then looks up which bank it actually belongs to</td><td>"Send to this SBI account" fails when the code isn't SBI's</td></tr>
+<tr><td><strong>UPI validator</strong></td><td>Checks the handle's provider against the real list (okhdfc, oksbi, ybl, paytm…)</td><td>Unknown providers are a strong tell</td></tr>
+<tr><td><strong>Claim cross-check</strong></td><td>The LLM checks assertions against known facts — "CBI does not arrest people over WhatsApp video"</td><td>The scam's core lie is stated plainly</td></tr>
+</table>
+
+<div class="analogy box">
+<span class="t">Analogy — reading a letter vs checking the address</span>
+The classifier is a person reading a suspicious letter and saying "the tone feels like a scam." The verifier is an investigator who <strong>drives to the address printed on it</strong> and reports that it's an empty lot. One judges style; the other gathers evidence.
+</div>
+
+<div class="box">
+<span class="t">Three deliberate safety rules</span>
+<strong>1. It can never change the verdict.</strong> It only adds a <code>verification</code> block. Delete this whole layer and every verdict is unchanged.<br>
+<strong>2. It only runs on already-flagged messages</strong> — a clean message costs nothing.<br>
+<strong>3. It has a time budget.</strong> Each tool has its own timeout and the whole pass has an overall limit; if the network is slow it returns whatever finished and falls back to offline checks. <strong>It can never hang the demo.</strong>
+</div>
+
+<div class="warn box">
+<span class="t">A security detail worth mentioning</span>
+Following a link the attacker controls is itself risky — it reveals your server to them, and a crafted URL could probe your internal network (an attack called SSRF). So private and internal addresses are blocked, redirects are capped, and only a small amount of the page is read.
+</div>
+
+<h3>3.9 WhatsApp channel</h3>
+
+<p>Most Indian scam messages arrive on WhatsApp, and the safest thing a citizen can do is <strong>forward a suspicious message to a number that checks it</strong> — no app to install, no account to make.</p>
+
+<p>Aegis includes a WhatsApp bot: forward a message and it replies with a verdict, the markers it found, and safety advice ("do not click any link, do not share OTP, report on 1930"). There is a simulator page for demos, plus a real Twilio webhook.</p>
+
+<div class="box">
+<span class="t">A security detail done properly</span>
+The webhook verifies Twilio's cryptographic signature before trusting a request, so nobody can post fake messages to it by guessing the address. It correctly handles tunnel-forwarding headers, which is a common source of bugs when testing locally.
+</div>
+
+<div class="warn box">
+<span class="t">State it accurately</span>
+This is a <strong>transport adapter</strong> with a working simulator, not a bot running on a live business number. The honest framing: "the detection pipeline is complete and signature-verified; connecting a production WhatsApp Business number is a deployment step."
+</div>
+
 <h2>4 · Counterfeit Vision</h2>
 
 <p class="lead">Photograph a banknote; the system decides whether it is genuine — and shows you why.</p>
@@ -611,6 +866,30 @@ The standard heatmap technique needs a "backward pass", which roughly triples me
 <p>A clever extra check. Every genuine note has a unique serial number. Counterfeiters typically print <strong>one real serial onto thousands of notes</strong>. So Aegis remembers every serial it has seen, and if the same serial appears in two different districts, that is strong evidence of a printing run — a link the image alone could never provide.</p>
 
 <!-- ==================== PART 5 ==================== -->
+<h3>4.8 The vision second look — the only layer that reads the note</h3>
+
+<p>This one exists because of a real hole that was found, not a theoretical one.</p>
+
+<p>Every other check in Counterfeit Vision measures <strong>print physics</strong>: ink saturation, intaglio texture, paper sharpness. Even the CNN — it was trained on genuine notes versus physically counterfeited ones, so what it learned to separate is <em>print quality</em>. <strong>Nothing in the pipeline reads what is actually printed on the note.</strong></p>
+
+<div class="warn box">
+<span class="t">The failure this exposed</span>
+Take a genuine note and paste a different face over Gandhi. The paper is genuine, the intaglio texture is genuine, the colour is genuine — <strong>every physical measurement passes</strong>. And the CNN, which shrinks the image to 224×224, pools that one altered region into almost nothing. The system returned <strong>"genuine" at 95% confidence</strong> on an obviously tampered note.
+</div>
+
+<p>The fix is a <strong>vision LLM</strong> — an AI that can look at an image and answer questions about its <em>content</em>:</p>
+<ul>
+  <li>Is the portrait actually Mahatma Gandhi?</li>
+  <li>Does the header read "RESERVE BANK OF INDIA"?</li>
+  <li>Is "SPECIMEN" overprinted anywhere?</li>
+  <li>Does the printed denomination match?</li>
+</ul>
+
+<div class="box">
+<span class="t">Why this layer is allowed to convict — unlike the others</span>
+Elsewhere the rule is that only the CNN decides. This layer is the exception, and the reasoning is precise: <strong>a wrong portrait or wrong header is a fact about what is printed, not a fragile measurement of a surface.</strong> Dim lighting can fool a texture check; it cannot turn someone else's face into Gandhi. So content findings convict, while "SPECIMEN" detected merely caps the verdict to "needs manual check".
+</div>
+
 <h2>5 · The Dashboard and Generative AI</h2>
 
 <p class="lead">This is where the three modules stop being separate tools and become one intelligence picture.</p>
@@ -765,11 +1044,228 @@ Free services <strong>sleep after 15 minutes</strong> of no traffic and take 50�
 
 
 <!-- ==================== PART 8 ==================== -->
-<h2>7 · Achievements — what was built, and how</h2>
+<h3>6.5 The bank-partner API (the third stakeholder)</h3>
+
+<p>The problem statement names three stakeholders: <strong>law enforcement</strong>, <strong>financial institutions</strong>, and <strong>citizens</strong>. The dashboard serves the first, the scan and message tools serve the third. This module is the second.</p>
+
+<p>It exposes the same Counterfeit Vision and Fraud Graph models as <strong>machine-to-machine calls</strong> — the kind a bank's note-counting machine or AML screening system would make. No web page, no styling: an API key in the header, and a terse pass/fail answer a machine can act on.</p>
+
+<div class="analogy box">
+<span class="t">Analogy — a card reader vs a website</span>
+When a shop swipes your card, no human reads a screen — one machine asks another "is this authorised?" and gets yes or no. That is what this surface is: <strong>the same intelligence, shaped for a machine instead of a person.</strong>
+</div>
+
+<h3>6.6 Intel Feed — growing the evidence base from news</h3>
+
+<p>Supply Trail is only as good as the seizure records it knows about. Those exist in public reporting — news articles about FICN seizures — but a program cannot be trusted to decide what counts as evidence.</p>
+
+<p>So the pipeline is split deliberately:</p>
+<ul>
+  <li><strong>Offline batch job:</strong> fetches articles and extracts candidate facts (district, denomination, amount, date)</li>
+  <li><strong>Intel Feed page:</strong> an officer reviews each candidate and <em>chooses</em> which enter the corpus</li>
+</ul>
+
+<div class="box">
+<span class="t">Two careful decisions</span>
+<strong>It never fetches news during a request</strong> — candidates are pre-staged, so nothing waits on an external site and the fusion result stays reproducible.<br>
+<strong>Every ingest writes a backup</strong>, with undo and full reset — so the feature can be driven repeatedly in rehearsal without damaging anything.
+</div>
+
+<h3>6.7 The self-improving classifier</h3>
+
+<p>A scam detector trained on yesterday's scams will miss tomorrow's. This experiment asks: <strong>can the system prepare for scams that don't exist yet?</strong></p>
+
+<p>The method turns an LLM into the adversary:</p>
+<ol>
+  <li>An LLM writes brand-new scam variants designed to <em>evade</em> filters trained on classic patterns — paraphrased authority claims, none of the usual keywords, new pressure tactics</li>
+  <li><strong>Half</strong> are added to the training data</li>
+  <li>The other <strong>half are held back</strong> as an "unseen future scams" test set</li>
+  <li>The model is retrained, and measured on that held-out half</li>
+</ol>
+
+<div class="box">
+<span class="t">Why the split matters</span>
+If you trained on all the generated scams and then tested on them, you would learn nothing — the model has seen the answers. Holding half back means the improvement is measured against variants <strong>the model has genuinely never seen</strong>. That is the difference between a demo and an experiment.
+</div>
+
+<div class="analogy box">
+<span class="t">Analogy — a vaccine</span>
+A vaccine shows the immune system a harmless version of a threat so it can recognise the real one later. Here the LLM manufactures harmless scam variants so the classifier learns the <em>shape</em> of an attack it has not encountered.
+</div>
+
+<h2>7 &middot; What Is Genuinely New</h2>
+
+<p class="lead">Judges ask "what did you invent, versus what did you assemble?" This chapter separates the two honestly. Everything below either does not exist in a shipped product, or exists only as a research paper.</p>
+
+<h3>7.1 Cross-domain fusion with a deterministic evidence engine</h3>
+
+<p><strong>No product on the market correlates scam detection, counterfeit currency, and fraud-ring intelligence together.</strong> Single-domain products exist in each silo &mdash; the convergence layer does not.</p>
+
+<p>The architectural novelty is <em>how</em> generative AI is used: the correlation itself is <strong>deterministic and reproducible</strong> (exact arithmetic on amounts and timestamps), and the LLM only narrates the result. Most "AI fusion" claims invert this &mdash; letting the model decide what is linked, which is unauditable.</p>
+
+<h3>7.2 A deployed self-improving classifier</h3>
+
+<p>Described in section 6.7. The measured result is the headline:</p>
+
+<table>
+<tr><th style="width:46%">Measurement</th><th>Result</th></tr>
+<tr><td>Recall on held-out, never-seen scam variants <strong>before</strong></td><td>69%</td></tr>
+<tr><td>Recall on the same held-out variants <strong>after</strong> retraining</td><td class="big">100%</td></tr>
+<tr><td>Held-out ROC-AUC after</td><td>0.997</td></tr>
+<tr><td>Human labelling required</td><td><strong>Zero</strong></td></tr>
+</table>
+
+<div class="box">
+<span class="t">Why the protocol matters as much as the number</span>
+The evaluation half <strong>never enters training</strong>, and that protocol is written into the persisted report itself, so it can be checked rather than trusted. This loop exists in the literature (a January 2026 paper) and, to our knowledge, in <strong>zero deployed products</strong>.
+</div>
+
+<h3>7.3 Scam playbooks &mdash; a reasoning chain a court can replay</h3>
+
+<p>Rather than a score alone, a matched playbook produces the <em>sequence</em> of moves the scammer made: impersonate authority → allege a case → isolate the victim → demand transfer. An officer or a court can replay that chain against the transcript.</p>
+
+<h3>7.4 Agentic verification</h3>
+
+<p>Described in section 3.8. What is new is that the AI <strong>checks the scammer's own claims against the real world</strong> &mdash; resolving the link, validating the IFSC, checking the UPI provider &mdash; instead of only judging the writing style.</p>
+
+<h3>7.5 Printing-run detection via a serial registry</h3>
+
+<p>Counterfeiters print one real serial number onto thousands of notes. Recording every serial seen means the <strong>second sighting of the same serial in a different district is evidence of a printing run</strong> &mdash; intelligence no image model can produce, and not present in citizen-facing tools.</p>
+
+<h3>7.6 Plate families and campaign fingerprinting</h3>
+
+<table>
+<tr><th style="width:26%">Layer</th><th>The insight</th><th style="width:26%">How strength is stated</th></tr>
+<tr><td><strong>Plate families</strong></td><td>Counterfeits from one production source fail the <em>same</em> security features &mdash; a plate that cannot reproduce the security thread fails it on every note. This is the principle the US Secret Service uses to classify counterfeits.</td><td>Tiers: <em>high</em> (identical signature + denomination), <em>probable</em> (Jaccard &ge; 0.5), <em>possible</em> (&ge;1 shared defect)</td></tr>
+<tr><td><strong>Scam campaigns</strong></td><td>One gang runs one script. Near-identical texts hitting different districts are <strong>one campaign</strong>, not isolated complaints.</td><td>Token-set Jaccard + shared callback numbers + distinctive-bigram guards, clustered by union-find, same three tiers</td></tr>
+</table>
+
+<h3>7.7 Supply Trail &mdash; multi-modal provenance inference</h3>
+
+<p>Computing plausible entry routes for seized counterfeit notes across real rail, road and air corridors, scored by distance decay, mode risk, and FIR corroboration. Labelled a hypothesis, never proof.</p>
+
+<h3>7.8 The cap-only safety invariant &mdash; a design contribution</h3>
+
+<div class="box">
+<span class="t">The rule, in one line</span>
+<strong>A secondary AI layer may only make a verdict <em>less</em> confident, never more.</strong>
+</div>
+
+<p>The serial check and the vision review can downgrade "genuine" to "needs manual check". <strong>They can never upgrade "genuine" to "fake", and never acquit a "fake".</strong> This means a hallucinating or malfunctioning AI layer can only ever cause extra human review &mdash; the safe direction &mdash; and never a false accusation.</p>
+
+<p>This is a reusable design principle for adding AI to any high-stakes decision system, and it is worth naming as a contribution in its own right.</p>
+
+<h3>7.9 Mid-call intercept &mdash; acting before the money moves</h3>
+
+<p>Existing systems are post-complaint. Live Call Shield interrupts <strong>during</strong> the call, before the transfer &mdash; the difference between recording a crime and preventing one.</p>
+
+<h3>7.10 The money trail &mdash; a victim's report to a freezable account</h3>
+
+<p>Joining a citizen's reported payment to a specific account inside a detected ring (section 5.1). This is the output an investigator can actually act on: an account number to freeze.</p>
+
+<h3>7.11 Coordinated-hub detection on the map</h3>
+
+<p>Districts where <strong>all three</strong> crime types converge are marked as coordinated hubs &mdash; a stronger signal than any single-domain hotspot, and only computable because the three feeds share one map.</p>
+
+<h3>7.12 Contract-first architecture</h3>
+
+<p>An engineering decision that became a product feature: because every module speaks a strict validated schema, modules can be developed independently, and malformed data is rejected at the door rather than corrupting the intelligence picture three steps later.</p>
+
+<h3>7.13 Honest-negative reporting</h3>
+
+<p>The Research Lab displays results that <em>did not</em> work &mdash; the arms race showing detector decay, the spectral method's stated unreliability for cross-community ranking, the federated recall gain labelled unproven.</p>
+
+<div class="qa box">
+<span class="t">Why this is listed as an innovation</span>
+Publishing your own negative results is rare in a hackathon and rare in industry. It is what separates <strong>an experiment from a demo</strong>. If a judge probes any weakness, they find you already documented it &mdash; which converts an attack into evidence of rigour.
+</div>
+
+<h2>8 &middot; The Market &mdash; What Exists Today</h2>
+
+<p class="lead">"Why doesn't this already exist?" is a fair question. It partly does &mdash; in pieces. Here is what each existing system does, and precisely where Aegis goes further.</p>
+
+<table>
+<tr><th style="width:24%">Existing solution</th><th style="width:30%">What it does</th><th>Where Aegis goes further</th></tr>
+<tr><td><strong>RBI MuleHunter.ai</strong><br>(+ I4C&ndash;RBIH MoU, May 2026)</td><td>Machine learning over transaction patterns to flag mule accounts, <em>per bank</em></td><td>Our Fraud Graph is a MuleHunter-class engine &mdash; <strong>plus a fusion layer that joins the ring back to the scam that fed it</strong>, and a privacy-preserving federated variant with differential privacy that works <em>across</em> banks</td></tr>
+<tr><td><strong>Truecaller</strong> and telecom spam ID</td><td>Caller-ID reputation &mdash; flags <em>numbers</em></td><td>Aegis classifies <em>content</em>, with evidence spans a court can use. Works on <strong>first contact from an unknown number</strong>, monitors live calls with mid-call intercept, and covers WhatsApp text &mdash; where number reputation is blind</td></tr>
+<tr><td><strong>1930 helpline</strong>, cybercrime.gov.in, Chakshu</td><td>Post-incident complaint intake</td><td>Aegis operates <strong>pre-transfer</strong>, at the point of contact. Its citizen tools <em>end</em> by guiding the user to these portals &mdash; it complements them, it does not duplicate them</td></tr>
+<tr><td><strong>Note-sorting machines / UV lamps</strong></td><td>Branch-bound hardware; pass/fail with no explanation</td><td>Software on <strong>any phone camera</strong>; names <em>which</em> security feature failed; runs the serial registry for printing-run intelligence; links seizures into plate families; infers supply corridors</td></tr>
+<tr><td><strong>Fraud-analytics SaaS</strong></td><td>One domain, opaque scores, no citizen surface</td><td>Three domains fused by a deterministic correlator, with reproducible audit hashes and citizen + police + bank surfaces on one validated data plane</td></tr>
+<tr><td><strong>Self-improving classifiers</strong></td><td>A January 2026 research paper; no deployments</td><td>Aegis ships the loop, with a leakage-safe protocol and a measured 69% &rarr; 100% gain on unseen families</td></tr>
+</table>
+
+<h3>8.1 The three stakeholders</h3>
+
+<p>The challenge names three, and each has a working surface &mdash; a point worth making explicitly, because most entries build only one.</p>
+
+<table>
+<tr><th style="width:22%">Stakeholder</th><th style="width:30%">Their surface</th><th>What they get</th></tr>
+<tr><td><strong>Citizens</strong></td><td>Message checker, Live Call Shield, WhatsApp bot, note scanner</td><td>A verdict before they pay, in their own language, with the analysis on their own device</td></tr>
+<tr><td><strong>Law enforcement</strong></td><td>The command-centre dashboard</td><td>A live crime map, fused links, ring detection, AI case files, recommended actions</td></tr>
+<tr><td><strong>Financial institutions</strong></td><td>The API-key gated B2B endpoints</td><td>Machine-to-machine note verification and AML ring screening for teller terminals and screening systems</td></tr>
+</table>
+
+<h3>8.2 Why this shape is deployable</h3>
+
+<ul>
+  <li><strong>It complements rather than replaces.</strong> It feeds the existing 1930 / I4C reporting flow instead of competing with it.</li>
+  <li><strong>It respects the legal boundary.</strong> Banks cannot share customer data &mdash; so Ghost Ring is built to work without them doing so.</li>
+  <li><strong>It is privacy-compliant by construction</strong> on the detection path: with on-device scoring there is no personal data in transit to protect.</li>
+  <li><strong>The response layer is contract-ready.</strong> Freeze and block actions are already modelled and audited; connecting a real bank or telecom is a partnership, not a rebuild.</li>
+</ul>
+
+<h2>9 &middot; Limitations and Roadmap</h2>
+
+<p class="lead">Know these thoroughly. Volunteering a limitation before a judge finds it is the single most credibility-positive thing you can do in a Q&amp;A.</p>
+
+<h3>9.1 What is real data and what is simulated</h3>
+
+<table>
+<tr><th style="width:30%">Component</th><th style="width:22%">Data</th><th>Status</th></tr>
+<tr><td>Counterfeit model</td><td><strong>Real</strong></td><td>Real photographs of genuine and counterfeit notes</td></tr>
+<tr><td>Scam classifier</td><td><strong>Mixed</strong></td><td>Real public SMS spam corpus + generated Indian scam scripts</td></tr>
+<tr><td>Fraud-graph benchmark</td><td><strong>Real</strong></td><td>Elliptic++, 265,354 real Bitcoin wallets</td></tr>
+<tr><td>Fraud-graph demo data</td><td>Synthetic</td><td>No live bank feed exists to connect to &mdash; a partnership, not a technology gap</td></tr>
+<tr><td>Response actions</td><td>Simulated</td><td>Freeze/block are queued, audited and <strong>labelled simulated</strong> in the interface</td></tr>
+</table>
+
+<h3>9.2 Known limitations, stated plainly</h3>
+
+<table>
+<tr><th style="width:32%">Limitation</th><th>The honest framing</th></tr>
+<tr><td><strong>Money-trail join uses amount + time</strong></td><td>A real deployment would join by UPI or transaction reference &mdash; the same join, with a stronger key. Labelled in-product.</td></tr>
+<tr><td><strong>Ring &rarr; counterfeit link is geographic</strong></td><td>It is convergence, not a traced physical artefact. Tracing cash needs serial capture at the point of seizure &mdash; the contract fields exist as the hook, and the serial registry is the first step.</td></tr>
+<tr><td><strong>Supply trail is a hypothesis</strong></td><td>Corridor-based and FIR-corroborated; an investigative lead with a mandatory disclaimer, never forensic proof.</td></tr>
+<tr><td><strong>Live-call speech recognition</strong></td><td>Browser-based today, so audio reaches Google. A server-side STT front end (Sarvam <em>saarika</em>) feeding the same analyser is the designed next step.</td></tr>
+<tr><td><strong>Investment-scam recall</strong></td><td>50%. They read like legitimate financial advice; the fix is more training examples of that family.</td></tr>
+<tr><td><strong>Research-lab findings are runs, not theorems</strong></td><td>The federated gain is a single run; the arms race shows decay (that <em>is</em> the finding); spectral ranking is a triage hint only.</td></tr>
+<tr><td><strong>WhatsApp is sandboxed</strong></td><td>Production requires a WhatsApp Business account &mdash; a registration step, not engineering.</td></tr>
+</table>
+
+<h3>9.3 The roadmap</h3>
+
+<table>
+<tr><th style="width:26%">Next</th><th style="width:34%">What it adds</th><th>Why it is not done yet</th></tr>
+<tr><td><strong>Server-side speech recognition</strong></td><td>Removes the browser/Google dependency on live calls; enables IVR transport</td><td>Needs a live audio pipeline and validation on real recordings</td></tr>
+<tr><td><strong>Multilingual model retraining</strong></td><td>Removes the translation hop entirely &mdash; on-device scoring in every language</td><td>Character n-grams make it feasible; needs a translated corpus and careful validation that English does not regress</td></tr>
+<tr><td><strong>Live bank / telecom wiring</strong></td><td>Turns simulated freeze and block actions into real ones</td><td>The response contract is already built; this is a partnership</td></tr>
+<tr><td><strong>Per-denomination counterfeit metrics</strong></td><td>Accuracy broken down by &#8377;100 / &#8377;500 / &#8377;2000</td><td>Needs field validation beyond the public dataset</td></tr>
+<tr><td><strong>Mobile application</strong></td><td>Automatic SMS scanning; genuinely on-device speech</td><td>iOS and Android both provide the right APIs for SMS; <strong>neither permits tapping call audio</strong>, so calls need operator integration</td></tr>
+<tr><td><strong>Voice-spoofing detection</strong></td><td>Detecting AI-generated voices in scam calls</td><td>A separate research problem</td></tr>
+<tr><td><strong>SMPC matching</strong></td><td>Removes the trusted central matcher from Ghost Ring entirely</td><td>Designed; secure multi-party computation is a heavy dependency</td></tr>
+</table>
+
+<div class="qa box">
+<span class="t">How to deliver a limitation in a Q&amp;A</span>
+Name it, quantify it, then say what would fix it. <em>"Investment scams: we catch about half. They read like legitimate financial advice. The fix is more training examples of that family, and we know that because we measured recall per scam type rather than reporting one average."</em><br><br>
+That answer demonstrates measurement, self-knowledge and a plan &mdash; three things a single accuracy figure never shows.
+</div>
+
+<h2>10 · Achievements — what was built, and how</h2>
 
 <p class="lead">Every capability below, with the method that produced it and the measured result. This is the section to revise before a technical question.</p>
 
-<h3>7.1 Detection capabilities</h3>
+<h3>10.1 Detection capabilities</h3>
 
 <table>
 <tr><th style="width:23%">Achievement</th><th style="width:35%">How it was done</th><th>Measured result</th></tr>
@@ -783,7 +1279,7 @@ Free services <strong>sleep after 15 minutes</strong> of no traffic and take 50�
 <tr><td><strong>Serial-reuse detection</strong></td><td>Every scanned serial recorded in a registry (MongoDB, with file fallback)</td><td>Same serial in two districts implies one printing run</td></tr>
 </table>
 
-<h3>7.2 Research achievements</h3>
+<h3>10.2 Research achievements</h3>
 
 <table>
 <tr><th style="width:23%">Achievement</th><th style="width:35%">How it was done</th><th>Measured result</th></tr>
@@ -795,7 +1291,7 @@ Free services <strong>sleep after 15 minutes</strong> of no traffic and take 50�
 <tr><td><strong>Supply-trail inference</strong></td><td>Dijkstra + Yen k-shortest-paths over real Indian rail/road/air corridors; plausibility = distance decay + mode risk + FIR corroboration</td><td>Ranked entry routes with confidence capped below 1.0 by design</td></tr>
 </table>
 
-<h3>7.3 Privacy and engineering achievements</h3>
+<h3>10.3 Privacy and engineering achievements</h3>
 
 <table>
 <tr><th style="width:23%">Achievement</th><th style="width:35%">How it was done</th><th>Result</th></tr>
@@ -809,7 +1305,7 @@ Free services <strong>sleep after 15 minutes</strong> of no traffic and take 50�
 <tr><td><strong>Memory optimisation</strong></td><td>Heavy libraries made lazy; startup serves the shipped artifact instead of recomputing</td><td>Fraud-graph <strong>300&nbsp;MB &rarr; 48&nbsp;MB</strong> at rest, ending the OOM restarts</td></tr>
 </table>
 
-<h3>7.4 Bugs found and fixed &mdash; the engineering story</h3>
+<h3>10.4 Bugs found and fixed &mdash; the engineering story</h3>
 
 <p>Each of these was found by <em>measuring</em>, not by assuming. They matter because "how did you validate it?" is a common question.</p>
 
@@ -827,11 +1323,11 @@ Free services <strong>sleep after 15 minutes</strong> of no traffic and take 50�
 </table>
 
 <!-- ==================== PART 9 ==================== -->
-<h2>8 · References</h2>
+<h2>11 · References</h2>
 
 <p class="lead">The published methods Aegis builds on. Only techniques actually implemented in the codebase are listed.</p>
 
-<h3>8.1 Graph machine learning</h3>
+<h3>11.1 Graph machine learning</h3>
 
 <table>
 <tr><th style="width:28%">Method</th><th style="width:36%">Reference</th><th>Where used</th></tr>
@@ -842,7 +1338,7 @@ Free services <strong>sleep after 15 minutes</strong> of no traffic and take 50�
 <tr><td><strong>Spectral graph theory</strong><br>Laplacian, Rayleigh quotient</td><td>Chung, <em>Spectral Graph Theory</em>, AMS 1997</td><td>"Frequency of Fraud" &mdash; measuring a community's structural frequency</td></tr>
 </table>
 
-<h3>8.2 Machine learning</h3>
+<h3>11.2 Machine learning</h3>
 
 <table>
 <tr><th style="width:28%">Method</th><th style="width:36%">Reference</th><th>Where used</th></tr>
@@ -853,7 +1349,7 @@ Free services <strong>sleep after 15 minutes</strong> of no traffic and take 50�
 <tr><td><strong>TF-IDF</strong><br>term weighting</td><td>Sp&auml;rck Jones, <em>A Statistical Interpretation of Term Specificity and Its Application in Retrieval</em>, J. Documentation 1972</td><td>Turning scam messages into numbers</td></tr>
 </table>
 
-<h3>8.3 Privacy</h3>
+<h3>11.3 Privacy</h3>
 
 <table>
 <tr><th style="width:28%">Method</th><th style="width:36%">Reference</th><th>Where used</th></tr>
@@ -863,7 +1359,7 @@ Free services <strong>sleep after 15 minutes</strong> of no traffic and take 50�
 <tr><td><strong>BLAKE2</strong><br>keyed hashing</td><td>Aumasson, Neves, Wilcox-O'Hearn &amp; Winnerlein, <em>BLAKE2: simpler, smaller, fast as MD5</em>, ACNS 2013</td><td>Salted phone and account pseudonyms</td></tr>
 </table>
 
-<h3>8.4 Algorithms</h3>
+<h3>11.4 Algorithms</h3>
 
 <table>
 <tr><th style="width:28%">Method</th><th style="width:36%">Reference</th><th>Where used</th></tr>
@@ -874,7 +1370,7 @@ Free services <strong>sleep after 15 minutes</strong> of no traffic and take 50�
 <tr><td><strong>Damerau&ndash;Levenshtein</strong><br>edit distance</td><td>Damerau, <em>A technique for computer detection and correction of spelling errors</em>, CACM 1964</td><td>Matching misspelled district names in search</td></tr>
 </table>
 
-<h3>8.5 Datasets</h3>
+<h3>11.5 Datasets</h3>
 
 <table>
 <tr><th style="width:28%">Dataset</th><th style="width:36%">Source</th><th>Used for</th></tr>
@@ -883,7 +1379,7 @@ Free services <strong>sleep after 15 minutes</strong> of no traffic and take 50�
 <tr><td><strong>Indian currency real vs fake</strong></td><td>Public Kaggle dataset (preetrank) &mdash; real photographs of genuine and counterfeit notes, by denomination</td><td>Training the counterfeit CNN</td></tr>
 </table>
 
-<h3>8.6 Services and libraries</h3>
+<h3>11.6 Services and libraries</h3>
 
 <table>
 <tr><th style="width:28%">Component</th><th>Purpose</th></tr>
@@ -902,9 +1398,9 @@ You will not recite references. But if a judge asks <em>"is this your own idea o
 </div>
 
 <!-- ==================== PART 7 ==================== -->
-<h2>9 · Presentation Preparation</h2>
+<h2>12 · Presentation Preparation</h2>
 
-<h3>9.1 A suggested 7-minute structure</h3>
+<h3>12.1 A suggested 7-minute structure</h3>
 
 <table>
 <tr><th style="width:12%">Time</th><th style="width:26%">Section</th><th>Content</th></tr>
@@ -916,7 +1412,7 @@ You will not recite references. But if a judge asks <em>"is this your own idea o
 <tr><td>6:30–7:00</td><td><strong>Close</strong></td><td>Privacy: nothing leaves the device. Real benchmark: 265,000 Bitcoin wallets.</td></tr>
 </table>
 
-<h3>9.2 The questions you will be asked</h3>
+<h3>12.2 The questions you will be asked</h3>
 
 <div class="qa box">
 <span class="t">"Does the citizen's message go to your server?"</span>
@@ -959,7 +1455,7 @@ Answer this one honestly and specifically — it is often the question that deci
 "For SMS, yes — a mobile app can read messages on Android, and iOS has an on-device SMS filter API designed for exactly this. For calls, no app on iOS or Android is permitted to tap call audio, so production would require telecom-operator integration. That's a policy constraint, not a technical one."
 </div>
 
-<h3>9.3 Three things to avoid saying</h3>
+<h3>12.3 Three things to avoid saying</h3>
 
 <table>
 <tr><th style="width:34%">Don't say</th><th>Say instead</th></tr>
@@ -968,7 +1464,7 @@ Answer this one honestly and specifically — it is often the question that deci
 <tr><td>"100% accurate"</td><td>Quote the actual number, and the category where it's weakest</td></tr>
 </table>
 
-<h3>9.4 The five numbers to memorise</h3>
+<h3>12.4 The five numbers to memorise</h3>
 
 <table>
 <tr><th style="width:26%">Number</th><th>What it is</th></tr>
