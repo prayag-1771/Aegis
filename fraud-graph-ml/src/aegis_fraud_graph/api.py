@@ -62,12 +62,29 @@ def _set_current_output(payload) -> None:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # Warm at startup: a cold first GET /fraud-graph used to run the whole
-    # detect pipeline inside the request and blow the command centre's 30 s
-    # timeout on stage. Always recompute from the clean base dataset so a
-    # restart also wipes any rings injected during a previous rehearsal
-    # (the output file on disk may still contain them).
-    _set_current_output(run_detection(ds=_CURRENT_DATASET))
+    # Warm at startup, but from the SHIPPED artifact rather than by recomputing.
+    #
+    # run_detection() peaks at ~300 MB (19 MB baseline -> 167 MB once pandas,
+    # networkx, sklearn and xgboost are imported -> 300 MB through the pipeline's
+    # intermediate frames). On Render's 512 MB free instance that leaves nothing
+    # for serving, and the instance was OOM-killed and auto-restarted.
+    #
+    # output/fraud_graph.json is committed and is exactly what the pipeline
+    # produces from the clean base dataset, so loading it gives an identical
+    # payload for a fraction of the memory — and still satisfies the reason this
+    # warm-up exists: GET /fraud-graph must not run the pipeline inside a
+    # request and blow the command centre's timeout.
+    #
+    # Recompute only when the artifact is missing. Rings injected during a
+    # rehearsal live in memory and are wiped by the restart either way, since
+    # the artifact on disk is the clean base.
+    # Nothing to do when the shipped artifact is present: _current_output()
+    # already falls back to it via _load_output(), so GET /fraud-graph is served
+    # from the file without touching the pipeline. Recompute only if it is
+    # missing, which is also the only case where the warm-up's original purpose
+    # -- keeping the pipeline out of the request path -- still applies.
+    if not _OUTPUT_FILE.exists():
+        _set_current_output(run_detection(ds=_CURRENT_DATASET))
     yield
 
 
