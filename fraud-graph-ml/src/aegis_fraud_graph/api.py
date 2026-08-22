@@ -23,14 +23,36 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import __version__
 from .config import OUTPUT_DIR
-from .data import load
-from .demo import build_custom_dataset, inject_demo_ring
-from .pipeline import run_detection
+
+# pandas, networkx, scikit-learn and xgboost are NOT imported here on purpose.
+# Importing them costs ~148 MB resident before a single request is served, and
+# GET /fraud-graph — the only endpoint the dashboard actually polls — just
+# returns a JSON file that ships in the repo. On a 512 MB instance that import
+# cost was most of the headroom, and the service was OOM-killed and restarted.
+# They load on first use instead, so only the demo endpoints that genuinely
+# rebuild the graph ever pay for them.
 
 _OUTPUT_FILE = OUTPUT_DIR / "fraud_graph.json"
 _STATE_LOCK = Lock()
-_CURRENT_DATASET = load("synthetic")
+_CURRENT_DATASET = None  # loaded on first use — see _dataset()
 _CURRENT_OUTPUT = None
+
+
+def _dataset():
+    """Base synthetic dataset, loaded on first use (pulls in pandas)."""
+    global _CURRENT_DATASET
+    if _CURRENT_DATASET is None:
+        from .data import load
+
+        _CURRENT_DATASET = load("synthetic")
+    return _CURRENT_DATASET
+
+
+def _run_detection(ds=None):
+    from .pipeline import run_detection
+
+    return run_detection(ds=ds if ds is not None else _dataset())
+
 
 
 def _load_output() -> dict | None:
@@ -48,7 +70,7 @@ def _current_output() -> dict:
         if cached is not None:
             return cached
 
-    output = run_detection(ds=_CURRENT_DATASET)
+    output = _run_detection()
     with _STATE_LOCK:
         _CURRENT_OUTPUT = output
     return json.loads(output.model_dump_json())
@@ -84,7 +106,7 @@ async def lifespan(_: FastAPI):
     # missing, which is also the only case where the warm-up's original purpose
     # -- keeping the pipeline out of the request path -- still applies.
     if not _OUTPUT_FILE.exists():
-        _set_current_output(run_detection(ds=_CURRENT_DATASET))
+        _set_current_output(_run_detection())
     yield
 
 
@@ -124,7 +146,7 @@ def fraud_graph() -> dict:
 def detect() -> dict:
     """Re-run detection and return the fresh payload."""
     global _CURRENT_OUTPUT
-    out = run_detection(ds=_CURRENT_DATASET)
+    out = _run_detection()
     _set_current_output(out)
     return json.loads(out.model_dump_json())
 
@@ -148,15 +170,17 @@ def demo_inject_ring(body: dict | None = None) -> dict:
         raise HTTPException(422, "'accounts' must be a list of names")
 
     with _STATE_LOCK:
-        current_dataset = _CURRENT_DATASET
+        current_dataset = _dataset()
 
     try:
+        from .demo import inject_demo_ring
+
         injected = inject_demo_ring(
             current_dataset, district=district, topology=topology, account_names=raw_names
         )
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-    output = run_detection(ds=injected)
+    output = _run_detection(injected)
 
     with _STATE_LOCK:
         _CURRENT_DATASET = injected
@@ -193,6 +217,8 @@ def demo_score_custom(body: dict | None = None) -> dict:
         base = _CURRENT_DATASET
 
     try:
+        from .demo import build_custom_dataset
+
         eval_ds, user_accounts = build_custom_dataset(base, txs, district=district, speed=speed)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
