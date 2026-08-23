@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Aegis — Demo Pitch Script</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm; }
+  * { box-sizing: border-box; }
+  body { font: 11pt/1.6 "Segoe UI", Inter, system-ui, sans-serif; color: #1a1a1a; }
+  h1 { font-size: 25pt; color: #4c1d95; margin: 0 0 3pt; letter-spacing: -.5pt; }
+  h2 {
+    font-size: 15pt; color: #fff; background: #4c1d95; padding: 7pt 11pt;
+    margin: 0 0 10pt; border-radius: 4pt; page-break-after: avoid;
+  }
+  h3 { font-size: 12pt; color: #5b21b6; margin: 14pt 0 5pt; page-break-after: avoid; }
+  p { margin: 0 0 7pt; }
+  .cover { text-align: center; padding-top: 50mm; page-break-after: always; }
+  .cover h1 { font-size: 38pt; }
+  .cover .sub { font-size: 14pt; color: #6b7280; margin-top: 8pt; }
+  .cover .meta { margin-top: 34mm; font-size: 10pt; color: #9ca3af; line-height: 1.9; }
+
+  .section { page-break-inside: avoid; margin-bottom: 20pt; }
+  .bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #4c1d95; color: #fff; padding: 7pt 11pt; border-radius: 4pt 4pt 0 0;
+  }
+  .bar .name { font-size: 14pt; font-weight: 700; }
+  .bar .time { font-size: 11pt; font-family: Consolas, monospace; background: rgba(255,255,255,.18);
+               padding: 2pt 8pt; border-radius: 3pt; }
+  .frame { border: 1.5pt solid #4c1d95; border-top: none; border-radius: 0 0 4pt 4pt; padding: 10pt 12pt; }
+
+  .screen { background: #1f2937; color: #e5e7eb; padding: 6pt 10pt; border-radius: 3pt;
+            font-size: 9.5pt; margin-bottom: 9pt; }
+  .screen b { color: #a78bfa; }
+
+  .say { border-left: 3.5pt solid #7c3aed; background: #faf5ff; padding: 8pt 12pt; margin: 8pt 0; }
+  .say .lbl { font-size: 8.5pt; font-weight: 700; color: #6d28d9; letter-spacing: .8pt;
+              text-transform: uppercase; display: block; margin-bottom: 4pt; }
+  .say p { font-size: 11.5pt; line-height: 1.72; margin: 0 0 7pt; }
+  .say p:last-child { margin-bottom: 0; }
+  .say em { background: #fde68a; font-style: normal; padding: 0 2pt; }
+
+  .do { border-left: 3.5pt solid #0891b2; background: #ecfeff; padding: 7pt 11pt; margin: 8pt 0;
+        font-size: 10pt; }
+  .do .lbl { font-weight: 700; color: #0e7490; }
+
+  .cue { border: 1.2pt dashed #9ca3af; background: #f9fafb; padding: 8pt 12pt; margin-top: 9pt;
+         border-radius: 3pt; }
+  .cue .lbl { font-size: 8.5pt; font-weight: 700; color: #4b5563; letter-spacing: .8pt;
+              text-transform: uppercase; display: block; margin-bottom: 5pt; }
+  .cue ul { margin: 0; padding-left: 16pt; }
+  .cue li { font-size: 10pt; margin-bottom: 3pt; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8pt 0 12pt; font-size: 10pt; }
+  th { background: #ede9fe; color: #4c1d95; text-align: left; padding: 5pt 7pt;
+       border: 1pt solid #ddd6fe; }
+  td { padding: 5pt 7pt; border: 1pt solid #e5e7eb; vertical-align: top; }
+  .warn { border-left: 3.5pt solid #d97706; background: #fffbeb; padding: 8pt 12pt; margin: 9pt 0;
+          font-size: 10pt; }
+  .warn b { color: #b45309; }
+  ul.plain { padding-left: 17pt; }
+  ul.plain li { margin-bottom: 4pt; }
+  .say p.opt { opacity: .82; }
+  .say .tag { font-size: 7.5pt; font-weight: 700; color: #b45309; background: #fef3c7;
+              padding: 1pt 5pt; border-radius: 3pt; letter-spacing: .5pt; margin-right: 4pt;
+              vertical-align: 2pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>AEGIS</h1>
+  <div class="sub">Demo Pitch &mdash; word-for-word script</div>
+  <div class="sub" style="font-size:12pt">7 minutes 30 seconds</div>
+  <div class="meta">
+    Flow: citizen &rarr; command centre<br>
+    Counterfeit &rarr; Scam &rarr; Fraud Graph &rarr; Research Lab &rarr; Dashboard &amp; GenAI &rarr; Services<br><br>
+    Highlighted text = the line that must land.<br>
+    Cue cards at the end of every section.
+  </div>
+</div>
+
+<h1 style="font-size:19pt">Before you start</h1>
+
+<table>
+<tr><th style="width:28%">Do this</th><th>Why</th></tr>
+<tr><td><strong>15 min before:</strong> open all four service <code>/health</code> URLs</td><td>Free-tier services sleep; waking takes up to 90 seconds. A sleeping service looks broken.</td></tr>
+<tr><td><strong>Open every tab once</strong> on the dashboard</td><td>Warms the caches so nothing loads slowly on stage</td></tr>
+<tr><td><strong>Load the scam page and scan one message</strong></td><td>Downloads the 3.3&nbsp;MB on-device model. <b>The aeroplane-mode moment fails without this.</b></td></tr>
+<tr><td><strong>Have a real note ready</strong></td><td>For the counterfeit scan</td></tr>
+<tr><td>Keep tabs open in this order: counterfeit &rarr; scam &rarr; dashboard</td><td>No fumbling between sections</td></tr>
+</table>
+
+<div class="warn">
+<b>If the internet fails mid-demo:</b> stay calm and use it. The scam detection runs in the browser &mdash;
+say <em>"conveniently, this is the part that proves my privacy point: it still works."</em> Then continue on the
+dashboard, which holds its last state.
+</div>
+
+<div class="warn">
+<b>If a service is asleep and a panel is blank:</b> "That's a free-tier server waking up &mdash; it takes about a
+minute." Move on and come back. Do not stand and wait.
+</div>
+
+<!-- ============ 0 ============ -->
+<div class="section">
+<div class="bar"><span class="name">0 &middot; The problem</span><span class="time">0:00 – 0:35</span></div>
+<div class="frame">
+<div class="screen"><b>On screen:</b> title slide, or the dashboard map</div>
+
+<div class="say">
+<span class="lbl">Say</span>
+<p>India registered <strong>1.14 million cybercrime complaints</strong> in 2023 &mdash; up sixty percent in a year.</p>
+<p>Digital-arrest scams alone took <strong>one thousand seven hundred and seventy-six crore rupees</strong> in nine months.</p>
+<p>Now, the police treat these as three separate crimes: the scam call, the mule accounts that move the money, and the fake currency it turns into. Three departments. Three systems. They never talk.</p>
+<p><em>But it isn't three crimes. It's one pipeline, run by one organisation.</em></p>
+<p>Aegis is the first platform that connects all three. Let me show you, starting where a citizen actually stands.</p>
+</div>
+
+<div class="cue">
+<span class="lbl">Cue card</span>
+<ul>
+  <li>1.14 million complaints, up 60%</li>
+  <li>&#8377;1,776 crore &mdash; digital arrest, 9 months</li>
+  <li>Police see 3 crimes &mdash; 3 departments, never talk</li>
+  <li><strong>"It isn't three crimes. It's one pipeline."</strong></li>
+  <li>Start where the citizen stands</li>
+</ul>
+</div>
+</div>
+</div>
+
+<!-- ============ 1 ============ -->
+<div class="section">
+<div class="bar"><span class="name">1 &middot; Counterfeit Vision</span><span class="time">0:35 – 1:20</span></div>
+<div class="frame">
+<div class="screen"><b>On screen:</b> the counterfeit scanner &mdash; <b>Do:</b> photograph a real note, live</div>
+
+<div class="say">
+<span class="lbl">Say</span>
+<p>A shopkeeper gets a five-hundred rupee note. Is it real? Today he needs a bank machine. Here, he needs a phone.</p>
+<p><em>(scan the note)</em></p>
+<p>Genuine &mdash; ninety-nine percent confident. And this is the part that matters: it doesn't just say genuine, <em>it shows you where it looked.</em></p>
+<p>That heatmap is the model's attention &mdash; the security thread, the portrait, the micro print. If this were fake, those regions light up red, and the officer gets a reason, not just a verdict.</p>
+<p class="opt"><span class="tag">DROP IF SHORT</span> Trained on real photographs of real and counterfeit notes &mdash; <strong>ninety-nine point four percent accuracy</strong>. And it remembers every serial it sees: the same serial in two districts means one printing run.</p>
+</div>
+
+<div class="cue">
+<span class="lbl">Cue card</span>
+<ul>
+  <li>Shopkeeper problem &rarr; today needs a machine, here a phone</li>
+  <li><strong>Scan the note live</strong></li>
+  <li>Heatmap = <em>shows where it looked</em>, not just a verdict</li>
+  <li>0.994 AUC, trained on real photographs</li>
+  <li>Serial registry &rarr; same serial, two districts = one printing run</li>
+</ul>
+</div>
+
+<div class="warn"><b>Keep this fast.</b> 45 seconds. It's the visual hook, not the main event. If the scan is slow, keep talking over it &mdash; do not stand in silence.</div>
+</div>
+</div>
+
+<!-- ============ 2 ============ -->
+<div class="section">
+<div class="bar"><span class="name">2 &middot; Scam Detection</span><span class="time">1:20 – 3:00</span></div>
+<div class="frame">
+<div class="screen"><b>On screen:</b> the message checker &rarr; then Live Call Shield</div>
+
+<div class="say">
+<span class="lbl">Say</span>
+<p>Now the crime that starts it all. This is a real digital-arrest script.</p>
+<p><em>(paste the scam message)</em></p>
+<p>Scam &mdash; ninety-nine percent. And notice <em>why</em>: authority impersonation, a fake FIR, urgency pressure. Named reasons, not a black-box score. That matters, because this has to stand up in court.</p>
+<p>But here is the part I actually want you to remember.</p>
+<p><em>(turn on aeroplane mode)</em></p>
+<p><em>I've just switched off the network. Watch.</em></p>
+<p><em>(paste another scam message &mdash; it detects)</em></p>
+<p><strong>The AI is running inside the phone.</strong> The message never left this browser. We send our servers a verdict &mdash; scam, KYC type, district &mdash; and nothing else. <em>We never see what the citizen wrote.</em></p>
+<p>Same model as the server &mdash; identical to eleven decimal places, in under a millisecond.</p>
+<p><em>(switch to Live Call Shield, play the scripted call)</em></p>
+<p>And it works live, during the call. Listen to the risk climb &mdash; courier parcel, harmless. "I am Inspector Sharma from the CBI." Now it moves. FIR, digital arrest &mdash; <strong>and it interrupts, before the money is asked for.</strong></p>
+<p>Eleven Indian languages. And it catches Hinglish &mdash; Hindi typed in English letters &mdash; which is how most real scam messages in this country are actually written.</p>
+</div>
+
+<div class="cue">
+<span class="lbl">Cue card</span>
+<ul>
+  <li>Paste digital-arrest script &rarr; 99%, <strong>named reasons</strong> (court-usable)</li>
+  <li><strong>AEROPLANE MODE</strong> &rarr; paste again &rarr; still works</li>
+  <li>"The AI runs inside the phone. <em>We never see what the citizen wrote.</em>"</li>
+  <li>Identical to 11 decimals &middot; 0.8 ms</li>
+  <li>Live call: risk climbs &rarr; <strong>interrupts before the money ask</strong></li>
+  <li>11 languages + Hinglish</li>
+</ul>
+</div>
+
+<div class="warn"><b>The aeroplane-mode beat is your best moment.</b> Pause after "watch." Let them see the wifi icon go off. Do not rush it.</div>
+</div>
+</div>
+
+<!-- ============ 3 ============ -->
+<div class="section">
+<div class="bar"><span class="name">3 &middot; Fraud Graph</span><span class="time">3:00 – 4:20</span></div>
+<div class="frame">
+<div class="screen"><b>On screen:</b> dashboard &rarr; Fraud Rings tab &mdash; <b>Do:</b> inject a ring live</div>
+
+<div class="say">
+<span class="lbl">Say</span>
+<p>So the victim pays. Where does the money go?</p>
+<p>Not to one account &mdash; that's traceable. It's split across dozens belonging to ordinary people paid two thousand rupees for their bank card. Money mules. India has <strong>two and a half million</strong> flagged.</p>
+<p>And no single transaction looks wrong. Forty-eight thousand rupees between two normal accounts is normal. <em>The crime is only visible in the shape of the network.</em></p>
+<p><em>(click inject a ring)</em></p>
+<p>I've just created a brand-new laundering ring &mdash; accounts that have never existed before. Watch.</p>
+<p>Caught. In seconds. It found the whole ring, and it can tell you the role of each account: who collects, who distributes, who is just a link in the chain.</p>
+<p>It measures behaviour &mdash; money in and out within minutes, round numbers repeatedly, accounts all transacting in a closed circle. Real people don't do that.</p>
+<p>Zero point nine nine nine seven accuracy &mdash; and <strong>zero false accusations</strong> in evaluation. Every account it named was genuinely in a ring. For something that could freeze an innocent person's account, that number is the one that matters.</p>
+<p>And we didn't only test it on our own data. We ran it against <strong>two hundred and sixty-five thousand real Bitcoin wallets</strong> from a published academic dataset. Nought point nine nine four five.</p>
+</div>
+
+<div class="cue">
+<span class="lbl">Cue card</span>
+<ul>
+  <li>Victim pays &rarr; money splits across mules &rarr; 2.5M flagged in India</li>
+  <li>"No single transaction looks wrong &mdash; <em>the crime is in the shape</em>"</li>
+  <li><strong>Inject a ring live</strong> &rarr; caught in seconds</li>
+  <li>Behaviour: in-and-out in minutes, round numbers, closed circle</li>
+  <li>0.9997 &middot; <strong>zero false accusations</strong> &mdash; the number that matters</li>
+  <li>Real benchmark: <strong>265,354 Bitcoin wallets, 0.9945</strong></li>
+</ul>
+</div>
+</div>
+</div>
+
+<!-- ============ 4 ============ -->
+<div class="section">
+<div class="bar"><span class="name">4 &middot; Research Lab</span><span class="time">4:20 – 5:35</span></div>
+<div class="frame">
+<div class="screen"><b>On screen:</b> Research Lab tab &mdash; <b>Do:</b> play the spectral sound</div>
+
+<div class="say">
+<span class="lbl">Say</span>
+<p><em>That's detection working today. Here's what we built to test whether it survives tomorrow.</em></p>
+<p>First problem: criminals deliberately spread accounts across <em>different banks</em>. Each bank sees a quarter of the ring and dismisses it as noise. And by law, banks <strong>cannot</strong> share customer data to compare notes.</p>
+<p>So we built Ghost Ring. Four banks, each training its own AI, sharing <em>no customer data</em> &mdash; only an abstract fingerprint, with privacy noise on top.</p>
+<p>The best any single bank could see was twenty-three percent of the ring. Fused, <strong>forty-nine percent. Two point two times better</strong> &mdash; with zero false links. And the privacy protection cost us <em>nothing</em> in accuracy.</p>
+<p class="opt"><span class="tag">DROP IF SHORT</span> Second: we let a simulated criminal <em>evolve</em> against our detector for twenty generations. It survives &mdash; and where it didn't, we published that too.</p>
+<p>Third &mdash; and this one you can hear.</p>
+<p><em>(play clean community, then ring)</em></p>
+<p>That's a normal group of accounts. And that's a fraud ring. <strong>A criminal network literally vibrates at a different frequency.</strong></p>
+</div>
+
+<div class="cue">
+<span class="lbl">Cue card</span>
+<ul>
+  <li>Bridge: <em>"detection today &rarr; does it survive tomorrow"</em></li>
+  <li>Banks can't share data by law &rarr; <strong>Ghost Ring</strong></li>
+  <li>Best single bank <strong>23%</strong> &rarr; fused <strong>49% = 2.2&times;</strong>, zero false links</li>
+  <li>Differential privacy at <strong>no accuracy cost</strong></li>
+  <li>Arms race: criminal evolves 20 generations (15 sec, don't linger)</li>
+  <li><strong>Play the sound</strong> &mdash; clean vs ring</li>
+</ul>
+</div>
+
+<div class="warn"><b>Discipline here.</b> Ghost Ring gets 45 seconds, the other two get 15 each. The sound does the work &mdash; don't explain the mathematics.</div>
+</div>
+</div>
+
+<!-- ============ 5 ============ -->
+<div class="section">
+<div class="bar"><span class="name">5 &middot; Dashboard, Fusion &amp; GenAI</span><span class="time">5:35 – 6:55</span></div>
+<div class="frame">
+<div class="screen"><b>On screen:</b> Live Map &rarr; Alerts &amp; Analytics (money trail card) &rarr; AI case file</div>
+
+<div class="say">
+<span class="lbl">Say</span>
+<p>Now everything comes together. This is what the officer sees.</p>
+<p>Every scam call, every fake note, every ring &mdash; on one map. Where two crime types converge on a district, we mark a coordinated hub: the <em>infrastructure</em> is shared, so that isn't coincidence.</p>
+<p>And this is the moment I'd like you to take away.</p>
+<p><em>(open the money-trail card)</em></p>
+<p>A victim reported a scam call, and reported paying <strong>forty-nine thousand nine hundred and ninety-nine rupees</strong>. Our fraud graph, working completely separately, knows every transaction between mule accounts.</p>
+<p>The system matched them. <em>That exact amount, arriving minutes after the call, in this account &mdash; inside a ring we had already detected.</em></p>
+<p><strong>Two independent systems, one reading text and one reading bank transactions, pointing at the same crime.</strong> That's an account number an officer can freeze today.</p>
+<p class="opt"><span class="tag">DROP IF SHORT</span> One click writes the case file &mdash; timeline, hypothesis and next steps, each citing its evidence.</p>
+<p>And one thing about the AI, because you'll ask. <em>The AI never decides anything.</em> Every verdict here comes from a deterministic model we can audit line by line. The AI only writes the English explanation. Take it out entirely and every verdict is identical &mdash; you just lose the readable summary. <strong>That's how we make this court-defensible.</strong></p>
+</div>
+
+<div class="cue">
+<span class="lbl">Cue card</span>
+<ul>
+  <li>Everything on one map &rarr; coordinated hubs = shared infrastructure</li>
+  <li><strong>MONEY TRAIL &mdash; the climax</strong></li>
+  <li>Victim paid <strong>&#8377;49,999</strong> &rarr; matched into a detected ring's account</li>
+  <li>"Two independent systems pointing at the same crime"</li>
+  <li>"An account number an officer can freeze <em>today</em>"</li>
+  <li>One click &rarr; AI case file</li>
+  <li><strong>"The AI never decides. It only explains."</strong></li>
+</ul>
+</div>
+
+<div class="warn"><b>Slow down for the money trail.</b> It's the payoff for everything before it. Pause after "the same crime."</div>
+</div>
+</div>
+
+<!-- ============ 6 ============ -->
+<div class="section">
+<div class="bar"><span class="name">6 &middot; Services &amp; close</span><span class="time">6:55 – 7:30</span></div>
+<div class="frame">
+<div class="screen"><b>On screen:</b> Modules tab, or an architecture slide</div>
+
+<div class="say">
+<span class="lbl">Say</span>
+<p>Last thing. The challenge named three stakeholders, and all three have a working surface.</p>
+<p>Citizens get the tools you've seen. Police get this dashboard. Banks get the same models as machine-to-machine APIs, behind a key &mdash; so a teller terminal or an AML system calls them directly.</p>
+<p>Four services, one validated contract, deployed and running right now.</p>
+<p>So &mdash; three crimes that are actually one pipeline. Detected at the point of contact, not the point of complaint. <em>The citizen's message never leaves their phone.</em> The verdicts are auditable enough for a courtroom. And where our results were weak, we've published that too.</p>
+<p><strong>That's Aegis. Thank you.</strong></p>
+</div>
+
+<div class="cue">
+<span class="lbl">Cue card</span>
+<ul>
+  <li>Three stakeholders: citizens &middot; police &middot; <strong>banks via B2B API</strong></li>
+  <li>Four services, one contract, deployed now</li>
+  <li>Close: one pipeline &middot; point of contact &middot; <em>never leaves the phone</em> &middot; auditable &middot; honest about weaknesses</li>
+  <li><strong>"That's Aegis. Thank you."</strong></li>
+</ul>
+</div>
+</div>
+</div>
+
+<h2 style="page-break-before:always">Q&amp;A &mdash; the answers to have ready</h2>
+
+<table>
+<tr><th style="width:34%">If they ask</th><th>Say</th></tr>
+<tr><td><strong>"Does the message go to your server?"</strong></td><td>"No. The classifier runs in the browser &mdash; same model, verified score-for-score. You saw it work in aeroplane mode."</td></tr>
+<tr><td><strong>"What do you send, then?"</strong></td><td>"Verdict, scam type, district, timestamp. Not the message. That's all the crime map needs."</td></tr>
+<tr><td><strong>"How do you stop AI hallucination?"</strong></td><td>"The AI never decides. Every verdict is from a deterministic model. The AI only writes the explanation. Remove it and nothing changes."</td></tr>
+<tr><td><strong>"Is this just synthetic data?"</strong></td><td>"The counterfeit model is real photographs. The fraud graph was benchmarked on 265,354 real Bitcoin wallets at 0.9945. The scam model includes a public SMS spam corpus."</td></tr>
+<tr><td><strong>"What doesn't work?"</strong></td><td>"Three things. Investment scams &mdash; we catch about half; they read like real financial advice. Live-call speech-to-text goes through the browser, so audio reaches Google. And our synthetic fraud numbers are flattering, which is why we benchmarked on real Bitcoin data."</td></tr>
+<tr><td><strong>"Could this be deployed?"</strong></td><td>"For SMS yes &mdash; Android can read messages, iOS has an on-device SMS filter API for exactly this. For calls, no app on either platform may tap call audio, so that needs telecom-operator integration. Policy constraint, not technical."</td></tr>
+<tr><td><strong>"How is this different from Truecaller?"</strong></td><td>"Truecaller flags <em>numbers</em>. We classify <em>content</em> &mdash; so we work on first contact from an unknown number, and we monitor the call while it's happening."</td></tr>
+<tr><td><strong>"Isn't RBI already doing this?"</strong></td><td>"MuleHunter flags mule accounts per bank. We built that, plus the layer that joins the ring back to the scam that fed it &mdash; and a version that works across banks without them sharing customer data."</td></tr>
+</table>
+
+<div class="warn">
+<b>Three things never to say:</b>
+<ul class="plain" style="margin-top:5pt">
+<li>"Everything runs on-device" &mdash; say <em>"scam analysis is on-device; speech-to-text is the browser's service"</em></li>
+<li>"Our AI decides if it's a scam" &mdash; say <em>"a deterministic model decides; the AI explains"</em></li>
+<li>"100% accurate" &mdash; quote the real number, and the category where you're weakest</li>
+</ul>
+</div>
+
+<h2>Timing at a glance</h2>
+
+<table>
+<tr><th style="width:16%">Time</th><th style="width:30%">Section</th><th>The one thing that must land</th></tr>
+<tr><td>0:00 &ndash; 0:35</td><td>The problem</td><td>"It isn't three crimes. It's one pipeline."</td></tr>
+<tr><td>0:35 &ndash; 1:20</td><td>Counterfeit</td><td>The heatmap &mdash; it shows you <em>where it looked</em></td></tr>
+<tr><td>1:20 &ndash; 3:00</td><td>Scam</td><td><strong>Aeroplane mode</strong> &mdash; the message never leaves the phone</td></tr>
+<tr><td>3:00 &ndash; 4:20</td><td>Fraud Graph</td><td>Ring injected live, caught in seconds &middot; zero false accusations</td></tr>
+<tr><td>4:20 &ndash; 5:35</td><td>Research Lab</td><td>Ghost Ring <strong>2.2&times;</strong> &middot; privacy at no cost &middot; hear the ring</td></tr>
+<tr><td>5:35 &ndash; 6:55</td><td>Dashboard &amp; GenAI</td><td><strong>&#8377;49,999 traced into a freezable account</strong></td></tr>
+<tr><td>6:55 &ndash; 7:30</td><td>Services &amp; close</td><td>Three stakeholders &middot; "That's Aegis."</td></tr>
+</table>
+
+<div class="warn">
+<b>If you are running long</b>, cut in this order: (1) the arms race and spectral sound, (2) the counterfeit serial-registry line, (3) the Live Call Shield replay. <b>Never cut</b> aeroplane mode or the money trail &mdash; they are the demo.
+</div>
+
+</body>
+</html>
